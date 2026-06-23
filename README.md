@@ -1,45 +1,66 @@
-# Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
+# 🏗️ RedeAsso - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
 
-Este projeto é uma plataforma Web robusta e intuitiva voltada para a automação do dimensionamento de revestimentos cerâmicos. Ele foi desenvolvido para resolver problemas operacionais em lojas de materiais de construção, substituindo cálculos manuais imprecisos por um sistema automatizado que converte a área (m²) para unidades de venda (caixas fechadas). O sistema considera variáveis críticas como margens de quebra, perdas no corte e dimensões específicas de cada fabricante.
+Este sistema consiste em uma plataforma web focada na automação do processo de atendimento e orçamentação de pisos e revestimentos cerâmicos para o setor de construção civil.
+
+## 📖 Descrição e Contextualização do Problema
+
+No mercado de materiais de construção, a precisão no cálculo de quantitativos de revestimentos é um fator decisivo para a satisfação do cliente e a lucratividade das vendas. Durante a análise do fluxo de atendimento, constatou-se que o processo de conversão de área (m²) para caixas fechadas era realizado de forma manual ou por meio de planilhas genéricas que frequentemente ignoravam variáveis como a margem de quebra, as dimensões exatas de fabricação e a variação de peças por lote.
+
+Este projeto tem como finalidade resolver essas limitações. Ao centralizar as informações técnicas e automatizar o cálculo, o sistema elimina as divergências entre a quantidade vendida e a necessária para a obra, acabando com o retrabalho dos vendedores, inconsistências visuais no mostruário e o risco de prejuízos.
 
 ## 🎯 Objetivos do Sistema
 
-* **Exatidão Técnica:** Garantir que a quantidade de material calculada corresponda precisamente à necessidade da obra, reduzindo sobras e reposições.
-* **Agilidade Operacional:** Reduzir o tempo de atendimento por meio de uma interface otimizada para consultas rápidas e fluxo simplificado.
-* **Padronização:** Uniformizar a exibição de dados no showroom gerando automaticamente etiquetas com layout consistente em PDF.
-* **Disponibilidade:** Centralizar as informações em nuvem, permitindo acesso descentralizado via navegador.
-* **Redução de Erros:** Substituir processos manuais por um algoritmo validado e parametrizável.
+O desenvolvimento da plataforma foi pautado em cinco grandes pilares:
+1. **Exatidão Técnica:** Assegurar que a quantidade de material dimensionada corresponda precisamente à demanda da obra.
+2. **Agilidade Operacional:** Reduzir o tempo de cada atendimento através de um fluxo otimizado (finalização de consultas em até 5 interações ou em menos de 1 minuto).
+3. **Padronização Visual:** Uniformizar a exibição de dados no showroom utilizando a geração de etiquetas automatizadas.
+4. **Redução de Erros:** Mitigar falhas humanas substituindo cálculos manuais por um algoritmo parametrizável.
+5. **Disponibilidade e Mobilidade:** Garantir o acesso distribuído através da hospedagem em nuvem, permitindo o uso do sistema simultaneamente por vários colaboradores em qualquer dispositivo.
 
-## 🚀 Funcionalidades Principais (Escopo)
+## 🚀 Módulos e Funcionalidades Principais (Escopo)
 
-O projeto é focado em Pisos e Revestimentos. Suas principais funcionalidades incluem:
+O sistema abrange módulos que cobrem toda a jornada de dimensionamento e suporte à venda de cerâmicas:
 
-* **Módulo de Catálogo Técnico:** Registro e gerenciamento de atributos dos revestimentos, como PEI, acabamento, dimensões e tonalidade.
-* **Algoritmo de Cálculo de Conversão:** Processamento dinâmico da conversão de metros quadrados para caixas, com aplicação de margem de perda configurável.
-* **Interface de Consulta Integrada:** Visualização dos dados do catálogo interno em conjunto com a consulta em tempo real aos saldos de estoque no portal.
-* **Motor de Exportação de Documentos:** Geração automatizada de etiquetas de mostruário em PDF.
-* **Painel de Controle Administrativo:** Manutenção de dados cadastrais, configuração de margens e gerenciamento de links.
+* **Catálogo Técnico Centralizado (CRUD):** Registro, edição e visualização de todos os dados dos revestimentos. Os campos englobam: Nome do Piso, Código Rede, Código Loja, Largura, Altura, Rejunte, Peças/Caixa, M²/Caixa, Local de Uso, Tipo de Piso, índice PEI e Indicação de Retificação.
+* **Motor de Cálculo Dinâmico:** Algoritmo que recebe a área informada pelo cliente em metros quadrados ($m^2$) e a margem de quebra estipulada, convertendo automaticamente esses dados na quantidade exata de caixas (com arredondamento para cima).
+* **Consulta Integrada em Tempo Real:** Sistema de integração para busca de saldo de estoque e ficha técnica, consolidando os dados internos do aplicativo com as informações atualizadas do portal da rede.
+* **Módulo de Exportação PDF e Orçamentos:** Emissão automatizada de etiquetas para o showroom contendo especificações e códigos. Conta ainda com um facilitador para exportar e encaminhar o orçamento direto para o WhatsApp do cliente.
+* **Dashboard Administrativo:** Painel de controle inicial com métricas cruciais de operação (pisos cadastrados, impressões realizadas, simulações feitas, estoque geral) e atalhos rápidos.
 
-## 💻 Tecnologias Utilizadas
+## 📋 Requisitos Técnicos do Sistema
 
-A stack tecnológica foi definida com base na maturidade e compatibilidade com ambientes de nuvem:
+**Principais Requisitos Funcionais:**
+- Permissão para busca inteligente e filtragem de produtos utilizando Código Loja ou Código Rede.
+- Cálculo e simulação individualizada instantânea.
+- Visualização de atividades recentes no feed do dashboard principal.
 
-* **Backend:** Java.
-* **Framework Backend:** Spring Boot, utilizando Spring Data JPA para persistência e Spring Web para APIs REST.
-* **Frontend:** React.js (Vite/Create React App) integrado com HTML5 e CSS3 para uma interface responsiva.
-* **Banco de Dados:** Microsoft Azure SQL Database.
-* **Geração de PDF:** iTextPDF/Apache PDFBox para exportação das etiquetas técnicas.
-* **Hospedagem / Nuvem:** Microsoft Azure.
+**Principais Requisitos Não Funcionais:**
+- **Compatibilidade:** O sistema é acessível via navegadores modernos (Chrome, Firefox, Edge) de forma nativa, sem plug-ins.
+- **Alta Disponibilidade e Concorrência:** A arquitetura em nuvem permite acessos simultâneos sem perda de desempenho ou bloqueios de banco de dados.
 
-## ⚙️ Arquitetura
+## 💻 Arquitetura e Stack Tecnológica
 
-O sistema adota o modelo de **Arquitetura em Camadas (Multi-tier Architecture)**, garantindo clareza de responsabilidades e escalabilidade:
-* **Frontend:** Interface web responsiva para interação do usuário e exibição de resultados.
-* **Backend:** Núcleo de execução dos algoritmos de cálculo e integração com serviços externos.
-* **Database:** Servidor relacional para armazenamento seguro de todas as informações do catálogo.
+Para garantir a escalabilidade do código e uma fácil manutenção, o projeto utiliza a **Arquitetura em Camadas (Multi-tier Architecture)**.
 
-## 📋 Requisitos de Destaque e Desempenho
+| Camada / Componente | Tecnologia Adotada |
+| :--- | :--- |
+| **Linguagem Backend** | Java (JDK 17+) |
+| **Framework Backend** | Spring Boot com Spring Web (APIs REST) e Spring Data JPA |
+| **Frontend (Interface)** | React.js (com Vite), estruturado via HTML5 e CSS3 |
+| **Banco de Dados** | Microsoft Azure SQL Database (Relacional em Nuvem) |
+| **Geração de PDF** | Bibliotecas iTextPDF ou Apache PDFBox |
+| **Infraestrutura / Nuvem** | Microsoft Azure (Azure App Service, Static Web Apps, SQL) |
 
-* **Usabilidade e Rapidez:** O fluxo completo de busca de um produto e conclusão do cálculo de dimensionamento foi projetado para ser finalizado em no máximo 5 interações e em menos de 20 segundos.
-* **Compatibilidade:** Totalmente acessível via navegadores modernos (Google Chrome, Mozilla Firefox, Microsoft Edge), sem a necessidade de instalações adicionais.
-* **Escalabilidade:** Suporta acessos simultâneos de múltiplos usuários mantendo a integridade dos dados e o desempenho.
+A separação isola as regras de negócio das interações de tela. O design visual e o fluxo de interação foram prototipados previamente utilizando a plataforma Figma Make.
+
+## 👨‍💻 Equipe de Desenvolvimento
+
+Projeto de software concebido no âmbito acadêmico da disciplina de PAC Extensionista do curso de Engenharia de Software da Católica de Santa Catarina (2026):
+
+- **Douglas Eduardo Schuller Bohmer** - Líder do Projeto / Backend
+- **Gabriel Sordi** - Segurança / Levantamento de Requisitos
+- **Igor Sebastian Mathias** - Testes / Wireframes / Requisitos
+- **Lucas Dias** - Frontend / Backend / Wireframes
+- **Walter Matheus Retke** - Frontend / Banco de Dados
+
+**Orientação e Supervisão:** Professora Jéssica Aline Karsten
