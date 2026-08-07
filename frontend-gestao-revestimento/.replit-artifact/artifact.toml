@@ -9,7 +9,7 @@ router = "path"
 [[services]]
 name = "web"
 paths = [ "/" ]
-localPort = 23022
+localPort = 5000
 
 [services.development]
 run = "pnpm --filter @workspace/redeasso run dev"
@@ -17,12 +17,12 @@ run = "pnpm --filter @workspace/redeasso run dev"
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/redeasso", "run", "build" ]
 serve = "static"
-publicDir = "artifacts/redeasso/dist/public"
+publicDir = "frontend-gestao-revestimento/dist/public"
 
 [[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "23022"
+PORT = "5000"
 BASE_PATH = "/"
