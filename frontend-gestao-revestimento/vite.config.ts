@@ -53,7 +53,6 @@ export default defineConfig({
       '@assets': path.resolve(
         import.meta.dirname,
         '..',
-        '..',
         'attached_assets',
       ),
     },
@@ -66,7 +65,7 @@ export default defineConfig({
   },
   server: {
     port,
-    strictPort: true,
+    strictPort: false,
     host: '0.0.0.0',
     allowedHosts: true,
     fs: {
