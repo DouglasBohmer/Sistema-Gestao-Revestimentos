@@ -1,9 +1,14 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STATIC_DIR = path.resolve(__dirname, "../dist/public");
 
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.SERVER_PORT ? Number(process.env.SERVER_PORT) : 3001;
+const PORT = Number(process.env.SERVER_PORT ?? process.env.PORT ?? 3001);
 
 // ─── In-memory stores ───────────────────────────────────────────────────────
 
@@ -263,8 +268,18 @@ app.get("/api/dashboard/pisos-por-tipo", (_req, res) => {
   res.json(result);
 });
 
+// ─── Static files (produção) ─────────────────────────────────────────────────
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(STATIC_DIR));
+  // SPA fallback — qualquer rota que não seja /api retorna o index.html
+  app.get("/{*any}", (_req, res) => {
+    res.sendFile(path.join(STATIC_DIR, "index.html"));
+  });
+}
+
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[server] API rodando em http://localhost:${PORT}`);
+  console.log(`[server] Rodando em http://localhost:${PORT} (${process.env.NODE_ENV ?? "development"})`);
 });

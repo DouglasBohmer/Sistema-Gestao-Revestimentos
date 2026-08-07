@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  redeasso:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: redeasso:latest
+    container_name: redeasso
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      NODE_ENV: production
+    restart: unless-stopped
