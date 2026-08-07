@@ -62,5 +62,3 @@ Projeto de software concebido no âmbito acadêmico da disciplina de PAC Extensi
 - **Igor Sebastian Mathias** - Testes / Wireframes / Requisitos
 - **Lucas Dias** - Frontend / Backend / Wireframes
 - **Walter Matheus Retke** - Frontend / Banco de Dados
-
-**Orientação e Supervisão:** Professora Jéssica Aline Karsten
