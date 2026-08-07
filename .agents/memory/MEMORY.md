@@ -1,0 +1,1 @@
+- [RedeASSO infra](redeasso-infra.md) — portas, workflows, Docker, Express em memória; workflow do artifact não pode ser removido e compete na porta 5000.
