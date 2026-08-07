@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "RedeASSO"
+description = "Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos para a Casa dos Tubos. Permite cadastrar pisos cerâmicos com dados técnicos completos, calcular a quantidade de caixas necessárias a partir da metragem do cliente (com arredondamento para cima), e enviar orçamentos via WhatsApp. Inclui dashboard com métricas operacionais."
+version = "1.0.0"
+id = "artifacts/redeasso"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23022
+
+[services.development]
+run = "pnpm --filter @workspace/redeasso run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/redeasso", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/redeasso/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23022"
+BASE_PATH = "/"

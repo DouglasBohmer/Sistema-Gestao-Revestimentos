@@ -1,0 +1,457 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: pisos
+    description: Pisos e revestimentos cerâmicos
+  - name: dashboard
+    description: Dashboard e métricas
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /pisos:
+    get:
+      operationId: listPisos
+      tags: [pisos]
+      summary: Listar todos os pisos
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Busca por nome, código rede ou código loja
+        - name: localDeUso
+          in: query
+          schema:
+            type: string
+          description: Filtrar por local de uso
+        - name: tipoPiso
+          in: query
+          schema:
+            type: string
+          description: Filtrar por tipo de piso
+      responses:
+        "200":
+          description: Lista de pisos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Piso"
+
+    post:
+      operationId: createPiso
+      tags: [pisos]
+      summary: Cadastrar um novo piso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PisoInput"
+      responses:
+        "201":
+          description: Piso criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Piso"
+        "400":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pisos/{id}:
+    get:
+      operationId: getPiso
+      tags: [pisos]
+      summary: Buscar piso por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Piso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Piso"
+        "404":
+          description: Piso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updatePiso
+      tags: [pisos]
+      summary: Atualizar piso
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PisoInput"
+      responses:
+        "200":
+          description: Piso atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Piso"
+        "404":
+          description: Piso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deletePiso
+      tags: [pisos]
+      summary: Excluir piso
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Piso excluído
+        "404":
+          description: Piso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pisos/codigo/{codigo}:
+    get:
+      operationId: getPisoByCodigo
+      tags: [pisos]
+      summary: Buscar piso pelo código (loja ou rede)
+      parameters:
+        - name: codigo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Código Loja ou Código Rede
+      responses:
+        "200":
+          description: Piso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Piso"
+        "404":
+          description: Piso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pisos/calcular:
+    post:
+      operationId: calcularPiso
+      tags: [pisos]
+      summary: Calcular quantidade de caixas necessárias
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculoInput"
+      responses:
+        "200":
+          description: Resultado do cálculo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalculoResult"
+        "404":
+          description: Piso não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Métricas do dashboard
+      responses:
+        "200":
+          description: Estatísticas gerais
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/atividade-recente:
+    get:
+      operationId: getAtividadeRecente
+      tags: [dashboard]
+      summary: Atividades recentes do sistema
+      responses:
+        "200":
+          description: Lista de atividades recentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Atividade"
+
+  /dashboard/pisos-por-tipo:
+    get:
+      operationId: getPisosPorTipo
+      tags: [dashboard]
+      summary: Contagem de pisos agrupados por tipo
+      responses:
+        "200":
+          description: Pisos agrupados por tipo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GrupoTipo"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Piso:
+      type: object
+      required:
+        - id
+        - nome
+        - codigoLoja
+        - m2PorCaixa
+        - createdAt
+      properties:
+        id:
+          type: number
+        nome:
+          type: string
+        codigoRede:
+          type: ["string", "null"]
+        codigoLoja:
+          type: string
+        largura:
+          type: ["number", "null"]
+          description: Largura em cm
+        altura:
+          type: ["number", "null"]
+          description: Altura em cm
+        rejunte:
+          type: ["number", "null"]
+          description: Rejunte em mm
+        pecasPorCaixa:
+          type: ["number", "null"]
+        m2PorCaixa:
+          type: number
+          description: Metros quadrados por caixa
+        localDeUso:
+          type: ["string", "null"]
+          description: Interno, Externo ou Ambos
+        tipoPiso:
+          type: ["string", "null"]
+          description: Porcelanato, Cerâmica, etc.
+        pei:
+          type: ["number", "null"]
+          description: Classe PEI (1-5)
+        retificado:
+          type: ["boolean", "null"]
+        linkSite:
+          type: ["string", "null"]
+        linkFoto:
+          type: ["string", "null"]
+        valor:
+          type: ["number", "null"]
+          description: Valor em reais
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    PisoInput:
+      type: object
+      required:
+        - nome
+        - codigoLoja
+        - m2PorCaixa
+      properties:
+        nome:
+          type: string
+        codigoRede:
+          type: string
+        codigoLoja:
+          type: string
+        largura:
+          type: number
+        altura:
+          type: number
+        rejunte:
+          type: number
+        pecasPorCaixa:
+          type: number
+        m2PorCaixa:
+          type: number
+        localDeUso:
+          type: string
+        tipoPiso:
+          type: string
+        pei:
+          type: number
+        retificado:
+          type: boolean
+        linkSite:
+          type: string
+        linkFoto:
+          type: string
+        valor:
+          type: number
+
+    CalculoInput:
+      type: object
+      required:
+        - codigoPiso
+        - metragemM2
+      properties:
+        codigoPiso:
+          type: string
+          description: Código Loja ou Código Rede do piso
+        metragemM2:
+          type: number
+          description: Área total do cliente em metros quadrados
+        margemQuebra:
+          type: number
+          description: Margem de quebra em percentual (ex 10 = 10%). Padrão 10.
+          default: 10
+
+    CalculoResult:
+      type: object
+      required:
+        - piso
+        - metragemM2
+        - metragemComMargem
+        - quantidadeCaixas
+        - valorTotal
+      properties:
+        piso:
+          $ref: "#/components/schemas/Piso"
+        metragemM2:
+          type: number
+        margemQuebra:
+          type: number
+        metragemComMargem:
+          type: number
+        quantidadeCaixas:
+          type: number
+          description: Quantidade de caixas arredondada para cima (Math.ceil)
+        valorTotal:
+          type: ["number", "null"]
+          description: Valor total estimado em reais
+
+    DashboardStats:
+      type: object
+      required:
+        - totalPisos
+        - calculosRealizados
+        - totalImpressoes
+        - estoqueDisponivel
+      properties:
+        totalPisos:
+          type: number
+        calculosRealizados:
+          type: number
+        totalImpressoes:
+          type: number
+        estoqueDisponivel:
+          type: number
+
+    Atividade:
+      type: object
+      required:
+        - id
+        - tipo
+        - descricao
+        - createdAt
+      properties:
+        id:
+          type: number
+        tipo:
+          type: string
+          description: cadastro, calculo, impressao
+        descricao:
+          type: string
+        pisoNome:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    GrupoTipo:
+      type: object
+      required:
+        - tipo
+        - total
+      properties:
+        tipo:
+          type: string
+        total:
+          type: number
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
