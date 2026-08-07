@@ -44,7 +44,7 @@ Para garantir a escalabilidade do código e uma fácil manutenção, o projeto u
 
 | Camada / Componente | Tecnologia Adotada |
 | :--- | :--- |
-| **Linguagem Backend** | Java (JDK 17+) |
+| **Linguagem Backend** | Java (JDK 21+) |
 | **Framework Backend** | Spring Boot com Spring Web (APIs REST) e Spring Data JPA |
 | **Frontend (Interface)** | React.js (com Vite), estruturado via HTML5 e CSS3 |
 | **Banco de Dados** | Microsoft Azure SQL Database (Relacional em Nuvem) |
