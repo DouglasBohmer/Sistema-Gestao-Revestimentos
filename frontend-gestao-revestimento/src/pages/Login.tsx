@@ -1,0 +1,91 @@
+import { useState, FormEvent } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { Lock, User, AlertCircle } from 'lucide-react'
+
+export default function Login() {
+  const { login } = useAuth()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    await new Promise(r => setTimeout(r, 400))
+    const ok = login(username.trim(), password)
+    if (!ok) setError('Usuário ou senha incorretos.')
+    setLoading(false)
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#980000] mb-4">
+            <Lock className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800">RedeASSO</h1>
+          <p className="text-gray-500 mt-1 text-sm">Sistema de Gestão de Revestimentos</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg p-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Entrar no sistema</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Usuário</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="Digite seu usuário"
+                  required
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#980000]/30 focus:border-[#980000] transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#980000]/30 focus:border-[#980000] transition"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 bg-[#980000] hover:bg-[#7a0000] disabled:opacity-60 text-white font-semibold rounded-lg transition-colors text-sm"
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Casa dos Tubos © {new Date().getFullYear()}
+        </p>
+      </div>
+    </div>
+  )
+}

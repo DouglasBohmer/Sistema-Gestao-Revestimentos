@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
-import { Home, FileText, Calculator, LogOut } from "lucide-react"
+import { Home, FileText, Calculator, LogOut, Settings, Bell } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useState } from "react"
 
 const navigation = [
   { name: "Início", href: "/", icon: Home },
@@ -10,15 +12,20 @@ const navigation = [
 
 export function Sidebar() {
   const [location] = useLocation()
+  const { logout } = useAuth()
+  const [notifCount] = useState(3)
 
   return (
     <div className="flex h-full w-64 flex-col bg-[#980000]">
+      {/* Logo */}
       <div className="flex flex-col h-24 shrink-0 justify-center px-6 border-b border-white/10">
         <h1 className="text-2xl font-bold tracking-tight text-white">
           RedeASSO
         </h1>
         <p className="text-sm text-white/70 mt-1">Sistema de Gestão</p>
       </div>
+
+      {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = location === item.href
@@ -33,21 +40,41 @@ export function Sidebar() {
                   : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
               )}
             >
-              <item.icon
-                className={cn(
-                  "mr-3 h-5 w-5 flex-shrink-0"
-                )}
-                aria-hidden="true"
-              />
+              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
               {item.name}
             </Link>
           )
         })}
       </nav>
+
+      {/* Rodapé: Notificações + Configurações + Sair */}
       <div className="border-t border-white/10 mt-auto">
         <button
-          onClick={() => {}} 
-          className="w-full px-6 py-4 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
+          onClick={() => {}}
+          className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
+        >
+          <div className="relative">
+            <Bell className="h-5 w-5 flex-shrink-0" />
+            {notifCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-white text-[#980000] text-[10px] font-bold leading-none">
+                {notifCount}
+              </span>
+            )}
+          </div>
+          <span>Notificações</span>
+        </button>
+
+        <button
+          onClick={() => {}}
+          className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
+        >
+          <Settings className="h-5 w-5 flex-shrink-0" />
+          <span>Configurações</span>
+        </button>
+
+        <button
+          onClick={logout}
+          className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           <span>Sair</span>

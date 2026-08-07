@@ -3,6 +3,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Cadastro from '@/pages/Cadastro';
 import Calcular from '@/pages/Calcular';
@@ -11,6 +13,12 @@ import NotFound from '@/pages/not-found';
 const queryClient = new QueryClient();
 
 function Router() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
@@ -25,10 +33,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
+        <AuthProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
