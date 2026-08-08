@@ -9,7 +9,7 @@ description: Decisões de infraestrutura do projeto RedeASSO — portas, workflo
 ```
 cd frontend-gestao-revestimento && SERVER_PORT=3001 ./node_modules/.bin/tsx server/index.ts
 ```
-waitForPort: 3001
+waitForPort: 3001, outputType: **console** (nunca webview — se for webview na 3001, o preview pane do Replit passa a mostrar o Express, que responde "Cannot GET /" na raiz)
 
 **"frontend-gestao-revestimento: web"** (artifact-managed, não pode ser removido) — só Vite:
 ```
