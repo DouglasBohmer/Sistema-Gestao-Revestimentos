@@ -37,5 +37,5 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend-gestao-revestimento && SERVER_PORT=3001 ./node_modules/.bin/tsx server/index.ts & sleep 1 && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/redeasso run dev"
-waitForPort = 5000
+args = "cd frontend-gestao-revestimento && SERVER_PORT=3001 ./node_modules/.bin/tsx server/index.ts"
+waitForPort = 3001
