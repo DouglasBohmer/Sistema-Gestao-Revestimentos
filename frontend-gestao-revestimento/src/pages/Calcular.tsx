@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Search, MessageCircle, Package, Layers, Box } from "lucide-react"
+import { Search, MessageCircle, Package, Layers, Box, Plus } from "lucide-react"
 
 export default function Calcular() {
   const { toast } = useToast()
@@ -139,6 +139,10 @@ export default function Calcular() {
                 <Button type="submit" className="w-full h-11" disabled={isSearching || calcularMutation.isPending}>
                   <Search size={18} className="mr-2" />
                   Pesquisar e Calcular
+                </Button>
+                <Button type="button" variant="outline" className="w-full h-11">
+                  <Plus size={18} className="mr-2" />
+                  Adicionar a orçamento
                 </Button>
               </form>
             </CardContent>

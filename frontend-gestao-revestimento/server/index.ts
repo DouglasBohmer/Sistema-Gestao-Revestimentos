@@ -268,6 +268,137 @@ app.get("/api/dashboard/pisos-por-tipo", (_req, res) => {
   res.json(result);
 });
 
+// ─── Mapas de Estoque (em memória) ───────────────────────────────────────────
+
+interface MapaCelula {
+  pisoId: number;
+  m2: number;
+  caixas: number;
+}
+
+interface MapaEstoque {
+  id: number;
+  nome: string;
+  linhas: number;
+  colunas: number;
+  labels: { top: string; bottom: string; left: string; right: string };
+  celulas: Record<string, MapaCelula>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+let mapasSeq = 1;
+const mapas: MapaEstoque[] = [];
+
+app.get("/api/mapas", (_req, res) => {
+  res.json(mapas);
+});
+
+app.get("/api/mapas/:id", (req, res) => {
+  const mapa = mapas.find((m) => m.id === Number(req.params.id));
+  if (!mapa) return res.status(404).json({ message: "Mapa não encontrado" });
+  res.json(mapa);
+});
+
+app.post("/api/mapas", (req, res) => {
+  const { nome, linhas, colunas, labels } = req.body ?? {};
+  const l = Number(linhas);
+  const c = Number(colunas);
+  if (!nome || !Number.isInteger(l) || !Number.isInteger(c) || l < 1 || c < 1 || l > 26 || c > 50) {
+    return res.status(400).json({ message: "Informe nome, linhas (1-26) e colunas (1-50)" });
+  }
+  const now = new Date().toISOString();
+  const mapa: MapaEstoque = {
+    id: mapasSeq++,
+    nome: String(nome),
+    linhas: l,
+    colunas: c,
+    labels: {
+      top: labels?.top ?? "",
+      bottom: labels?.bottom ?? "",
+      left: labels?.left ?? "",
+      right: labels?.right ?? "",
+    },
+    celulas: {},
+    createdAt: now,
+    updatedAt: now,
+  };
+  mapas.push(mapa);
+  addAtividade("mapa", `Mapa "${mapa.nome}" criado`);
+  res.status(201).json(mapa);
+});
+
+app.put("/api/mapas/:id", (req, res) => {
+  const mapa = mapas.find((m) => m.id === Number(req.params.id));
+  if (!mapa) return res.status(404).json({ message: "Mapa não encontrado" });
+  const { nome, labels } = req.body ?? {};
+  if (nome !== undefined) mapa.nome = String(nome);
+  if (labels !== undefined && typeof labels === "object" && labels !== null) {
+    for (const key of ["top", "bottom", "left", "right"] as const) {
+      if (labels[key] !== undefined) mapa.labels[key] = String(labels[key]);
+    }
+  }
+  mapa.updatedAt = new Date().toISOString();
+  res.json(mapa);
+});
+
+// posição válida? ex: "A1".."Z50" dentro das dimensões do mapa
+function parsePos(mapa: MapaEstoque, pos: string): boolean {
+  const match = /^([A-Z])(\d+)$/.exec(pos);
+  if (!match) return false;
+  const row = match[1].charCodeAt(0) - 65;
+  const col = Number(match[2]);
+  return row < mapa.linhas && col >= 1 && col <= mapa.colunas;
+}
+
+// Define/atualiza uma posição do mapa (atômico, evita sobrescrever outras posições)
+app.put("/api/mapas/:id/celulas/:pos", (req, res) => {
+  const mapa = mapas.find((m) => m.id === Number(req.params.id));
+  if (!mapa) return res.status(404).json({ message: "Mapa não encontrado" });
+  const pos = String(req.params.pos).toUpperCase();
+  if (!parsePos(mapa, pos)) return res.status(400).json({ message: "Posição inválida para este mapa" });
+
+  const { pisoId, m2, caixas } = req.body ?? {};
+  const piso = pisos.find((p) => p.id === Number(pisoId));
+  if (!piso) return res.status(400).json({ message: "Piso não encontrado" });
+
+  let nM2 = Number(m2);
+  let nCaixas = Number(caixas);
+  if (!Number.isFinite(nM2) || nM2 < 0) nM2 = 0;
+  if (!Number.isFinite(nCaixas) || nCaixas < 0) nCaixas = 0;
+  nCaixas = Math.ceil(nCaixas);
+  if (nM2 <= 0 && nCaixas <= 0) {
+    return res.status(400).json({ message: "Informe os m² ou a quantidade de caixas" });
+  }
+  // cálculo canônico com base no m²/caixa do piso
+  if (piso.m2PorCaixa > 0) {
+    if (nM2 > 0) nCaixas = Math.ceil(nM2 / piso.m2PorCaixa);
+    else nM2 = Number((nCaixas * piso.m2PorCaixa).toFixed(2));
+  }
+
+  mapa.celulas[pos] = { pisoId: piso.id, m2: nM2, caixas: nCaixas };
+  mapa.updatedAt = new Date().toISOString();
+  res.json(mapa);
+});
+
+// Limpa uma posição do mapa
+app.delete("/api/mapas/:id/celulas/:pos", (req, res) => {
+  const mapa = mapas.find((m) => m.id === Number(req.params.id));
+  if (!mapa) return res.status(404).json({ message: "Mapa não encontrado" });
+  const pos = String(req.params.pos).toUpperCase();
+  delete mapa.celulas[pos];
+  mapa.updatedAt = new Date().toISOString();
+  res.json(mapa);
+});
+
+app.delete("/api/mapas/:id", (req, res) => {
+  const idx = mapas.findIndex((m) => m.id === Number(req.params.id));
+  if (idx === -1) return res.status(404).json({ message: "Mapa não encontrado" });
+  const [removed] = mapas.splice(idx, 1);
+  addAtividade("mapa", `Mapa "${removed.nome}" apagado`);
+  res.status(204).end();
+});
+
 // ─── Static files (produção) ─────────────────────────────────────────────────
 
 if (process.env.NODE_ENV === "production") {

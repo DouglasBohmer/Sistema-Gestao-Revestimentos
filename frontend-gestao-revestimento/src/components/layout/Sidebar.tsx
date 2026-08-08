@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
-import { Home, FileText, Calculator, LogOut, Settings, Bell } from "lucide-react"
+import { Home, FileText, Calculator, LogOut, Settings, Bell, Receipt, Map } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState } from "react"
 
@@ -8,7 +8,9 @@ const navigation = [
   { name: "Início", href: "/", icon: Home },
   { name: "Cadastro", href: "/cadastro", icon: FileText },
   { name: "Calcular", href: "/calcular", icon: Calculator },
-]
+  { name: "Orçamento", href: null, icon: Receipt },
+  { name: "Mapa Estoque", href: "/mapa-estoque", icon: Map },
+] as const
 
 export function Sidebar() {
   const [location] = useLocation()
@@ -29,6 +31,18 @@ export function Sidebar() {
       <nav className="flex-1 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = location === item.href
+          if (!item.href) {
+            return (
+              <button
+                key={item.name}
+                type="button"
+                className="w-full group flex items-center px-6 py-3 text-base font-medium transition-all text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
+              >
+                <item.icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                {item.name}
+              </button>
+            )
+          }
           return (
             <Link
               key={item.name}

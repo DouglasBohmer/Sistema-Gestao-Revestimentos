@@ -8,6 +8,7 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import Cadastro from '@/pages/Cadastro';
 import Calcular from '@/pages/Calcular';
+import MapaEstoque from '@/pages/MapaEstoque';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/cadastro" component={Cadastro} />
       <Route path="/calcular" component={Calcular} />
+      <Route path="/mapa-estoque" component={MapaEstoque} />
       <Route component={NotFound} />
     </Switch>
   );
