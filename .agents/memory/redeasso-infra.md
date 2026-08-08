@@ -21,6 +21,10 @@ Usa PORT=5000, BASE_PATH=/ de artifact.toml. Sobe na porta 5000 e proxeia /api �
 
 **O artifact.toml não pode ser editado diretamente** — o Edit tool rejeita. Não existe callback `updateArtifactToml`. Qualquer mudança no artifact.toml requer o "artifact TOML replacement flow" (mecanismo não disponível via ferramenta direta).
 
+## Mapeamento de portas no .replit
+
+O preview do Replit usa a porta externa **80**, que deve mapear para a **5000** (Vite). Se o `.replit` mapear 3001→80, o preview mostra o Express dev ("Cannot GET /"). `.replit` não pode ser editado direto — escrever TOML completo em arquivo temp e chamar `verifyAndReplaceDotReplit({ tempFilePath })`.
+
 ## Resolução de PORT no servidor Express
 
 O servidor usa `SERVER_PORT ?? PORT ?? 3001`. Em dev usa SERVER_PORT=3001. Em Docker usa PORT=8080 (sem SERVER_PORT).
