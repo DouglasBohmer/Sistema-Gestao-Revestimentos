@@ -22,13 +22,15 @@ interface MapaCelula {
   caixas: number
 }
 
+type CelulaArmazenada = MapaCelula | MapaCelula[]
+
 interface MapaEstoqueData {
   id: number
   nome: string
   linhas: number
   colunas: number
   labels: { top: string; bottom: string; left: string; right: string }
-  celulas: Record<string, MapaCelula>
+  celulas: Record<string, CelulaArmazenada>
   createdAt: string
   updatedAt: string
 }
@@ -47,6 +49,11 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 const letra = (i: number) => String.fromCharCode(65 + i)
+
+const pisosDaCelula = (celula?: CelulaArmazenada): MapaCelula[] => {
+  if (!celula) return []
+  return Array.isArray(celula) ? celula : [celula]
+}
 
 export default function MapaEstoque() {
   const queryClient = useQueryClient()
@@ -94,9 +101,9 @@ export default function MapaEstoque() {
   })
 
   const celulaMutation = useMutation({
-    mutationFn: ({ id, pos, celula }: { id: number; pos: string; celula: MapaCelula | null }) =>
+    mutationFn: ({ id, pos, celula }: { id: number; pos: string; celula: MapaCelula[] | null }) =>
       celula
-        ? apiFetch<MapaEstoqueData>(`/api/mapas/${id}/celulas/${pos}`, { method: "PUT", body: JSON.stringify(celula) })
+        ? apiFetch<MapaEstoqueData>(`/api/mapas/${id}/celulas/${pos}`, { method: "PUT", body: JSON.stringify({ pisos: celula }) })
         : apiFetch<MapaEstoqueData>(`/api/mapas/${id}/celulas/${pos}`, { method: "DELETE" }),
     onSuccess: aplicarMapa,
     onError: (e: Error) => toast({ title: "Erro ao salvar posição", description: e.message, variant: "destructive" }),
@@ -245,7 +252,7 @@ function MapaGrid({
   mapa: MapaEstoqueData
   onVoltar: () => void
   onSalvar: (body: Partial<MapaEstoqueData>) => void
-  onSalvarCelula: (pos: string, celula: MapaCelula | null) => void
+  onSalvarCelula: (pos: string, celula: MapaCelula[] | null) => void
 }) {
   const [labels, setLabels] = useState(mapa.labels)
   const [posSelecionada, setPosSelecionada] = useState<string | null>(null)
@@ -259,16 +266,16 @@ function MapaGrid({
     }
   }
 
-  const salvarCelula = (pos: string, celula: MapaCelula | null) => {
+  const salvarCelula = (pos: string, celula: MapaCelula[] | null) => {
     onSalvarCelula(pos, celula)
     setPosSelecionada(null)
   }
 
-  const pisoDaCelula = (pos: string) => {
-    const cel = mapa.celulas[pos]
-    if (!cel) return null
-    return { cel, piso: pisos.find((p) => p.id === cel.pisoId) ?? null }
-  }
+  const pisosNaPosicao = (pos: string) =>
+    pisosDaCelula(mapa.celulas[pos]).map((cel) => ({
+      cel,
+      piso: pisos.find((p) => p.id === cel.pisoId) ?? null,
+    }))
 
   const labelInput = (key: keyof typeof labels, placeholder: string, className = "") => (
     <Input
@@ -276,7 +283,7 @@ function MapaGrid({
       placeholder={placeholder}
       onChange={(e) => setLabels((l) => ({ ...l, [key]: e.target.value }))}
       onBlur={salvarLabels}
-      className={`text-center border-2 border-green-600 bg-white ${className}`}
+      className={`text-center border-2 border-black bg-white ${className}`}
     />
   )
 
@@ -309,30 +316,34 @@ function MapaGrid({
                 {Array.from({ length: mapa.linhas }).flatMap((_, r) =>
                   Array.from({ length: mapa.colunas }).map((_, c) => {
                     const pos = `${letra(r)}${c + 1}`
-                    const info = pisoDaCelula(pos)
+                    const info = pisosNaPosicao(pos)
                     return (
                       <button
                         key={pos}
                         type="button"
                         onClick={() => setPosSelecionada(pos)}
                         className={`rounded-md border-2 p-2 min-h-[90px] flex flex-col items-center justify-center text-center transition-colors ${
-                          info
-                            ? "border-[#980000] bg-red-50 hover:bg-red-100"
-                            : "border-red-500 bg-white hover:bg-red-50"
+                          info.length > 0
+                            ? "border-black bg-zinc-100 hover:bg-zinc-200"
+                            : "border-zinc-400 bg-white hover:bg-zinc-100"
                         }`}
                       >
                         <span className="text-xs font-bold text-gray-400 mb-1">{pos}</span>
-                        {info ? (
-                          <>
-                            <span className="text-sm font-semibold text-gray-800 leading-tight">
-                              {info.piso?.nome ?? `Piso #${info.cel.pisoId}`}
-                            </span>
-                            <span className="text-xs text-gray-600 mt-1">
-                              {info.cel.m2} m² • {info.cel.caixas} cx
-                            </span>
-                          </>
+                        {info.length > 0 ? (
+                          <div className="w-full space-y-1 text-left">
+                            {info.map(({ cel, piso }) => (
+                              <div key={cel.pisoId} className="rounded bg-white/70 px-2 py-1">
+                                <p className="truncate text-xs font-semibold text-gray-800">
+                                  {piso?.nome ?? `Piso #${cel.pisoId}`}
+                                </p>
+                                <p className="text-[11px] text-gray-600">
+                                  {cel.m2} m² • {cel.caixas} cx
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         ) : (
-                          <span className="text-sm font-medium text-red-600">Add Piso</span>
+                          <span className="text-sm font-medium text-zinc-700">Adicionar pisos</span>
                         )}
                       </button>
                     )
@@ -351,7 +362,7 @@ function MapaGrid({
       {posSelecionada && (
         <CelulaDialog
           pos={posSelecionada}
-          celula={mapa.celulas[posSelecionada] ?? null}
+          celulas={pisosDaCelula(mapa.celulas[posSelecionada])}
           pisos={pisos}
           onClose={() => setPosSelecionada(null)}
           onSalvar={(cel) => salvarCelula(posSelecionada, cel)}
@@ -365,24 +376,29 @@ function MapaGrid({
 
 function CelulaDialog({
   pos,
-  celula,
+  celulas,
   pisos,
   onClose,
   onSalvar,
 }: {
   pos: string
-  celula: MapaCelula | null
+  celulas: MapaCelula[]
   pisos: Piso[]
   onClose: () => void
-  onSalvar: (celula: MapaCelula | null) => void
+  onSalvar: (celulas: MapaCelula[] | null) => void
 }) {
   const { toast } = useToast()
   const [busca, setBusca] = useState("")
-  const [pisoId, setPisoId] = useState<number | null>(celula?.pisoId ?? null)
-  const [m2, setM2] = useState(celula ? String(celula.m2) : "")
-  const [caixas, setCaixas] = useState(celula ? String(celula.caixas) : "")
-
-  const piso = pisos.find((p) => p.id === pisoId) ?? null
+  const [pisosEmEdicao, setPisosEmEdicao] = useState(
+    celulas.map((celula) => ({
+      pisoId: celula.pisoId,
+      m2: String(celula.m2),
+      caixas: String(celula.caixas),
+    }))
+  )
+  const [indiceSelecionando, setIndiceSelecionando] = useState<number | null>(
+    celulas.length === 0 ? 0 : null
+  )
 
   const filtrados = pisos.filter((p) => {
     const q = busca.toLowerCase()
@@ -393,122 +409,176 @@ function CelulaDialog({
     )
   })
 
-  const onM2Change = (v: string) => {
-    setM2(v)
-    const n = parseFloat(v)
-    if (piso && piso.m2PorCaixa > 0 && !isNaN(n) && n > 0) {
-      setCaixas(String(Math.ceil(n / piso.m2PorCaixa)))
-    } else if (!v) {
-      setCaixas("")
-    }
+  const selecionarPiso = (piso: Piso) => {
+    if (indiceSelecionando === null) return
+
+    setPisosEmEdicao((atual) => {
+      const existente = atual[indiceSelecionando]
+      let m2 = existente?.m2 ?? ""
+      let caixas = existente?.caixas ?? ""
+      const nM2 = parseFloat(m2)
+      const nCaixas = parseFloat(caixas)
+
+      if (piso.m2PorCaixa > 0 && !isNaN(nM2) && nM2 > 0) {
+        caixas = String(Math.ceil(nM2 / piso.m2PorCaixa))
+      } else if (piso.m2PorCaixa > 0 && !isNaN(nCaixas) && nCaixas > 0) {
+        m2 = (nCaixas * piso.m2PorCaixa).toFixed(2)
+      }
+
+      const proximo = { pisoId: piso.id, m2, caixas }
+      if (indiceSelecionando === atual.length) return [...atual, proximo]
+      return atual.map((item, indice) => (indice === indiceSelecionando ? proximo : item))
+    })
+    setIndiceSelecionando(null)
+    setBusca("")
   }
 
-  const onCaixasChange = (v: string) => {
-    setCaixas(v)
-    const n = parseFloat(v)
-    if (piso && piso.m2PorCaixa > 0 && !isNaN(n) && n > 0) {
-      setM2((n * piso.m2PorCaixa).toFixed(2))
-    } else if (!v) {
-      setM2("")
-    }
+  const atualizarMedida = (indice: number, campo: "m2" | "caixas", valor: string) => {
+    setPisosEmEdicao((atual) => atual.map((item, itemIndice) => {
+      if (itemIndice !== indice) return item
+
+      const piso = pisos.find((p) => p.id === item.pisoId)
+      if (!piso || piso.m2PorCaixa <= 0) return { ...item, [campo]: valor }
+
+      if (campo === "m2") {
+        const m2 = parseFloat(valor)
+        return {
+          ...item,
+          m2: valor,
+          caixas: !valor ? "" : !isNaN(m2) && m2 > 0 ? String(Math.ceil(m2 / piso.m2PorCaixa)) : item.caixas,
+        }
+      }
+
+      const caixas = parseFloat(valor)
+      return {
+        ...item,
+        caixas: valor,
+        m2: !valor ? "" : !isNaN(caixas) && caixas > 0 ? (caixas * piso.m2PorCaixa).toFixed(2) : item.m2,
+      }
+    }))
   }
 
-  const selecionarPiso = (p: Piso) => {
-    setPisoId(p.id)
-    // recalcula com o m²/caixa do novo piso
-    const nM2 = parseFloat(m2)
-    if (p.m2PorCaixa > 0 && !isNaN(nM2) && nM2 > 0) {
-      setCaixas(String(Math.ceil(nM2 / p.m2PorCaixa)))
-    }
+  const removerPiso = (indice: number) => {
+    setPisosEmEdicao((atual) => atual.filter((_, itemIndice) => itemIndice !== indice))
+    setIndiceSelecionando(null)
   }
 
   const handleSalvar = () => {
-    const nM2 = parseFloat(m2)
-    const nCaixas = parseFloat(caixas)
-    if (!pisoId) {
-      toast({ title: "Selecione um piso", variant: "destructive" })
+    if (pisosEmEdicao.length === 0) {
+      toast({ title: "Adicione pelo menos um piso", variant: "destructive" })
       return
     }
-    if ((isNaN(nM2) || nM2 <= 0) && (isNaN(nCaixas) || nCaixas <= 0)) {
-      toast({ title: "Informe os m² ou a quantidade de caixas", variant: "destructive" })
-      return
+
+    const celulasParaSalvar: MapaCelula[] = []
+    for (const item of pisosEmEdicao) {
+      const nM2 = parseFloat(item.m2)
+      const nCaixas = parseFloat(item.caixas)
+      if ((isNaN(nM2) || nM2 <= 0) && (isNaN(nCaixas) || nCaixas <= 0)) {
+        toast({ title: "Informe os m² ou a quantidade de caixas para cada piso", variant: "destructive" })
+        return
+      }
+      celulasParaSalvar.push({
+        pisoId: item.pisoId,
+        m2: isNaN(nM2) ? 0 : nM2,
+        caixas: isNaN(nCaixas) ? 0 : nCaixas,
+      })
     }
-    onSalvar({
-      pisoId,
-      m2: isNaN(nM2) ? 0 : nM2,
-      caixas: isNaN(nCaixas) ? 0 : nCaixas,
-    })
+    onSalvar(celulasParaSalvar)
   }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Posição {pos}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Piso</Label>
-            {piso ? (
-              <div className="flex items-center justify-between rounded-md border p-3 bg-gray-50">
-                <div>
-                  <p className="font-medium text-gray-800">{piso.nome}</p>
-                  <p className="text-xs text-gray-500">
-                    {piso.codigoLoja} • {piso.m2PorCaixa} m²/caixa
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setPisoId(null)}>Trocar</Button>
-              </div>
-            ) : (
-              <>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar piso por nome ou código..."
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
-                  {filtrados.length === 0 ? (
-                    <p className="p-3 text-sm text-gray-500 text-center">Nenhum piso encontrado</p>
-                  ) : (
-                    filtrados.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => selecionarPiso(p)}
-                        className="w-full text-left p-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <p className="font-medium text-gray-800 text-sm">{p.nome}</p>
-                        <p className="text-xs text-gray-500">
-                          {p.codigoLoja} • {p.m2PorCaixa} m²/caixa
-                        </p>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </>
-            )}
+          <div className="flex items-center justify-between rounded-md bg-zinc-100 px-3 py-2">
+            <p className="text-sm font-medium text-zinc-700">{pisosEmEdicao.length} de 4 pisos adicionados</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pisosEmEdicao.length >= 4 || indiceSelecionando !== null}
+              onClick={() => { setIndiceSelecionando(pisosEmEdicao.length); setBusca("") }}
+            >
+              <Plus size={16} className="mr-2" />
+              Adicionar piso
+            </Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Metragem (m²)</Label>
-              <Input type="number" step="0.01" min="0" placeholder="Ex: 45.5" value={m2} onChange={(e) => onM2Change(e.target.value)} />
+          {pisosEmEdicao.map((item, indice) => {
+            const piso = pisos.find((p) => p.id === item.pisoId)
+            return (
+              <div key={`${item.pisoId}-${indice}`} className="space-y-3 rounded-md border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-gray-800">Piso {indice + 1}: {piso?.nome ?? `Piso #${item.pisoId}`}</p>
+                    <p className="text-xs text-gray-500">{piso?.codigoLoja ?? "Código indisponível"} • {piso?.m2PorCaixa ?? "-"} m²/caixa</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => { setIndiceSelecionando(indice); setBusca("") }}>
+                      Trocar
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removerPiso(indice)} aria-label={`Remover piso ${indice + 1}`}>
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Metragem (m²)</Label>
+                    <Input type="number" step="0.01" min="0" placeholder="Ex: 45.5" value={item.m2} onChange={(e) => atualizarMedida(indice, "m2", e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Caixas</Label>
+                    <Input type="number" step="1" min="0" placeholder="Ex: 10" value={item.caixas} onChange={(e) => atualizarMedida(indice, "caixas", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {indiceSelecionando !== null && (
+            <div className="space-y-2 rounded-md border border-black p-4">
+              <div className="flex items-center justify-between">
+                <Label>{indiceSelecionando < pisosEmEdicao.length ? `Trocar piso ${indiceSelecionando + 1}` : "Selecionar novo piso"}</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIndiceSelecionando(null)}>Cancelar</Button>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Buscar piso por nome ou código..." value={busca} onChange={(e) => setBusca(e.target.value)} className="pl-9" autoFocus />
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-md border divide-y">
+                {filtrados.length === 0 ? (
+                  <p className="p-3 text-sm text-gray-500 text-center">Nenhum piso encontrado</p>
+                ) : (
+                  filtrados.map((piso) => {
+                    const repetido = pisosEmEdicao.some((item, indice) => item.pisoId === piso.id && indice !== indiceSelecionando)
+                    return (
+                      <button
+                        key={piso.id}
+                        type="button"
+                        disabled={repetido}
+                        onClick={() => selecionarPiso(piso)}
+                        className="w-full text-left p-3 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <p className="font-medium text-gray-800 text-sm">{piso.nome}</p>
+                        <p className="text-xs text-gray-500">{piso.codigoLoja} • {piso.m2PorCaixa} m²/caixa</p>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Caixas</Label>
-              <Input type="number" step="1" min="0" placeholder="Ex: 10" value={caixas} onChange={(e) => onCaixasChange(e.target.value)} />
-            </div>
-          </div>
-          <p className="text-xs text-gray-500">Preencha um dos campos — o outro é calculado automaticamente pelo m²/caixa do piso.</p>
+          )}
+
+          <p className="text-xs text-gray-500">Adicione até quatro pisos diferentes. Para cada um, informe os m² ou as caixas; o outro valor é calculado automaticamente.</p>
         </div>
 
         <DialogFooter className="gap-2">
-          {celula && (
+          {celulas.length > 0 && (
             <Button variant="destructive" onClick={() => onSalvar(null)}>
               <Trash2 size={16} className="mr-2" />
               Limpar posição

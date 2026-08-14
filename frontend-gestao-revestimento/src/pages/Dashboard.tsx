@@ -29,7 +29,7 @@ export default function Dashboard() {
           <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="bg-blue-500 p-3 rounded-lg text-white">
+                <div className="bg-black p-3 rounded-lg text-white">
                   <Package className="h-6 w-6" />
                 </div>
               </div>
@@ -46,7 +46,7 @@ export default function Dashboard() {
           <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="bg-green-500 p-3 rounded-lg text-white">
+                <div className="bg-zinc-800 p-3 rounded-lg text-white">
                   <FileText className="h-6 w-6" />
                 </div>
               </div>
@@ -63,7 +63,7 @@ export default function Dashboard() {
           <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="bg-purple-500 p-3 rounded-lg text-white">
+                <div className="bg-zinc-700 p-3 rounded-lg text-white">
                   <TrendingUp className="h-6 w-6" />
                 </div>
               </div>
@@ -80,7 +80,7 @@ export default function Dashboard() {
           <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="bg-orange-500 p-3 rounded-lg text-white">
+                <div className="bg-zinc-600 p-3 rounded-lg text-white">
                   <Box className="h-6 w-6" />
                 </div>
               </div>
@@ -101,21 +101,21 @@ export default function Dashboard() {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Atalhos Rápidos</h3>
               <div className="space-y-3">
                 <Link href="/cadastro" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <Package size={20} className="text-[#980000]" />
+                  <Package size={20} className="text-black" />
                   <div>
                     <p className="font-medium text-gray-800">Novo Cadastro</p>
                     <p className="text-sm text-gray-600">Adicionar novo piso ao sistema</p>
                   </div>
                 </Link>
                 <Link href="/calcular" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <TrendingUp size={20} className="text-[#980000]" />
+                  <TrendingUp size={20} className="text-black" />
                   <div>
                     <p className="font-medium text-gray-800">Calcular Piso</p>
                     <p className="text-sm text-gray-600">Calcular quantidade necessária</p>
                   </div>
                 </Link>
                 <Link href="/calcular" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <FileText size={20} className="text-[#980000]" />
+                  <FileText size={20} className="text-black" />
                   <div>
                     <p className="font-medium text-gray-800">Imprimir Etiqueta</p>
                     <p className="text-sm text-gray-600">Gerar etiqueta de produto</p>
@@ -144,8 +144,8 @@ export default function Dashboard() {
                 ) : atividades && atividades.length > 0 ? (
                   atividades.slice(0, 5).map((atividade) => {
                     const colorClass = 
-                      atividade.tipo === 'calculo' ? 'bg-blue-500' : 
-                      atividade.tipo === 'cadastro' ? 'bg-green-500' : 'bg-purple-500';
+                      atividade.tipo === 'calculo' ? 'bg-black' :
+                      atividade.tipo === 'cadastro' ? 'bg-zinc-700' : 'bg-zinc-500';
                     
                     return (
                       <div key={atividade.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">

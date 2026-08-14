@@ -18,7 +18,7 @@ export function Sidebar() {
   const [notifCount] = useState(3)
 
   return (
-    <div className="flex h-full w-64 flex-col bg-[#980000]">
+    <div className="flex h-full w-64 flex-col bg-black">
       {/* Logo */}
       <div className="flex flex-col h-24 shrink-0 justify-center px-6 border-b border-white/10">
         <h1 className="text-2xl font-bold tracking-tight text-white">
@@ -70,7 +70,7 @@ export function Sidebar() {
           <div className="relative">
             <Bell className="h-5 w-5 flex-shrink-0" />
             {notifCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-white text-[#980000] text-[10px] font-bold leading-none">
+              <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-white text-black text-[10px] font-bold leading-none">
                 {notifCount}
               </span>
             )}

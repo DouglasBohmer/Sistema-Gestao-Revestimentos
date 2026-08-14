@@ -198,8 +198,8 @@ export default function Calcular() {
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Status Estoque:</span>
-                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full text-xs font-medium">
+                            <div className="w-2 h-2 bg-black rounded-full"></div>
                             Disponível
                           </span>
                         </div>
@@ -243,7 +243,7 @@ export default function Calcular() {
                   Enviar via WhatsApp
                 </Button>
 
-                <div className="mt-6 p-4 bg-[#980000]/5 border border-[#980000]/20 rounded-lg">
+                <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
                   <h4 className="font-medium text-gray-800 mb-3 text-sm">Informações Adicionais</h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p>• Considere {margem}% de quebra</p>
@@ -260,7 +260,7 @@ export default function Calcular() {
         {resultado && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
-              <Card className="bg-gradient-to-br from-[#980000] to-[#7a0000] text-white border-none shadow-lg">
+              <Card className="bg-gradient-to-br from-black to-zinc-800 text-white border-none shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="bg-white/20 p-3 rounded-lg">
@@ -273,7 +273,7 @@ export default function Calcular() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-lg">
+              <Card className="bg-gradient-to-br from-zinc-800 to-zinc-700 text-white border-none shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="bg-white/20 p-3 rounded-lg">
@@ -286,7 +286,7 @@ export default function Calcular() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-none shadow-lg">
+              <Card className="bg-gradient-to-br from-zinc-700 to-zinc-600 text-white border-none shadow-lg">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="bg-white/20 p-3 rounded-lg">
@@ -322,9 +322,9 @@ export default function Calcular() {
                     <span className="text-gray-600">Rejunte ({Math.ceil((parseFloat(metragem) * 0.15) / 1)} sacos):</span>
                     <span className="font-medium text-gray-400 text-sm italic">Cálculo de valor não disponível</span>
                   </div>
-                  <div className="flex justify-between py-3 bg-[#980000]/5 px-4 rounded-lg mt-4">
+                  <div className="flex justify-between py-3 bg-zinc-100 px-4 rounded-lg mt-4">
                     <span className="font-semibold text-lg text-gray-800">Total Estimado (apenas piso):</span>
-                    <span className="font-bold text-2xl text-[#980000]">
+                    <span className="font-bold text-2xl text-black">
                       {valorM2 ? `R$ ${(resultado.quantidadeCaixas * (piso?.m2PorCaixa || 1) * parseFloat(valorM2)).toFixed(2)}` : 'R$ 0,00'}
                     </span>
                   </div>

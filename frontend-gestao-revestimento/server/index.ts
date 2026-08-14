@@ -282,7 +282,7 @@ interface MapaEstoque {
   linhas: number;
   colunas: number;
   labels: { top: string; bottom: string; left: string; right: string };
-  celulas: Record<string, MapaCelula>;
+  celulas: Record<string, MapaCelula[]>;
   createdAt: string;
   updatedAt: string;
 }
@@ -351,32 +351,47 @@ function parsePos(mapa: MapaEstoque, pos: string): boolean {
   return row < mapa.linhas && col >= 1 && col <= mapa.colunas;
 }
 
-// Define/atualiza uma posição do mapa (atômico, evita sobrescrever outras posições)
+// Define/atualiza os pisos de uma posição (até quatro por posição)
 app.put("/api/mapas/:id/celulas/:pos", (req, res) => {
   const mapa = mapas.find((m) => m.id === Number(req.params.id));
   if (!mapa) return res.status(404).json({ message: "Mapa não encontrado" });
   const pos = String(req.params.pos).toUpperCase();
   if (!parsePos(mapa, pos)) return res.status(400).json({ message: "Posição inválida para este mapa" });
 
-  const { pisoId, m2, caixas } = req.body ?? {};
-  const piso = pisos.find((p) => p.id === Number(pisoId));
-  if (!piso) return res.status(400).json({ message: "Piso não encontrado" });
-
-  let nM2 = Number(m2);
-  let nCaixas = Number(caixas);
-  if (!Number.isFinite(nM2) || nM2 < 0) nM2 = 0;
-  if (!Number.isFinite(nCaixas) || nCaixas < 0) nCaixas = 0;
-  nCaixas = Math.ceil(nCaixas);
-  if (nM2 <= 0 && nCaixas <= 0) {
-    return res.status(400).json({ message: "Informe os m² ou a quantidade de caixas" });
-  }
-  // cálculo canônico com base no m²/caixa do piso
-  if (piso.m2PorCaixa > 0) {
-    if (nM2 > 0) nCaixas = Math.ceil(nM2 / piso.m2PorCaixa);
-    else nM2 = Number((nCaixas * piso.m2PorCaixa).toFixed(2));
+  const body = req.body ?? {};
+  // Aceita o formato antigo de um único piso para não quebrar clientes já abertos.
+  const itens = Array.isArray(body.pisos) ? body.pisos : [body];
+  if (itens.length < 1 || itens.length > 4) {
+    return res.status(400).json({ message: "Cada posição deve ter entre 1 e 4 pisos" });
   }
 
-  mapa.celulas[pos] = { pisoId: piso.id, m2: nM2, caixas: nCaixas };
+  const pisoIds = new Set<number>();
+  const celulas: MapaCelula[] = [];
+  for (const item of itens) {
+    const piso = pisos.find((p) => p.id === Number(item?.pisoId));
+    if (!piso) return res.status(400).json({ message: "Piso não encontrado" });
+    if (pisoIds.has(piso.id)) {
+      return res.status(400).json({ message: "Não repita o mesmo piso na posição" });
+    }
+    pisoIds.add(piso.id);
+
+    let nM2 = Number(item?.m2);
+    let nCaixas = Number(item?.caixas);
+    if (!Number.isFinite(nM2) || nM2 < 0) nM2 = 0;
+    if (!Number.isFinite(nCaixas) || nCaixas < 0) nCaixas = 0;
+    nCaixas = Math.ceil(nCaixas);
+    if (nM2 <= 0 && nCaixas <= 0) {
+      return res.status(400).json({ message: "Informe os m² ou a quantidade de caixas para cada piso" });
+    }
+    // cálculo canônico com base no m²/caixa do piso
+    if (piso.m2PorCaixa > 0) {
+      if (nM2 > 0) nCaixas = Math.ceil(nM2 / piso.m2PorCaixa);
+      else nM2 = Number((nCaixas * piso.m2PorCaixa).toFixed(2));
+    }
+    celulas.push({ pisoId: piso.id, m2: nM2, caixas: nCaixas });
+  }
+
+  mapa.celulas[pos] = celulas;
   mapa.updatedAt = new Date().toISOString();
   res.json(mapa);
 });

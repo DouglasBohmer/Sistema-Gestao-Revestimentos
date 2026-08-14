@@ -23,7 +23,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#980000] mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-black mb-4">
             <Lock className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800">RedeASSO</h1>
@@ -45,7 +45,7 @@ export default function Login() {
                   placeholder="Digite seu usuário"
                   required
                   autoFocus
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#980000]/30 focus:border-[#980000] transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition"
                 />
               </div>
             </div>
@@ -60,13 +60,13 @@ export default function Login() {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Digite sua senha"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-[#980000]/30 focus:border-[#980000] transition"
+                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 text-sm">
+              <div className="flex items-center gap-2 text-zinc-800 bg-zinc-100 border border-zinc-300 rounded-lg px-3 py-2.5 text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {error}
               </div>
@@ -75,7 +75,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-[#980000] hover:bg-[#7a0000] disabled:opacity-60 text-white font-semibold rounded-lg transition-colors text-sm"
+              className="w-full py-2.5 bg-black hover:bg-zinc-800 disabled:opacity-60 text-white font-semibold rounded-lg transition-colors text-sm"
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
