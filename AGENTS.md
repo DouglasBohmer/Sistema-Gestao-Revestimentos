@@ -144,6 +144,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 - `.github/workflows/docker.yml` apenas faz checkout, autentica no GHCR, constrói e publica a imagem após push em `main`.
 - O workflow não entra no servidor, não executa `git pull`, não executa `docker compose pull/up` e não comprova um deploy remoto.
+- Em 17/08/2026, o usuário confirmou que o Docker do servidor está ligado. A partir desta estação, `usuario-pc.tailbc9bf3.ts.net:8080` ainda não respondeu; confirmar porta, publicação via Tailscale e qual imagem/versão está em execução antes de tratá-lo como ambiente de homologação.
 - `Ideias.md` menciona “GitHub Actions + Watchtower”. A atualização automática só acontece se o Watchtower estiver configurado no servidor para observar a imagem correta e tiver acesso ao GHCR; isso ainda não foi verificado.
 - O `docker-compose.yml` define Spring + PostgreSQL 17, volume persistente, health checks, dependência por saúde e configuração por `.env`; a imagem pode ser local ou indicada por `REDEASSO_IMAGE`.
 - O Dockerfile multi-stage compila React/pnpm e Spring/Maven e entrega uma imagem JRE 21 não-root com o React incorporado ao JAR.
