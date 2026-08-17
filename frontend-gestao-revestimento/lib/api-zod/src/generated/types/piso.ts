@@ -53,7 +53,7 @@ export interface Piso {
   /** @nullable */
   linkFoto?: string | null;
   /**
-     * Valor em reais
+     * Preço de venda em reais por metro quadrado (R$/m²)
      * @nullable
      */
   valor?: number | null;

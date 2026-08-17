@@ -10,12 +10,12 @@ import type { Piso } from './piso';
 export interface CalculoResult {
   piso: Piso;
   metragemM2: number;
-  margemQuebra?: number;
+  margemQuebra: number;
   metragemComMargem: number;
-  /** Quantidade de caixas arredondada para cima (Math.ceil) */
-  quantidadeCaixas: number;
+  /** Quantidade de caixas inteiras arredondada para cima */
+  quantidadeCaixas: bigint;
   /**
-     * Valor total estimado em reais
+     * M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²
      * @nullable
      */
   valorTotal: number | null;

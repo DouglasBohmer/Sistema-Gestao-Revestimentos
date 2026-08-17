@@ -1,15 +1,52 @@
-version: "3.9"
+name: redeasso
 
 services:
-  redeasso:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-redeasso}
+      POSTGRES_USER: ${POSTGRES_USER:-redeasso}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+    volumes:
+      - redeasso-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    image: ${REDEASSO_IMAGE:-redeasso:local}
     build:
       context: .
       dockerfile: Dockerfile
-    image: redeasso:latest
-    container_name: redeasso
-    ports:
-      - "8080:8080"
     environment:
-      PORT: "8080"
-      NODE_ENV: production
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-redeasso}
+      DATABASE_USERNAME: ${POSTGRES_USER:-redeasso}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      SESSION_TIMEOUT: ${SESSION_TIMEOUT:-12h}
+      # Temporário até o login Área Central ser concluído. Em ambiente exposto,
+      # troque a senha ou desative explicitamente este acesso.
+      REDEASSO_LOCAL_ADMIN_ENABLED: ${REDEASSO_LOCAL_ADMIN_ENABLED:-true}
+      REDEASSO_LOCAL_ADMIN_USERNAME: ${REDEASSO_LOCAL_ADMIN_USERNAME:-admin}
+      REDEASSO_LOCAL_ADMIN_PASSWORD: ${REDEASSO_LOCAL_ADMIN_PASSWORD:-admin}
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     restart: unless-stopped
+    stop_grace_period: 30s
+
+volumes:
+  redeasso-postgres:

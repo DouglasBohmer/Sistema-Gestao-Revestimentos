@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Home, FileText, Calculator, LogOut, Settings, Bell, Receipt, Map } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 
 const navigation = [
   { name: "Início", href: "/", icon: Home },
@@ -15,7 +16,13 @@ const navigation = [
 export function Sidebar() {
   const [location] = useLocation()
   const { logout } = useAuth()
+  const queryClient = useQueryClient()
   const [notifCount] = useState(3)
+
+  const handleLogout = async () => {
+    await logout()
+    queryClient.clear()
+  }
 
   return (
     <div className="flex h-full w-64 flex-col bg-black">
@@ -87,7 +94,7 @@ export function Sidebar() {
         </button>
 
         <button
-          onClick={logout}
+          onClick={() => void handleLogout()}
           className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />

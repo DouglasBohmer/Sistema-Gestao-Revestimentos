@@ -47,11 +47,26 @@ Para garantir a escalabilidade do código e uma fácil manutenção, o projeto u
 | **Linguagem Backend** | Java (JDK 21+) |
 | **Framework Backend** | Spring Boot com Spring Web (APIs REST) e Spring Data JPA |
 | **Frontend (Interface)** | React.js (com Vite), estruturado via HTML5 e CSS3 |
-| **Banco de Dados** | Microsoft Azure SQL Database (Relacional em Nuvem) |
+| **Banco de Dados** | PostgreSQL com migrations Flyway |
 | **Geração de PDF** | Bibliotecas iTextPDF ou Apache PDFBox |
-| **Infraestrutura / Nuvem** | Microsoft Azure (Azure App Service, Static Web Apps, SQL) |
+| **Infraestrutura** | Docker; servidor principal privado via Tailscale e ambiente local como fallback |
 
 A separação isola as regras de negócio das interações de tela. O design visual e o fluxo de interação foram prototipados previamente utilizando a plataforma Figma Make.
+
+O backend de catálogo, cálculo, dashboard/atividades e mapas está integralmente em Spring Boot, com persistência PostgreSQL e migrations Flyway. O Node/Express foi retirado do runtime; em produção, o próprio Spring também serve o bundle React no mesmo endereço.
+
+## ▶️ Executar com Docker
+
+Na raiz do repositório, copie `.env.example` para `.env`, ajuste pelo menos `POSTGRES_PASSWORD` e execute:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+A aplicação abre em `http://localhost:8080`. Nesta fase, o acesso temporário de testes continua sendo `admin/admin`; ele será substituído pelo fluxo completo de login da Área Central na próxima etapa. Não use Funnel enquanto essa credencial temporária estiver habilitada.
+
+Para desenvolvimento com recarregamento do React e Spring separados, consulte [backend-gestao-revestimento/README.md](backend-gestao-revestimento/README.md).
 
 ## 👨‍💻 Equipe de Desenvolvimento
 

@@ -1,34 +1,73 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import {
+  clearCsrfToken,
+  getAuthSession,
+  localLogin,
+  logout as apiLogout,
+  type SessionResponse,
+} from '@workspace/api-client-react'
 
 interface AuthContextType {
   isAuthenticated: boolean
-  login: (username: string, password: string) => boolean
-  logout: () => void
+  isLoading: boolean
+  session: SessionResponse | null
+  login: (username: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => sessionStorage.getItem('redeasso_auth') === 'true'
-  )
+  const [session, setSession] = useState<SessionResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  function login(username: string, password: string) {
-    if (username === 'admin' && password === 'admin') {
-      setIsAuthenticated(true)
-      sessionStorage.setItem('redeasso_auth', 'true')
-      return true
+  useEffect(() => {
+    let mounted = true
+
+    getAuthSession()
+      .then((currentSession) => {
+        if (mounted) setSession(currentSession)
+      })
+      .catch(() => {
+        if (mounted) setSession(null)
+      })
+      .finally(() => {
+        if (mounted) setIsLoading(false)
+      })
+
+    return () => {
+      mounted = false
     }
-    return false
+  }, [])
+
+  async function login(username: string, password: string) {
+    try {
+      const authenticatedSession = await localLogin({ username, password })
+      setSession(authenticatedSession)
+      return authenticatedSession.authenticated
+    } catch {
+      setSession(null)
+      return false
+    }
   }
 
-  function logout() {
-    setIsAuthenticated(false)
-    sessionStorage.removeItem('redeasso_auth')
+  async function logout() {
+    try {
+      await apiLogout()
+    } finally {
+      clearCsrfToken()
+      setSession(null)
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{
+      isAuthenticated: session?.authenticated === true,
+      isLoading,
+      session,
+      login,
+      logout,
+    }}>
       {children}
     </AuthContext.Provider>
   )

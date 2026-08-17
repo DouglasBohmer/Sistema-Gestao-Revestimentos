@@ -9,6 +9,57 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface LocalLoginRequest {
+  /** @minLength 1 */
+  username: string;
+  /** @minLength 1 */
+  password: string;
+}
+
+/**
+ * Forma usada para autenticar a identidade atual no RedeASSO.
+ * @nullable
+ */
+export type SessionResponseAuthType = typeof SessionResponseAuthType[keyof typeof SessionResponseAuthType] | null;
+
+
+export const SessionResponseAuthType = {
+  LOCAL: 'LOCAL',
+  AREA_CENTRAL: 'AREA_CENTRAL',
+} as const;
+
+export interface SessionResponse {
+  authenticated: boolean;
+  /** @nullable */
+  username?: string | null;
+  /**
+     * Forma usada para autenticar a identidade atual no RedeASSO.
+     * @nullable
+     */
+  authType?: SessionResponseAuthType;
+  /** Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada. */
+  areaCentralConnected: boolean;
+}
+
+export interface CsrfTokenResponse {
+  headerName: string;
+  parameterName: string;
+  token: string;
+}
+
+export interface ApiError {
+  /** Código estável e legível por máquina, como `INVALID_CREDENTIALS` ou `VALIDATION_ERROR`. */
+  code: string;
+  message: string;
+  /**
+     * @minimum 400
+     * @maximum 599
+     */
+  status: number;
+  timestamp: string;
+  path: string;
+}
+
 export interface Piso {
   id: number;
   nome: string;
@@ -56,7 +107,7 @@ export interface Piso {
   /** @nullable */
   linkFoto?: string | null;
   /**
-     * Valor em reais
+     * Preço de venda em reais por metro quadrado (R$/m²)
      * @nullable
      */
   valor?: number | null;
@@ -95,12 +146,12 @@ export interface CalculoInput {
 export interface CalculoResult {
   piso: Piso;
   metragemM2: number;
-  margemQuebra?: number;
+  margemQuebra: number;
   metragemComMargem: number;
-  /** Quantidade de caixas arredondada para cima (Math.ceil) */
+  /** Quantidade de caixas inteiras arredondada para cima */
   quantidadeCaixas: number;
   /**
-     * Valor total estimado em reais
+     * M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²
      * @nullable
      */
   valorTotal: number | null;
@@ -126,6 +177,108 @@ export interface Atividade {
 export interface GrupoTipo {
   tipo: string;
   total: number;
+}
+
+export interface MapaLabels {
+  top: string;
+  bottom: string;
+  left: string;
+  right: string;
+}
+
+export interface MapaLabelsInput {
+  /** @maxLength 160 */
+  top?: string;
+  /** @maxLength 160 */
+  bottom?: string;
+  /** @maxLength 160 */
+  left?: string;
+  /** @maxLength 160 */
+  right?: string;
+}
+
+export interface MapaCelula {
+  /** @minimum 1 */
+  pisoId: number;
+  /** @minimum 0 */
+  m2: number;
+  /** @minimum 0 */
+  caixas: number;
+}
+
+export type MapaCelulas = {[key: string]: MapaCelula[]};
+
+export interface Mapa {
+  id: number;
+  nome: string;
+  /**
+     * @minimum 1
+     * @maximum 26
+     */
+  linhas: number;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  colunas: number;
+  labels: MapaLabels;
+  celulas: MapaCelulas;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MapaCreateRequest {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  nome: string;
+  /**
+     * @minimum 1
+     * @maximum 26
+     */
+  linhas: number;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  colunas: number;
+  labels?: MapaLabelsInput;
+}
+
+export interface MapaUpdateRequest {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  nome?: string;
+  labels?: MapaLabelsInput;
+}
+
+export interface MapaCelulaInput {
+  /** @minimum 1 */
+  pisoId: number;
+  /** @minimum 0 */
+  m2?: number;
+  /** @minimum 0 */
+  caixas?: number;
+}
+
+/**
+ * Use `pisos` para o formato atual. Os campos pisoId/m2/caixas existem temporariamente para compatibilidade com o formato antigo de um piso.
+ */
+export interface MapaCellUpdateRequest {
+  /**
+     * @minItems 1
+     * @maxItems 4
+     */
+  pisos?: MapaCelulaInput[];
+  /** @minimum 1 */
+  pisoId?: number;
+  /** @minimum 0 */
+  m2?: number;
+  /** @minimum 0 */
+  caixas?: number;
 }
 
 export interface ErrorResponse {

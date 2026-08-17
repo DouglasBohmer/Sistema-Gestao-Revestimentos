@@ -1,0 +1,12 @@
+redeasso:
+  auth:
+    local:
+      enabled: ${REDEASSO_LOCAL_ADMIN_ENABLED:true}
+      username: ${REDEASSO_LOCAL_ADMIN_USERNAME:admin}
+      password: ${REDEASSO_LOCAL_ADMIN_PASSWORD:admin}
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false

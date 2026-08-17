@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./frontend-gestao-revestimento/lib/api-client-react" },
+    { "path": "./frontend-gestao-revestimento/lib/api-zod" }
+  ]
+}

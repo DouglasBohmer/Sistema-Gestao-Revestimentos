@@ -1,7 +1,20 @@
 import { useState } from "react"
 import { Layout } from "@/components/layout/Layout"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useListPisos, type Piso } from "@workspace/api-client-react"
+import {
+  clearMapaCell,
+  createMapa,
+  deleteMapa,
+  listMapas,
+  updateMapa,
+  updateMapaCell,
+  useListPisos,
+  type Mapa,
+  type MapaCelula,
+  type MapaCreateRequest,
+  type MapaUpdateRequest,
+  type Piso,
+} from "@workspace/api-client-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,44 +29,9 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Plus, Trash2, ArrowLeft, Map as MapIcon, Search } from "lucide-react"
 
-interface MapaCelula {
-  pisoId: number
-  m2: number
-  caixas: number
-}
-
-type CelulaArmazenada = MapaCelula | MapaCelula[]
-
-interface MapaEstoqueData {
-  id: number
-  nome: string
-  linhas: number
-  colunas: number
-  labels: { top: string; bottom: string; left: string; right: string }
-  celulas: Record<string, CelulaArmazenada>
-  createdAt: string
-  updatedAt: string
-}
-
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new Error(body?.message ?? `Erro ${res.status}`)
-  }
-  if (res.status === 204) return undefined as T
-  return res.json()
-}
-
 const letra = (i: number) => String.fromCharCode(65 + i)
 
-const pisosDaCelula = (celula?: CelulaArmazenada): MapaCelula[] => {
-  if (!celula) return []
-  return Array.isArray(celula) ? celula : [celula]
-}
+const pisosDaCelula = (celula?: MapaCelula[]): MapaCelula[] => celula ?? []
 
 export default function MapaEstoque() {
   const queryClient = useQueryClient()
@@ -68,16 +46,15 @@ export default function MapaEstoque() {
   const [linhas, setLinhas] = useState("3")
   const [colunas, setColunas] = useState("4")
 
-  const { data: mapas = [] } = useQuery<MapaEstoqueData[]>({
+  const { data: mapas = [] } = useQuery<Mapa[]>({
     queryKey: ["mapas"],
-    queryFn: () => apiFetch("/api/mapas"),
+    queryFn: () => listMapas(),
   })
 
   const mapa = mapas.find((m) => m.id === mapaAberto) ?? null
 
   const criarMutation = useMutation({
-    mutationFn: (body: object) =>
-      apiFetch<MapaEstoqueData>("/api/mapas", { method: "POST", body: JSON.stringify(body) }),
+    mutationFn: (body: MapaCreateRequest) => createMapa(body),
     onSuccess: (novo) => {
       queryClient.invalidateQueries({ queryKey: ["mapas"] })
       setNovoOpen(false)
@@ -88,14 +65,14 @@ export default function MapaEstoque() {
     onError: (e: Error) => toast({ title: "Erro ao criar mapa", description: e.message, variant: "destructive" }),
   })
 
-  const aplicarMapa = (atualizado: MapaEstoqueData) =>
-    queryClient.setQueryData<MapaEstoqueData[]>(["mapas"], (old) =>
+  const aplicarMapa = (atualizado: Mapa) =>
+    queryClient.setQueryData<Mapa[]>(["mapas"], (old) =>
       (old ?? []).map((m) => (m.id === atualizado.id ? atualizado : m))
     )
 
   const atualizarMutation = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: object }) =>
-      apiFetch<MapaEstoqueData>(`/api/mapas/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    mutationFn: ({ id, body }: { id: number; body: MapaUpdateRequest }) =>
+      updateMapa(id, body),
     onSuccess: aplicarMapa,
     onError: (e: Error) => toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" }),
   })
@@ -103,14 +80,14 @@ export default function MapaEstoque() {
   const celulaMutation = useMutation({
     mutationFn: ({ id, pos, celula }: { id: number; pos: string; celula: MapaCelula[] | null }) =>
       celula
-        ? apiFetch<MapaEstoqueData>(`/api/mapas/${id}/celulas/${pos}`, { method: "PUT", body: JSON.stringify({ pisos: celula }) })
-        : apiFetch<MapaEstoqueData>(`/api/mapas/${id}/celulas/${pos}`, { method: "DELETE" }),
+        ? updateMapaCell(id, pos, { pisos: celula })
+        : clearMapaCell(id, pos),
     onSuccess: aplicarMapa,
     onError: (e: Error) => toast({ title: "Erro ao salvar posição", description: e.message, variant: "destructive" }),
   })
 
   const apagarMutation = useMutation({
-    mutationFn: (id: number) => apiFetch(`/api/mapas/${id}`, { method: "DELETE" }),
+    mutationFn: (id: number) => deleteMapa(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mapas"] })
       setApagarId(null)
@@ -249,9 +226,9 @@ function MapaGrid({
   onSalvar,
   onSalvarCelula,
 }: {
-  mapa: MapaEstoqueData
+  mapa: Mapa
   onVoltar: () => void
-  onSalvar: (body: Partial<MapaEstoqueData>) => void
+  onSalvar: (body: MapaUpdateRequest) => void
   onSalvarCelula: (pos: string, celula: MapaCelula[] | null) => void
 }) {
   const [labels, setLabels] = useState(mapa.labels)

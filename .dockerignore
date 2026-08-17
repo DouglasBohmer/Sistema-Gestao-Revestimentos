@@ -1,29 +1,27 @@
-# Deps — never copy, always install inside Docker
-**/node_modules/
-
-# Git & Replit internals
 .git/
-.gitignore
+.github/
+.agents/
+.codex/
+.idea/
+.vscode/
 .replit
-.replit.new
-replit.nix
-.local/
-.upm/
-.cache/
-.config/
 
-# Build artefacts (rebuilt inside Docker)
+**/node_modules/
 **/dist/
 **/.vite/
+**/target/
+**/*.tsbuildinfo
 
-# Java backend (not used in the web container)
-backend-gestao-revestimento/
+.env
+.env.*
+!**/.env.example
 
-# Logs & temp files
+artifacts/
+attached_assets/
+lib/
+scripts/
+
 *.log
 *.log.*
-/tmp/
-
-# OS
-.DS_Store
 Thumbs.db
+.DS_Store

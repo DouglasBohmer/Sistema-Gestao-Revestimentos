@@ -10,10 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Autenticação e sessão do RedeASSO
   - name: pisos
     description: Pisos e revestimentos cerâmicos
   - name: dashboard
     description: Dashboard e métricas
+  - name: mapas
+    description: Mapas de localização dos pisos no estoque
 
 paths:
   /healthz:
@@ -29,6 +33,110 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/csrf:
+    get:
+      operationId: getCsrfToken
+      tags: [auth]
+      summary: Obter token CSRF
+      description: Inicia ou reutiliza a sessão do RedeASSO e retorna os dados necessários para enviar o token CSRF nas operações de escrita.
+      responses:
+        "200":
+          description: Token CSRF da sessão atual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfTokenResponse"
+
+  /auth/local/login:
+    post:
+      operationId: localLogin
+      tags: [auth]
+      summary: Entrar com credenciais locais
+      description: Autentica o usuário local e vincula a identidade à sessão do RedeASSO. Requer o token retornado por `/auth/csrf` no cabeçalho indicado por `headerName`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocalLoginRequest"
+      responses:
+        "200":
+          description: Login realizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+              example:
+                authenticated: true
+                username: usuario-local
+                authType: LOCAL
+                areaCentralConnected: false
+        "400":
+          description: Corpo da requisição inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Token CSRF ausente ou inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Consultar a sessão atual
+      description: >-
+        Retorna sempre o estado da sessão. Uma sessão anônima é representada
+        por `authenticated: false`, sem responder 401.
+      responses:
+        "200":
+          description: Estado atual da sessão
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+              examples:
+                authenticated:
+                  summary: Sessão local autenticada
+                  value:
+                    authenticated: true
+                    username: usuario-local
+                    authType: LOCAL
+                    areaCentralConnected: false
+                anonymous:
+                  summary: Sessão anônima
+                  value:
+                    authenticated: false
+                    username: null
+                    authType: null
+                    areaCentralConnected: false
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Encerrar a sessão atual
+      description: Invalida a sessão do RedeASSO e exige um token CSRF válido.
+      responses:
+        "204":
+          description: Sessão encerrada
+        "403":
+          description: Token CSRF ausente ou inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
   /pisos:
     get:
@@ -109,7 +217,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-
     put:
       operationId: updatePiso
       tags: [pisos]
@@ -159,6 +266,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Piso vinculado a uma posição do mapa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /pisos/codigo/{codigo}:
     get:
@@ -204,12 +317,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CalculoResult"
+        "400":
+          description: Código, metragem ou margem inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "404":
           description: Piso não encontrado
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ApiError"
 
   /dashboard/stats:
     get:
@@ -254,7 +373,181 @@ paths:
                 items:
                   $ref: "#/components/schemas/GrupoTipo"
 
+  /mapas:
+    get:
+      operationId: listMapas
+      tags: [mapas]
+      summary: Listar mapas completos
+      responses:
+        "200":
+          description: Mapas e respectivas posições
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mapa"
+    post:
+      operationId: createMapa
+      tags: [mapas]
+      summary: Criar mapa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapaCreateRequest"
+      responses:
+        "201":
+          description: Mapa criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mapa"
+        "400":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /mapas/{id}:
+    parameters:
+      - $ref: "#/components/parameters/MapaId"
+    get:
+      operationId: getMapa
+      tags: [mapas]
+      summary: Buscar mapa completo
+      responses:
+        "200":
+          description: Mapa encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mapa"
+        "404":
+          description: Mapa não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: updateMapa
+      tags: [mapas]
+      summary: Atualizar nome ou rótulos do mapa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapaUpdateRequest"
+      responses:
+        "200":
+          description: Mapa completo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mapa"
+        "400":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Mapa não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteMapa
+      tags: [mapas]
+      summary: Excluir mapa e suas posições
+      responses:
+        "204":
+          description: Mapa excluído
+        "404":
+          description: Mapa não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /mapas/{id}/celulas/{pos}:
+    parameters:
+      - $ref: "#/components/parameters/MapaId"
+      - name: pos
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^[A-Z]([1-9]|[1-4][0-9]|50)$"
+        description: Posição do mapa, por exemplo A1 ou C12
+    put:
+      operationId: updateMapaCell
+      tags: [mapas]
+      summary: Salvar de um a quatro pisos em uma posição
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapaCellUpdateRequest"
+      responses:
+        "200":
+          description: Mapa completo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mapa"
+        "400":
+          description: Posição, piso ou quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Mapa não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: clearMapaCell
+      tags: [mapas]
+      summary: Limpar uma posição
+      responses:
+        "200":
+          description: Mapa completo atualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mapa"
+        "400":
+          description: Posição inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Mapa não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
+  parameters:
+    MapaId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
   schemas:
     HealthStatus:
       type: object
@@ -263,6 +556,81 @@ components:
           type: string
       required:
         - status
+
+    LocalLoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+          writeOnly: true
+
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - authenticated
+        - areaCentralConnected
+      properties:
+        authenticated:
+          type: boolean
+        username:
+          type: ["string", "null"]
+        authType:
+          type: ["string", "null"]
+          enum: [LOCAL, AREA_CENTRAL, null]
+          description: Forma usada para autenticar a identidade atual no RedeASSO.
+        areaCentralConnected:
+          type: boolean
+          description: Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.
+
+    CsrfTokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - headerName
+        - parameterName
+        - token
+      properties:
+        headerName:
+          type: string
+        parameterName:
+          type: string
+        token:
+          type: string
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - status
+        - timestamp
+        - path
+      properties:
+        code:
+          type: string
+          description: Código estável e legível por máquina, como `INVALID_CREDENTIALS` ou `VALIDATION_ERROR`.
+        message:
+          type: string
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
 
     Piso:
       type: object
@@ -312,7 +680,7 @@ components:
           type: ["string", "null"]
         valor:
           type: ["number", "null"]
-          description: Valor em reais
+          description: Preço de venda em reais por metro quadrado (R$/m²)
         createdAt:
           type: string
           format: date-time
@@ -380,6 +748,7 @@ components:
       required:
         - piso
         - metragemM2
+        - margemQuebra
         - metragemComMargem
         - quantidadeCaixas
         - valorTotal
@@ -393,11 +762,12 @@ components:
         metragemComMargem:
           type: number
         quantidadeCaixas:
-          type: number
-          description: Quantidade de caixas arredondada para cima (Math.ceil)
+          type: integer
+          format: int64
+          description: Quantidade de caixas inteiras arredondada para cima
         valorTotal:
           type: ["number", "null"]
-          description: Valor total estimado em reais
+          description: M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²
 
     DashboardStats:
       type: object
@@ -447,6 +817,159 @@ components:
           type: string
         total:
           type: number
+
+    MapaLabels:
+      type: object
+      additionalProperties: false
+      required: [top, bottom, left, right]
+      properties:
+        top:
+          type: string
+        bottom:
+          type: string
+        left:
+          type: string
+        right:
+          type: string
+
+    MapaLabelsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        top:
+          type: string
+          maxLength: 160
+        bottom:
+          type: string
+          maxLength: 160
+        left:
+          type: string
+          maxLength: 160
+        right:
+          type: string
+          maxLength: 160
+
+    MapaCelula:
+      type: object
+      additionalProperties: false
+      required: [pisoId, m2, caixas]
+      properties:
+        pisoId:
+          type: integer
+          format: int64
+          minimum: 1
+        m2:
+          type: number
+          minimum: 0
+        caixas:
+          type: integer
+          minimum: 0
+
+    Mapa:
+      type: object
+      additionalProperties: false
+      required: [id, nome, linhas, colunas, labels, celulas, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        linhas:
+          type: integer
+          minimum: 1
+          maximum: 26
+        colunas:
+          type: integer
+          minimum: 1
+          maximum: 50
+        labels:
+          $ref: "#/components/schemas/MapaLabels"
+        celulas:
+          type: object
+          additionalProperties:
+            type: array
+            minItems: 1
+            maxItems: 4
+            items:
+              $ref: "#/components/schemas/MapaCelula"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MapaCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [nome, linhas, colunas]
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 160
+        linhas:
+          type: integer
+          minimum: 1
+          maximum: 26
+        colunas:
+          type: integer
+          minimum: 1
+          maximum: 50
+        labels:
+          $ref: "#/components/schemas/MapaLabelsInput"
+
+    MapaUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 160
+        labels:
+          $ref: "#/components/schemas/MapaLabelsInput"
+
+    MapaCelulaInput:
+      type: object
+      additionalProperties: false
+      required: [pisoId]
+      properties:
+        pisoId:
+          type: integer
+          format: int64
+          minimum: 1
+        m2:
+          type: number
+          minimum: 0
+        caixas:
+          type: number
+          minimum: 0
+
+    MapaCellUpdateRequest:
+      type: object
+      additionalProperties: false
+      description: >-
+        Use `pisos` para o formato atual. Os campos pisoId/m2/caixas existem
+        temporariamente para compatibilidade com o formato antigo de um piso.
+      properties:
+        pisos:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/MapaCelulaInput"
+        pisoId:
+          type: integer
+          format: int64
+          minimum: 1
+        m2:
+          type: number
+          minimum: 0
+        caixas:
+          type: number
+          minimum: 0
 
     ErrorResponse:
       type: object

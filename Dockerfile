@@ -1,59 +1,60 @@
-# ─── Stage 1: Build ──────────────────────────────────────────────────────────
-FROM node:22-slim AS builder
+# syntax=docker/dockerfile:1.7
 
-# Enable corepack and install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# O frontend e o backend são compilados separadamente. A imagem final contém
+# somente o JRE, o JAR Spring e os arquivos estáticos gerados pelo Vite.
+FROM node:22-slim AS frontend-build
+
+RUN corepack enable && corepack prepare pnpm@11.21.0 --activate
+
+WORKDIR /workspace
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.base.json ./
+COPY frontend-gestao-revestimento/package.json frontend-gestao-revestimento/tsconfig.json frontend-gestao-revestimento/tsconfig.base.json ./frontend-gestao-revestimento/
+COPY frontend-gestao-revestimento/lib/api-client-react/package.json ./frontend-gestao-revestimento/lib/api-client-react/
+COPY frontend-gestao-revestimento/lib/api-zod/package.json ./frontend-gestao-revestimento/lib/api-zod/
+
+RUN --mount=type=cache,id=redeasso-pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter @workspace/redeasso...
+
+COPY frontend-gestao-revestimento ./frontend-gestao-revestimento
+
+RUN PORT=5000 BASE_PATH=/ pnpm --filter @workspace/redeasso run build
+
+
+FROM eclipse-temurin:21-jdk-jammy AS backend-build
+
+WORKDIR /workspace/backend-gestao-revestimento
+
+COPY backend-gestao-revestimento/.mvn .mvn
+COPY backend-gestao-revestimento/mvnw backend-gestao-revestimento/mvnw.cmd backend-gestao-revestimento/pom.xml ./
+
+# O checkout pode ter sido feito no Windows (CRLF); normalize o wrapper para o
+# shell Linux sem alterar a configuração local do desenvolvedor.
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+RUN --mount=type=cache,id=redeasso-maven,target=/root/.m2 \
+    ./mvnw -B -ntp dependency:go-offline
+
+COPY backend-gestao-revestimento/src ./src
+COPY --from=frontend-build /workspace/frontend-gestao-revestimento/dist/public ./src/main/resources/static
+
+# Executa os testes unitários antes de produzir o artefato de produção.
+RUN --mount=type=cache,id=redeasso-maven,target=/root/.m2 \
+    ./mvnw -B -ntp package
+
+
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+RUN addgroup -S redeasso && adduser -S -G redeasso redeasso
 
 WORKDIR /app
 
-# Copy workspace-level files first (better layer caching)
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY --from=backend-build --chown=redeasso:redeasso \
+    /workspace/backend-gestao-revestimento/target/*.jar /app/redeasso.jar
 
-# Copy package.json for every workspace package
-COPY frontend-gestao-revestimento/package.json                    ./frontend-gestao-revestimento/
-COPY frontend-gestao-revestimento/tsconfig.json                   ./frontend-gestao-revestimento/
-COPY frontend-gestao-revestimento/tsconfig.base.json              ./frontend-gestao-revestimento/
-COPY frontend-gestao-revestimento/lib/api-client-react/package.json ./frontend-gestao-revestimento/lib/api-client-react/
-COPY frontend-gestao-revestimento/lib/api-zod/package.json        ./frontend-gestao-revestimento/lib/api-zod/
-COPY frontend-gestao-revestimento/lib/db/package.json             ./frontend-gestao-revestimento/lib/db/
-
-# Install ALL dependencies (dev included — needed for tsx + vite build)
-RUN pnpm install --frozen-lockfile
-
-# Copy the rest of the source
-COPY frontend-gestao-revestimento ./frontend-gestao-revestimento/
-
-# Build the Vite frontend (static output → dist/public)
-RUN PORT=8080 BASE_PATH=/ pnpm --filter @workspace/redeasso run build
-
-# ─── Stage 2: Runtime ────────────────────────────────────────────────────────
-FROM node:22-slim AS runtime
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-WORKDIR /app
-
-# Workspace manifests
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
-COPY frontend-gestao-revestimento/package.json                    ./frontend-gestao-revestimento/
-COPY frontend-gestao-revestimento/tsconfig.base.json              ./frontend-gestao-revestimento/
-COPY frontend-gestao-revestimento/lib/api-client-react/package.json ./frontend-gestao-revestimento/lib/api-client-react/
-COPY frontend-gestao-revestimento/lib/api-zod/package.json        ./frontend-gestao-revestimento/lib/api-zod/
-COPY frontend-gestao-revestimento/lib/db/package.json             ./frontend-gestao-revestimento/lib/db/
-
-# Install production deps only (express) + tsx for running the server TS file
-# tsx is a devDep so we install all deps but skip heavy build-only tools
-RUN pnpm install --frozen-lockfile --ignore-scripts
-
-# Copy built frontend from builder stage
-COPY --from=builder /app/frontend-gestao-revestimento/dist ./frontend-gestao-revestimento/dist
-
-# Copy server source
-COPY frontend-gestao-revestimento/server ./frontend-gestao-revestimento/server
+USER redeasso
 
 EXPOSE 8080
 
-ENV PORT=8080
-ENV NODE_ENV=production
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
 
-CMD ["./frontend-gestao-revestimento/node_modules/.bin/tsx", "frontend-gestao-revestimento/server/index.ts"]
+ENTRYPOINT ["java", "-jar", "/app/redeasso.jar"]

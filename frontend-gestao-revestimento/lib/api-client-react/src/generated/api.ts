@@ -20,16 +20,24 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiError,
   Atividade,
   CalculoInput,
   CalculoResult,
+  CsrfTokenResponse,
   DashboardStats,
   ErrorResponse,
   GrupoTipo,
   HealthStatus,
   ListPisosParams,
+  LocalLoginRequest,
+  Mapa,
+  MapaCellUpdateRequest,
+  MapaCreateRequest,
+  MapaUpdateRequest,
   Piso,
-  PisoInput
+  PisoInput,
+  SessionResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -136,6 +144,306 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+export const getGetCsrfTokenUrl = () => {
+
+
+
+
+  return `/api/auth/csrf`
+}
+
+/**
+ * Inicia ou reutiliza a sessão do RedeASSO e retorna os dados necessários para enviar o token CSRF nas operações de escrita.
+ * @summary Obter token CSRF
+ */
+export const getCsrfToken = async ( options?: Parameters<typeof customFetch>[1]): Promise<CsrfTokenResponse> => {
+
+  return customFetch<CsrfTokenResponse>(getGetCsrfTokenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCsrfTokenQueryKey = () => {
+    return [
+    `/api/auth/csrf`
+    ] as const;
+    }
+
+
+export const getGetCsrfTokenQueryOptions = <TData = Awaited<ReturnType<typeof getCsrfToken>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCsrfToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCsrfTokenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCsrfToken>>> = ({ signal }) => getCsrfToken({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCsrfToken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCsrfTokenQueryResult = NonNullable<Awaited<ReturnType<typeof getCsrfToken>>>
+export type GetCsrfTokenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Obter token CSRF
+ */
+
+export function useGetCsrfToken<TData = Awaited<ReturnType<typeof getCsrfToken>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCsrfToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCsrfTokenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLocalLoginUrl = () => {
+
+
+
+
+  return `/api/auth/local/login`
+}
+
+/**
+ * Autentica o usuário local e vincula a identidade à sessão do RedeASSO. Requer o token retornado por `/auth/csrf` no cabeçalho indicado por `headerName`.
+ * @summary Entrar com credenciais locais
+ */
+export const localLogin = async (localLoginRequest: LocalLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<SessionResponse> => {
+
+  return customFetch<SessionResponse>(getLocalLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(localLoginRequest)
+  }
+);}
+
+
+
+
+
+export const getLocalLoginMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof localLogin>>, TError,{data: BodyType<LocalLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof localLogin>>, TError,{data: BodyType<LocalLoginRequest>}, TContext> => {
+
+const mutationKey = ['localLogin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof localLogin>>, {data: BodyType<LocalLoginRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  localLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LocalLoginMutationResult = NonNullable<Awaited<ReturnType<typeof localLogin>>>
+    export type LocalLoginMutationBody = BodyType<LocalLoginRequest>
+    export type LocalLoginMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Entrar com credenciais locais
+ */
+export const useLocalLogin = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof localLogin>>, TError,{data: BodyType<LocalLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof localLogin>>,
+        TError,
+        {data: BodyType<LocalLoginRequest>},
+        TContext
+      > => {
+      return useMutation(getLocalLoginMutationOptions(options));
+    }
+
+export const getGetAuthSessionUrl = () => {
+
+
+
+
+  return `/api/auth/session`
+}
+
+/**
+ * Retorna sempre o estado da sessão. Uma sessão anônima é representada por `authenticated: false`, sem responder 401.
+ * @summary Consultar a sessão atual
+ */
+export const getAuthSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<SessionResponse> => {
+
+  return customFetch<SessionResponse>(getGetAuthSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuthSessionQueryKey = () => {
+    return [
+    `/api/auth/session`
+    ] as const;
+    }
+
+
+export const getGetAuthSessionQueryOptions = <TData = Awaited<ReturnType<typeof getAuthSession>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuthSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuthSession>>> = ({ signal }) => getAuthSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuthSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getAuthSession>>>
+export type GetAuthSessionQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Consultar a sessão atual
+ */
+
+export function useGetAuthSession<TData = Awaited<ReturnType<typeof getAuthSession>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuthSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuthSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLogoutUrl = () => {
+
+
+
+
+  return `/api/auth/logout`
+}
+
+/**
+ * Invalida a sessão do RedeASSO e exige um token CSRF válido.
+ * @summary Encerrar a sessão atual
+ */
+export const logout = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext> => {
+
+const mutationKey = ['logout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+
+
+          return  logout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>
+
+    export type LogoutMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Encerrar a sessão atual
+ */
+export const useLogout = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutMutationOptions(options));
+    }
 
 export const getListPisosUrl = (params?: ListPisosParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -615,7 +923,7 @@ export const calcularPiso = async (calculoInput: CalculoInput, options?: Paramet
 
 
 
-export const getCalcularPisoMutationOptions = <TError = ErrorType<ErrorResponse>,
+export const getCalcularPisoMutationOptions = <TError = ErrorType<ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calcularPiso>>, TError,{data: BodyType<CalculoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof calcularPiso>>, TError,{data: BodyType<CalculoInput>}, TContext> => {
 
@@ -644,12 +952,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CalcularPisoMutationResult = NonNullable<Awaited<ReturnType<typeof calcularPiso>>>
     export type CalcularPisoMutationBody = BodyType<CalculoInput>
-    export type CalcularPisoMutationError = ErrorType<ErrorResponse>
+    export type CalcularPisoMutationError = ErrorType<ApiError>
 
     /**
  * @summary Calcular quantidade de caixas necessárias
  */
-export const useCalcularPiso = <TError = ErrorType<ErrorResponse>,
+export const useCalcularPiso = <TError = ErrorType<ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof calcularPiso>>, TError,{data: BodyType<CalculoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof calcularPiso>>,
@@ -890,4 +1198,519 @@ export function useGetPisosPorTipo<TData = Awaited<ReturnType<typeof getPisosPor
 
 
 
+
+export const getListMapasUrl = () => {
+
+
+
+
+  return `/api/mapas`
+}
+
+/**
+ * @summary Listar mapas completos
+ */
+export const listMapas = async ( options?: Parameters<typeof customFetch>[1]): Promise<Mapa[]> => {
+
+  return customFetch<Mapa[]>(getListMapasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMapasQueryKey = () => {
+    return [
+    `/api/mapas`
+    ] as const;
+    }
+
+
+export const getListMapasQueryOptions = <TData = Awaited<ReturnType<typeof listMapas>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMapas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMapasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMapas>>> = ({ signal }) => listMapas({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMapas>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMapasQueryResult = NonNullable<Awaited<ReturnType<typeof listMapas>>>
+export type ListMapasQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Listar mapas completos
+ */
+
+export function useListMapas<TData = Awaited<ReturnType<typeof listMapas>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMapas>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMapasQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateMapaUrl = () => {
+
+
+
+
+  return `/api/mapas`
+}
+
+/**
+ * @summary Criar mapa
+ */
+export const createMapa = async (mapaCreateRequest: MapaCreateRequest, options?: Parameters<typeof customFetch>[1]): Promise<Mapa> => {
+
+  return customFetch<Mapa>(getCreateMapaUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mapaCreateRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateMapaMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMapa>>, TError,{data: BodyType<MapaCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMapa>>, TError,{data: BodyType<MapaCreateRequest>}, TContext> => {
+
+const mutationKey = ['createMapa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMapa>>, {data: BodyType<MapaCreateRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMapa(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMapaMutationResult = NonNullable<Awaited<ReturnType<typeof createMapa>>>
+    export type CreateMapaMutationBody = BodyType<MapaCreateRequest>
+    export type CreateMapaMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Criar mapa
+ */
+export const useCreateMapa = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMapa>>, TError,{data: BodyType<MapaCreateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMapa>>,
+        TError,
+        {data: BodyType<MapaCreateRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateMapaMutationOptions(options));
+    }
+
+export const getGetMapaUrl = (id: number,) => {
+
+
+
+
+  return `/api/mapas/${id}`
+}
+
+/**
+ * @summary Buscar mapa completo
+ */
+export const getMapa = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Mapa> => {
+
+  return customFetch<Mapa>(getGetMapaUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMapaQueryKey = (id: number,) => {
+    return [
+    `/api/mapas/${id}`
+    ] as const;
+    }
+
+
+export const getGetMapaQueryOptions = <TData = Awaited<ReturnType<typeof getMapa>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMapa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMapaQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMapa>>> = ({ signal }) => getMapa(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMapa>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMapaQueryResult = NonNullable<Awaited<ReturnType<typeof getMapa>>>
+export type GetMapaQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Buscar mapa completo
+ */
+
+export function useGetMapa<TData = Awaited<ReturnType<typeof getMapa>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMapa>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMapaQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateMapaUrl = (id: number,) => {
+
+
+
+
+  return `/api/mapas/${id}`
+}
+
+/**
+ * @summary Atualizar nome ou rótulos do mapa
+ */
+export const updateMapa = async (id: number,
+    mapaUpdateRequest: MapaUpdateRequest, options?: Parameters<typeof customFetch>[1]): Promise<Mapa> => {
+
+  return customFetch<Mapa>(getUpdateMapaUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mapaUpdateRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateMapaMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMapa>>, TError,{id: number;data: BodyType<MapaUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMapa>>, TError,{id: number;data: BodyType<MapaUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateMapa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMapa>>, {id: number;data: BodyType<MapaUpdateRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMapa(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMapaMutationResult = NonNullable<Awaited<ReturnType<typeof updateMapa>>>
+    export type UpdateMapaMutationBody = BodyType<MapaUpdateRequest>
+    export type UpdateMapaMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Atualizar nome ou rótulos do mapa
+ */
+export const useUpdateMapa = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMapa>>, TError,{id: number;data: BodyType<MapaUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMapa>>,
+        TError,
+        {id: number;data: BodyType<MapaUpdateRequest>},
+        TContext
+      > => {
+      return useMutation(getUpdateMapaMutationOptions(options));
+    }
+
+export const getDeleteMapaUrl = (id: number,) => {
+
+
+
+
+  return `/api/mapas/${id}`
+}
+
+/**
+ * @summary Excluir mapa e suas posições
+ */
+export const deleteMapa = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteMapaUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMapaMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMapa>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMapa>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMapa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMapa>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMapa(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMapaMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMapa>>>
+
+    export type DeleteMapaMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Excluir mapa e suas posições
+ */
+export const useDeleteMapa = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMapa>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMapa>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMapaMutationOptions(options));
+    }
+
+export const getUpdateMapaCellUrl = (id: number,
+    pos: string,) => {
+
+
+
+
+  return `/api/mapas/${id}/celulas/${pos}`
+}
+
+/**
+ * @summary Salvar de um a quatro pisos em uma posição
+ */
+export const updateMapaCell = async (id: number,
+    pos: string,
+    mapaCellUpdateRequest: MapaCellUpdateRequest, options?: Parameters<typeof customFetch>[1]): Promise<Mapa> => {
+
+  return customFetch<Mapa>(getUpdateMapaCellUrl(id,pos),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mapaCellUpdateRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateMapaCellMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMapaCell>>, TError,{id: number;pos: string;data: BodyType<MapaCellUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMapaCell>>, TError,{id: number;pos: string;data: BodyType<MapaCellUpdateRequest>}, TContext> => {
+
+const mutationKey = ['updateMapaCell'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMapaCell>>, {id: number;pos: string;data: BodyType<MapaCellUpdateRequest>}> = (props) => {
+          const {id,pos,data} = props ?? {};
+
+          return  updateMapaCell(id,pos,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMapaCellMutationResult = NonNullable<Awaited<ReturnType<typeof updateMapaCell>>>
+    export type UpdateMapaCellMutationBody = BodyType<MapaCellUpdateRequest>
+    export type UpdateMapaCellMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Salvar de um a quatro pisos em uma posição
+ */
+export const useUpdateMapaCell = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMapaCell>>, TError,{id: number;pos: string;data: BodyType<MapaCellUpdateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMapaCell>>,
+        TError,
+        {id: number;pos: string;data: BodyType<MapaCellUpdateRequest>},
+        TContext
+      > => {
+      return useMutation(getUpdateMapaCellMutationOptions(options));
+    }
+
+export const getClearMapaCellUrl = (id: number,
+    pos: string,) => {
+
+
+
+
+  return `/api/mapas/${id}/celulas/${pos}`
+}
+
+/**
+ * @summary Limpar uma posição
+ */
+export const clearMapaCell = async (id: number,
+    pos: string, options?: Parameters<typeof customFetch>[1]): Promise<Mapa> => {
+
+  return customFetch<Mapa>(getClearMapaCellUrl(id,pos),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getClearMapaCellMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearMapaCell>>, TError,{id: number;pos: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof clearMapaCell>>, TError,{id: number;pos: string}, TContext> => {
+
+const mutationKey = ['clearMapaCell'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearMapaCell>>, {id: number;pos: string}> = (props) => {
+          const {id,pos} = props ?? {};
+
+          return  clearMapaCell(id,pos,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClearMapaCellMutationResult = NonNullable<Awaited<ReturnType<typeof clearMapaCell>>>
+
+    export type ClearMapaCellMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Limpar uma posição
+ */
+export const useClearMapaCell = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearMapaCell>>, TError,{id: number;pos: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof clearMapaCell>>,
+        TError,
+        {id: number;pos: string},
+        TContext
+      > => {
+      return useMutation(getClearMapaCellMutationOptions(options));
+    }
 

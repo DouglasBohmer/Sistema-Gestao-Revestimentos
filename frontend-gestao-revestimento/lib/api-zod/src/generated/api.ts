@@ -18,6 +18,57 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * Inicia ou reutiliza a sessão do RedeASSO e retorna os dados necessários para enviar o token CSRF nas operações de escrita.
+ * @summary Obter token CSRF
+ */
+export const GetCsrfTokenResponse = zod.object({
+  "headerName": zod.string(),
+  "parameterName": zod.string(),
+  "token": zod.string()
+})
+
+
+/**
+ * Autentica o usuário local e vincula a identidade à sessão do RedeASSO. Requer o token retornado por `/auth/csrf` no cabeçalho indicado por `headerName`.
+ * @summary Entrar com credenciais locais
+ */
+
+
+
+
+export const LocalLoginBody = zod.object({
+  "username": zod.string().min(1),
+  "password": zod.string().min(1)
+})
+
+export const LocalLoginResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "username": zod.string().nullish(),
+  "authType": zod.union([zod.literal('LOCAL'),zod.literal('AREA_CENTRAL'),zod.literal(null)]).nullish().describe('Forma usada para autenticar a identidade atual no RedeASSO.'),
+  "areaCentralConnected": zod.boolean().describe('Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.')
+})
+
+
+/**
+ * Retorna sempre o estado da sessão. Uma sessão anônima é representada por `authenticated: false`, sem responder 401.
+ * @summary Consultar a sessão atual
+ */
+export const GetAuthSessionResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "username": zod.string().nullish(),
+  "authType": zod.union([zod.literal('LOCAL'),zod.literal('AREA_CENTRAL'),zod.literal(null)]).nullish().describe('Forma usada para autenticar a identidade atual no RedeASSO.'),
+  "areaCentralConnected": zod.boolean().describe('Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.')
+})
+
+
+/**
+ * Invalida a sessão do RedeASSO e exige um token CSRF válido.
+ * @summary Encerrar a sessão atual
+ */
+export const LogoutResponse = zod.void()
+
+
+/**
  * @summary Listar todos os pisos
  */
 export const ListPisosQueryParams = zod.object({
@@ -42,7 +93,7 @@ export const ListPisosResponseItem = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -86,7 +137,7 @@ export const CreatePisoResponse = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -115,7 +166,7 @@ export const GetPisoResponse = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -162,7 +213,7 @@ export const UpdatePisoResponse = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -201,7 +252,7 @@ export const GetPisoByCodigoResponse = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -235,15 +286,15 @@ export const CalcularPisoResponse = zod.object({
   "retificado": zod.boolean().nullish(),
   "linkSite": zod.string().nullish(),
   "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Valor em reais'),
+  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }),
   "metragemM2": zod.number(),
-  "margemQuebra": zod.number().optional(),
+  "margemQuebra": zod.number(),
   "metragemComMargem": zod.number(),
-  "quantidadeCaixas": zod.number().describe('Quantidade de caixas arredondada para cima (Math.ceil)'),
-  "valorTotal": zod.number().nullable().describe('Valor total estimado em reais')
+  "quantidadeCaixas": zod.number().int().describe('Quantidade de caixas inteiras arredondada para cima'),
+  "valorTotal": zod.number().nullable().describe('M² efetivamente vendidos (caixas x m²\/caixa) multiplicados pelo preço em R$\/m²')
 })
 
 
@@ -279,5 +330,348 @@ export const GetPisosPorTipoResponseItem = zod.object({
   "total": zod.number()
 })
 export const GetPisosPorTipoResponse = zod.array(GetPisosPorTipoResponseItem)
+
+
+/**
+ * @summary Listar mapas completos
+ */
+export const listMapasResponseLinhasMax = 26;
+
+export const listMapasResponseColunasMax = 50;
+
+
+export const listMapasResponseCelulasItemM2Min = 0;
+
+export const listMapasResponseCelulasItemCaixasMin = 0;
+
+export const listMapasResponseCelulasMaxOne = 4;
+
+
+
+export const ListMapasResponseItem = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(listMapasResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(listMapasResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(listMapasResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(listMapasResponseCelulasItemCaixasMin)
+})).min(1).max(listMapasResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListMapasResponse = zod.array(ListMapasResponseItem)
+
+
+/**
+ * @summary Criar mapa
+ */
+export const createMapaBodyNomeMax = 160;
+
+export const createMapaBodyLinhasMax = 26;
+
+export const createMapaBodyColunasMax = 50;
+
+export const createMapaBodyLabelsTopMax = 160;
+
+export const createMapaBodyLabelsBottomMax = 160;
+
+export const createMapaBodyLabelsLeftMax = 160;
+
+export const createMapaBodyLabelsRightMax = 160;
+
+
+
+export const CreateMapaBody = zod.object({
+  "nome": zod.string().min(1).max(createMapaBodyNomeMax),
+  "linhas": zod.number().int().min(1).max(createMapaBodyLinhasMax),
+  "colunas": zod.number().int().min(1).max(createMapaBodyColunasMax),
+  "labels": zod.object({
+  "top": zod.string().max(createMapaBodyLabelsTopMax).optional(),
+  "bottom": zod.string().max(createMapaBodyLabelsBottomMax).optional(),
+  "left": zod.string().max(createMapaBodyLabelsLeftMax).optional(),
+  "right": zod.string().max(createMapaBodyLabelsRightMax).optional()
+}).optional()
+})
+
+export const createMapaResponseLinhasMax = 26;
+
+export const createMapaResponseColunasMax = 50;
+
+
+export const createMapaResponseCelulasItemM2Min = 0;
+
+export const createMapaResponseCelulasItemCaixasMin = 0;
+
+export const createMapaResponseCelulasMaxOne = 4;
+
+
+
+export const CreateMapaResponse = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(createMapaResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(createMapaResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(createMapaResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(createMapaResponseCelulasItemCaixasMin)
+})).min(1).max(createMapaResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Buscar mapa completo
+ */
+
+
+
+export const GetMapaParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const getMapaResponseLinhasMax = 26;
+
+export const getMapaResponseColunasMax = 50;
+
+
+export const getMapaResponseCelulasItemM2Min = 0;
+
+export const getMapaResponseCelulasItemCaixasMin = 0;
+
+export const getMapaResponseCelulasMaxOne = 4;
+
+
+
+export const GetMapaResponse = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(getMapaResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(getMapaResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(getMapaResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(getMapaResponseCelulasItemCaixasMin)
+})).min(1).max(getMapaResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Atualizar nome ou rótulos do mapa
+ */
+
+
+
+export const UpdateMapaParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const updateMapaBodyNomeMax = 160;
+
+export const updateMapaBodyLabelsTopMax = 160;
+
+export const updateMapaBodyLabelsBottomMax = 160;
+
+export const updateMapaBodyLabelsLeftMax = 160;
+
+export const updateMapaBodyLabelsRightMax = 160;
+
+
+
+export const UpdateMapaBody = zod.object({
+  "nome": zod.string().min(1).max(updateMapaBodyNomeMax).optional(),
+  "labels": zod.object({
+  "top": zod.string().max(updateMapaBodyLabelsTopMax).optional(),
+  "bottom": zod.string().max(updateMapaBodyLabelsBottomMax).optional(),
+  "left": zod.string().max(updateMapaBodyLabelsLeftMax).optional(),
+  "right": zod.string().max(updateMapaBodyLabelsRightMax).optional()
+}).optional()
+})
+
+export const updateMapaResponseLinhasMax = 26;
+
+export const updateMapaResponseColunasMax = 50;
+
+
+export const updateMapaResponseCelulasItemM2Min = 0;
+
+export const updateMapaResponseCelulasItemCaixasMin = 0;
+
+export const updateMapaResponseCelulasMaxOne = 4;
+
+
+
+export const UpdateMapaResponse = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(updateMapaResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(updateMapaResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(updateMapaResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(updateMapaResponseCelulasItemCaixasMin)
+})).min(1).max(updateMapaResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Excluir mapa e suas posições
+ */
+
+
+
+export const DeleteMapaParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const DeleteMapaResponse = zod.void()
+
+
+/**
+ * @summary Salvar de um a quatro pisos em uma posição
+ */
+
+export const updateMapaCellPathPosRegExp = new RegExp('^[A-Z]([1-9]|[1-4][0-9]|50)$');
+
+
+export const UpdateMapaCellParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "pos": zod.coerce.string().regex(updateMapaCellPathPosRegExp).describe('Posição do mapa, por exemplo A1 ou C12')
+})
+
+
+export const updateMapaCellBodyPisosItemM2Min = 0;
+
+export const updateMapaCellBodyPisosItemCaixasMin = 0;
+
+export const updateMapaCellBodyPisosMax = 4;
+
+
+export const updateMapaCellBodyM2Min = 0;
+
+export const updateMapaCellBodyCaixasMin = 0;
+
+
+
+export const UpdateMapaCellBody = zod.object({
+  "pisos": zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(updateMapaCellBodyPisosItemM2Min).optional(),
+  "caixas": zod.number().min(updateMapaCellBodyPisosItemCaixasMin).optional()
+})).min(1).max(updateMapaCellBodyPisosMax).optional(),
+  "pisoId": zod.number().int().min(1).optional(),
+  "m2": zod.number().min(updateMapaCellBodyM2Min).optional(),
+  "caixas": zod.number().min(updateMapaCellBodyCaixasMin).optional()
+}).describe('Use `pisos` para o formato atual. Os campos pisoId\/m2\/caixas existem temporariamente para compatibilidade com o formato antigo de um piso.')
+
+export const updateMapaCellResponseLinhasMax = 26;
+
+export const updateMapaCellResponseColunasMax = 50;
+
+
+export const updateMapaCellResponseCelulasItemM2Min = 0;
+
+export const updateMapaCellResponseCelulasItemCaixasMin = 0;
+
+export const updateMapaCellResponseCelulasMaxOne = 4;
+
+
+
+export const UpdateMapaCellResponse = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(updateMapaCellResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(updateMapaCellResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(updateMapaCellResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(updateMapaCellResponseCelulasItemCaixasMin)
+})).min(1).max(updateMapaCellResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Limpar uma posição
+ */
+
+export const clearMapaCellPathPosRegExp = new RegExp('^[A-Z]([1-9]|[1-4][0-9]|50)$');
+
+
+export const ClearMapaCellParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "pos": zod.coerce.string().regex(clearMapaCellPathPosRegExp).describe('Posição do mapa, por exemplo A1 ou C12')
+})
+
+export const clearMapaCellResponseLinhasMax = 26;
+
+export const clearMapaCellResponseColunasMax = 50;
+
+
+export const clearMapaCellResponseCelulasItemM2Min = 0;
+
+export const clearMapaCellResponseCelulasItemCaixasMin = 0;
+
+export const clearMapaCellResponseCelulasMaxOne = 4;
+
+
+
+export const ClearMapaCellResponse = zod.object({
+  "id": zod.number().int(),
+  "nome": zod.string(),
+  "linhas": zod.number().int().min(1).max(clearMapaCellResponseLinhasMax),
+  "colunas": zod.number().int().min(1).max(clearMapaCellResponseColunasMax),
+  "labels": zod.object({
+  "top": zod.string(),
+  "bottom": zod.string(),
+  "left": zod.string(),
+  "right": zod.string()
+}),
+  "celulas": zod.record(zod.string(), zod.array(zod.object({
+  "pisoId": zod.number().int().min(1),
+  "m2": zod.number().min(clearMapaCellResponseCelulasItemM2Min),
+  "caixas": zod.number().int().min(clearMapaCellResponseCelulasItemCaixasMin)
+})).min(1).max(clearMapaCellResponseCelulasMaxOne)),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
 
 

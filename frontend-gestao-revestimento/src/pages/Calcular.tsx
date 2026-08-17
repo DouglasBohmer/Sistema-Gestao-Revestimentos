@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Layout } from "@/components/layout/Layout"
-import { useGetPisoByCodigo, useCalcularPiso, type CalculoResult } from "@workspace/api-client-react"
+import { useCalcularPiso, type CalculoResult } from "@workspace/api-client-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,7 +12,6 @@ export default function Calcular() {
   const { toast } = useToast()
   
   const [codigoBusca, setCodigoBusca] = useState("")
-  const [codigoAtivo, setCodigoAtivo] = useState("")
   
   const [metragem, setMetragem] = useState<string>("")
   const [telefone, setTelefone] = useState<string>("")
@@ -20,25 +19,15 @@ export default function Calcular() {
   const [margem] = useState<string>("10")
 
   const [resultado, setResultado] = useState<CalculoResult | null>(null)
-
-  const { data: piso, isLoading: isSearching, isError: isSearchError } = useGetPisoByCodigo(codigoAtivo, {
-    query: {
-      enabled: !!codigoAtivo,
-      retry: false
-    }
-  })
+  const piso = resultado?.piso ?? null
 
   const calcularMutation = useCalcularPiso()
 
   const handleCalcular = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (codigoBusca !== codigoAtivo) {
-      setCodigoAtivo(codigoBusca.trim())
-    }
-    
-    // We need to wait for piso to be fetched before calculating if it wasn't active
-    if (!codigoBusca.trim()) {
+
+    const codigo = codigoBusca.trim()
+    if (!codigo) {
       toast({ title: "Erro", description: "Informe o código do piso.", variant: "destructive" })
       return
     }
@@ -50,38 +39,19 @@ export default function Calcular() {
       return
     }
 
-    // Since searching is reactive to `codigoAtivo`, if `piso` is already loaded and matches `codigoBusca`, we calculate directly.
-    // If not, the effect below will trigger the calculation once `piso` is available.
-    if (piso && piso.codigoLoja === codigoBusca.trim()) {
-      executeCalculo(piso.codigoLoja, m2)
-    }
-  }
-
-  // Effect to automatically calculate once the search completes if triggered by the form
-  useState(() => {
-    // Only run this if we are actively trying to calculate and just resolved the piso
-  })
-
-  const executeCalculo = (codigoLoja: string, m2: number) => {
+    setResultado(null)
     calcularMutation.mutate(
-      { data: { codigoPiso: codigoLoja, metragemM2: m2, margemQuebra: parseFloat(margem) } },
+      { data: { codigoPiso: codigo, metragemM2: m2, margemQuebra: parseFloat(margem) } },
       {
         onSuccess: (data) => {
           setResultado(data)
-          if (piso && piso.valor && !valorM2) {
-            setValorM2(piso.valor.toString())
-          }
+          setValorM2(data.piso.valor?.toString() ?? "")
         },
         onError: () => {
-          toast({ title: "Erro", description: "Erro ao realizar o cálculo.", variant: "destructive" })
+          toast({ title: "Erro", description: "Piso não encontrado ou dados inválidos.", variant: "destructive" })
         }
       }
     )
-  }
-  
-  // Reactively calculate when piso is fetched successfully after form submit
-  if (piso && piso.codigoLoja === codigoAtivo && !calcularMutation.isPending && !resultado && parseFloat(metragem) > 0) {
-     executeCalculo(piso.codigoLoja, parseFloat(metragem))
   }
 
   const handleWhatsApp = () => {
@@ -115,7 +85,6 @@ export default function Calcular() {
                     onChange={(e) => setCodigoBusca(e.target.value)}
                     required
                   />
-                  {isSearchError && <span className="text-xs text-destructive">Piso não encontrado.</span>}
                 </div>
                 <div className="space-y-2">
                   <Label>M² do Cliente</Label>
@@ -136,7 +105,7 @@ export default function Calcular() {
                     value={resultado ? resultado.quantidadeCaixas : ""}
                   />
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={isSearching || calcularMutation.isPending}>
+                <Button type="submit" className="w-full h-11" disabled={calcularMutation.isPending}>
                   <Search size={18} className="mr-2" />
                   Pesquisar e Calcular
                 </Button>

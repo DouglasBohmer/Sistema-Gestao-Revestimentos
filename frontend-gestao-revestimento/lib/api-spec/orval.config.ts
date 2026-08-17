@@ -23,6 +23,7 @@ export default defineConfig({
     },
     output: {
       workspace: apiClientReactSrc,
+      tsconfig: path.resolve(apiClientReactSrc, "..", "tsconfig.json"),
       target: "generated",
       client: "react-query",
       mode: "split",
@@ -49,6 +50,7 @@ export default defineConfig({
     },
     output: {
       workspace: apiZodSrc,
+      tsconfig: path.resolve(apiZodSrc, "..", "tsconfig.json"),
       client: "zod",
       target: "generated",
       schemas: { path: "generated/types", type: "typescript" },
@@ -57,6 +59,7 @@ export default defineConfig({
       prettier: true,
       override: {
         zod: {
+          version: 3,
           coerce: {
             query: ['boolean', 'number', 'string'],
             param: ['boolean', 'number', 'string'],

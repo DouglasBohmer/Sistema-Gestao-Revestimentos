@@ -17,6 +17,12 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _csrfTokenPromise: Promise<CsrfTokenData> | null = null;
+
+type CsrfTokenData = {
+  headerName: string;
+  token: string;
+};
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -44,6 +50,14 @@ export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
 }
 
+/**
+ * Clears the CSRF token cached for the current browser session. Call this
+ * after logout or whenever the server-side session is explicitly replaced.
+ */
+export function clearCsrfToken(): void {
+  _csrfTokenPromise = null;
+}
+
 function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
@@ -52,6 +66,10 @@ function resolveMethod(input: RequestInfo | URL, explicitMethod?: string): strin
   if (explicitMethod) return explicitMethod.toUpperCase();
   if (isRequest(input)) return input.method.toUpperCase();
   return "GET";
+}
+
+function requiresCsrf(method: string): boolean {
+  return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
 }
 
 // Use loose check for URL — some runtimes (e.g. React Native) polyfill URL
@@ -322,6 +340,25 @@ async function parseSuccessBody(
   }
 }
 
+async function loadCsrfToken(): Promise<CsrfTokenData> {
+  if (!_csrfTokenPromise) {
+    _csrfTokenPromise = customFetch<{
+      headerName: string;
+      token: string;
+    }>("/api/auth/csrf", {
+      credentials: "same-origin",
+      responseType: "json",
+    })
+      .then(({ headerName, token }) => ({ headerName, token }))
+      .catch((error) => {
+        _csrfTokenPromise = null;
+        throw error;
+      });
+  }
+
+  return _csrfTokenPromise;
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
@@ -358,9 +395,21 @@ export async function customFetch<T = unknown>(
     }
   }
 
+  if (requiresCsrf(method)) {
+    const csrf = await loadCsrfToken();
+    if (!headers.has(csrf.headerName)) {
+      headers.set(csrf.headerName, csrf.token);
+    }
+  }
+
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    ...init,
+    credentials: init.credentials ?? "same-origin",
+    method,
+    headers,
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
