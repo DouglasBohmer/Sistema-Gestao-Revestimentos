@@ -64,7 +64,18 @@ docker compose up -d --build
 docker compose ps
 ```
 
-A aplicação abre em `http://localhost:8080`. Nesta fase, o acesso temporário de testes continua sendo `admin/admin`; ele será substituído pelo fluxo completo de login da Área Central na próxima etapa. Não use Funnel enquanto essa credencial temporária estiver habilitada.
+A aplicação abre em `http://localhost:8080`. O acesso local temporário de testes
+continua sendo `admin/admin`; ele pode vincular uma sessão da Área Central pela
+ação “Conectar Área Central”, mas não dá acesso externo por si só. Não use
+Funnel enquanto essa credencial estiver habilitada.
+
+## Área Central com CAPTCHA
+
+O login da Área Central é assistido por um Chrome isolado e noVNC. O usuário
+resolve o CAPTCHA manualmente e somente o Spring retém o cookie jar externo em
+memória, vinculado à sessão atual. Para habilitar o navegador auxiliar, use o
+arquivo adicional `docker-compose.area-central.yml`; as instruções de portas
+Tailscale e variáveis estão no [README do backend](backend-gestao-revestimento/README.md).
 
 Para desenvolvimento com recarregamento do React e Spring separados, consulte [backend-gestao-revestimento/README.md](backend-gestao-revestimento/README.md).
 

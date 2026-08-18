@@ -9,6 +9,7 @@ import Dashboard from '@/pages/Dashboard';
 import Cadastro from '@/pages/Cadastro';
 import Calcular from '@/pages/Calcular';
 import MapaEstoque from '@/pages/MapaEstoque';
+import ConexaoAreaCentral from '@/pages/ConexaoAreaCentral';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/cadastro" component={Cadastro} />
       <Route path="/calcular" component={Calcular} />
       <Route path="/mapa-estoque" component={MapaEstoque} />
+      <Route path="/conexao-area-central" component={ConexaoAreaCentral} />
       <Route component={NotFound} />
     </Switch>
   );

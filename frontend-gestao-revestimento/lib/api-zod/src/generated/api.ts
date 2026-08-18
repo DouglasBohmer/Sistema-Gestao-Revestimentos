@@ -50,6 +50,44 @@ export const LocalLoginResponse = zod.object({
 
 
 /**
+ * Abre um navegador isolado no servidor para que o usuário conclua o login e o CAPTCHA legitimamente pelo noVNC. Não recebe credenciais nem devolve cookies da Área Central.
+ * @summary Iniciar login assistido da Área Central
+ */
+export const StartAreaCentralLoginAttemptResponse = zod.object({
+  "status": zod.enum(['WAITING_FOR_USER']),
+  "interactiveUrl": zod.string().url().describe('URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.'),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * Captura o cookie jar apenas no backend depois que o usuário concluiu a interação no navegador remoto. Requer token CSRF.
+ * @summary Confirmar login assistido da Área Central
+ */
+export const completeAreaCentralLoginAttemptBodyUsernameMax = 160;
+
+
+
+export const CompleteAreaCentralLoginAttemptBody = zod.object({
+  "username": zod.string().min(1).max(completeAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central, para a sessão e auditoria local.')
+})
+
+export const CompleteAreaCentralLoginAttemptResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "username": zod.string().nullish(),
+  "authType": zod.union([zod.literal('LOCAL'),zod.literal('AREA_CENTRAL'),zod.literal(null)]).nullish().describe('Forma usada para autenticar a identidade atual no RedeASSO.'),
+  "areaCentralConnected": zod.boolean().describe('Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.')
+})
+
+
+/**
+ * Fecha o navegador remoto associado à sessão atual. Requer token CSRF.
+ * @summary Cancelar login assistido em andamento
+ */
+export const CancelCurrentAreaCentralLoginAttemptResponse = zod.void()
+
+
+/**
  * Retorna sempre o estado da sessão. Uma sessão anônima é representada por `authenticated: false`, sem responder 401.
  * @summary Consultar a sessão atual
  */

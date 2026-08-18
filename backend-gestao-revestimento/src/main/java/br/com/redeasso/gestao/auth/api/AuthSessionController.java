@@ -3,6 +3,7 @@ package br.com.redeasso.gestao.auth.api;
 import br.com.redeasso.gestao.auth.api.dto.CsrfTokenResponse;
 import br.com.redeasso.gestao.auth.api.dto.SessionResponse;
 import br.com.redeasso.gestao.auth.application.AuthSessionAttributes;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralSessionStore;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthSessionController {
 
+    private final AreaCentralSessionStore areaCentralSessionStore;
+
+    public AuthSessionController(AreaCentralSessionStore areaCentralSessionStore) {
+        this.areaCentralSessionStore = areaCentralSessionStore;
+    }
+
     @GetMapping("/session")
     public ResponseEntity<SessionResponse> session(
             Authentication authentication,
@@ -27,16 +34,14 @@ public class AuthSessionController {
 
         HttpSession session = request.getSession(false);
         String authType = sessionAttribute(session, AuthSessionAttributes.AUTH_TYPE, String.class);
-        Boolean areaCentralConnected = sessionAttribute(
-                session,
-                AuthSessionAttributes.AREA_CENTRAL_CONNECTED,
-                Boolean.class);
+        boolean areaCentralConnected = session != null
+                && areaCentralSessionStore.hasSession(session.getId());
 
         return ResponseEntity.ok(new SessionResponse(
                 true,
                 authentication.getName(),
                 authType,
-                Boolean.TRUE.equals(areaCentralConnected)));
+                areaCentralConnected));
     }
 
     @GetMapping("/csrf")

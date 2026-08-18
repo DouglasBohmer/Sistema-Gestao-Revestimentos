@@ -91,6 +91,85 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /auth/area-central/attempts:
+    post:
+      operationId: startAreaCentralLoginAttempt
+      tags: [auth]
+      summary: Iniciar login assistido da Área Central
+      description: >-
+        Abre um navegador isolado no servidor para que o usuário conclua o
+        login e o CAPTCHA legitimamente pelo noVNC. Não recebe credenciais nem
+        devolve cookies da Área Central.
+      responses:
+        "201":
+          description: Navegador pronto para interação humana
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCentralLoginAttempt"
+        "409":
+          description: Já existe outra verificação em andamento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Integração ou navegador assistido indisponível
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/area-central/attempts/complete:
+    post:
+      operationId: completeAreaCentralLoginAttempt
+      tags: [auth]
+      summary: Confirmar login assistido da Área Central
+      description: >-
+        Captura o cookie jar apenas no backend depois que o usuário concluiu
+        a interação no navegador remoto. Requer token CSRF.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteAreaCentralLoginRequest"
+      responses:
+        "200":
+          description: Sessão RedeASSO autenticada ou vinculada à Área Central
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "400":
+          description: Dados inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Não há tentativa de login nesta sessão
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Login ainda não concluído no navegador remoto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/area-central/attempts/current:
+    delete:
+      operationId: cancelCurrentAreaCentralLoginAttempt
+      tags: [auth]
+      summary: Cancelar login assistido em andamento
+      description: Fecha o navegador remoto associado à sessão atual. Requer token CSRF.
+      responses:
+        "204":
+          description: Tentativa cancelada ou já encerrada
+
   /auth/session:
     get:
       operationId: getAuthSession
@@ -571,6 +650,33 @@ components:
           type: string
           minLength: 1
           writeOnly: true
+
+    AreaCentralLoginAttempt:
+      type: object
+      additionalProperties: false
+      required: [status, interactiveUrl, expiresAt]
+      properties:
+        status:
+          type: string
+          enum: [WAITING_FOR_USER]
+        interactiveUrl:
+          type: string
+          format: uri
+          description: URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.
+        expiresAt:
+          type: string
+          format: date-time
+
+    CompleteAreaCentralLoginRequest:
+      type: object
+      additionalProperties: false
+      required: [username]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 160
+          description: Identificador da conta usada na Área Central, para a sessão e auditoria local.
 
     SessionResponse:
       type: object

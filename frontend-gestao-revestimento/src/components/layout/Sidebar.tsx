@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
-import { Home, FileText, Calculator, LogOut, Settings, Bell, Receipt, Map } from "lucide-react"
+import { Home, FileText, Calculator, LogOut, Settings, Bell, Receipt, Map, Link2 } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -15,7 +15,7 @@ const navigation = [
 
 export function Sidebar() {
   const [location] = useLocation()
-  const { logout } = useAuth()
+  const { logout, session } = useAuth()
   const queryClient = useQueryClient()
   const [notifCount] = useState(3)
 
@@ -66,6 +66,20 @@ export function Sidebar() {
             </Link>
           )
         })}
+        {!session?.areaCentralConnected && (
+          <Link
+            href="/conexao-area-central"
+            className={cn(
+              "group flex items-center px-6 py-3 text-base font-medium transition-all",
+              location === "/conexao-area-central"
+                ? "bg-white/20 border-l-4 border-white text-white"
+                : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
+            )}
+          >
+            <Link2 className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+            Conectar Área Central
+          </Link>
+        )}
       </nav>
 
       {/* Rodapé: Notificações + Configurações + Sair */}

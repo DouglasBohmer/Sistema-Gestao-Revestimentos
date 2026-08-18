@@ -1,0 +1,35 @@
+# Ative este arquivo somente quando for usar o login assistido da Área Central:
+# docker compose -f docker-compose.yml -f docker-compose.area-central.yml up -d --build
+#
+# A porta do noVNC não deve ser publicada na internet. No servidor, vincule-a
+# ao IP Tailscale da máquina e restrinja o acesso pela tailnet.
+services:
+  app:
+    environment:
+      REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED: "true"
+      AREA_CENTRAL_BASE_URL: ${AREA_CENTRAL_BASE_URL:-https://redeasso.areacentral.com.br}
+      AREA_CENTRAL_LOGIN_URL: ${AREA_CENTRAL_LOGIN_URL:-https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc}
+      AREA_CENTRAL_WEBDRIVER_URL: http://area-central-browser:4444
+      AREA_CENTRAL_INTERACTIVE_URL: ${AREA_CENTRAL_INTERACTIVE_URL:?Defina a URL privada do noVNC em .env}
+      AREA_CENTRAL_CONNECT_TIMEOUT: ${AREA_CENTRAL_CONNECT_TIMEOUT:-5s}
+      AREA_CENTRAL_READ_TIMEOUT: ${AREA_CENTRAL_READ_TIMEOUT:-15s}
+      AREA_CENTRAL_LOGIN_ATTEMPT_TIMEOUT: ${AREA_CENTRAL_LOGIN_ATTEMPT_TIMEOUT:-10m}
+
+  area-central-browser:
+    image: selenium/standalone-chrome:4.44.0-20260505
+    shm_size: 2gb
+    environment:
+      SE_VNC_PASSWORD: ${AREA_CENTRAL_VNC_PASSWORD:?Defina uma senha forte do noVNC em .env}
+      SE_NODE_MAX_SESSIONS: "1"
+      SE_NODE_OVERRIDE_MAX_SESSIONS: "false"
+    expose:
+      - "4444"
+    ports:
+      - "${AREA_CENTRAL_NOVNC_BIND_ADDRESS:-127.0.0.1}:${AREA_CENTRAL_NOVNC_PORT:-7900}:7900"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:4444/status >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped

@@ -53,5 +53,9 @@ redeasso:
     area-central:
       enabled: false
       base-url: ${AREA_CENTRAL_BASE_URL:https://redeasso.areacentral.com.br}
+      login-url: ${AREA_CENTRAL_LOGIN_URL:https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc}
+      web-driver-url: ${AREA_CENTRAL_WEBDRIVER_URL:http://area-central-browser:4444}
+      interactive-url: ${AREA_CENTRAL_INTERACTIVE_URL:}
       connect-timeout: ${AREA_CENTRAL_CONNECT_TIMEOUT:5s}
       read-timeout: ${AREA_CENTRAL_READ_TIMEOUT:10s}
+      login-attempt-timeout: ${AREA_CENTRAL_LOGIN_ATTEMPT_TIMEOUT:10m}

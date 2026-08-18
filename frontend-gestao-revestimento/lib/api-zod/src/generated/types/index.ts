@@ -7,9 +7,12 @@
  */
 
 export * from './apiError';
+export * from './areaCentralLoginAttempt';
+export * from './areaCentralLoginAttemptStatus';
 export * from './atividade';
 export * from './calculoInput';
 export * from './calculoResult';
+export * from './completeAreaCentralLoginRequest';
 export * from './csrfTokenResponse';
 export * from './dashboardStats';
 export * from './errorResponse';

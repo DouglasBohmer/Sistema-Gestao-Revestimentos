@@ -2,6 +2,11 @@ package br.com.redeasso.gestao.shared.api;
 
 import br.com.redeasso.gestao.auth.application.InvalidCredentialsException;
 import br.com.redeasso.gestao.catalogo.application.PisoNaoEncontradoException;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralBrowserUnavailableException;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralIntegrationUnavailableException;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginAttemptNotFoundException;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginBusyException;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginIncompleteException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -34,6 +39,32 @@ public class ApiExceptionHandler {
                 "INVALID_CREDENTIALS",
                 exception.getMessage(),
                 request);
+    }
+
+    @ExceptionHandler({AreaCentralIntegrationUnavailableException.class, AreaCentralBrowserUnavailableException.class})
+    public ResponseEntity<ApiError> areaCentralUnavailable(Exception exception, HttpServletRequest request) {
+        return response(HttpStatus.SERVICE_UNAVAILABLE, "AREA_CENTRAL_UNAVAILABLE", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AreaCentralLoginBusyException.class)
+    public ResponseEntity<ApiError> areaCentralLoginBusy(
+            AreaCentralLoginBusyException exception,
+            HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "AREA_CENTRAL_LOGIN_BUSY", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AreaCentralLoginIncompleteException.class)
+    public ResponseEntity<ApiError> areaCentralLoginIncomplete(
+            AreaCentralLoginIncompleteException exception,
+            HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "AREA_CENTRAL_LOGIN_INCOMPLETE", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AreaCentralLoginAttemptNotFoundException.class)
+    public ResponseEntity<ApiError> areaCentralLoginNotFound(
+            AreaCentralLoginAttemptNotFoundException exception,
+            HttpServletRequest request) {
+        return response(HttpStatus.NOT_FOUND, "AREA_CENTRAL_LOGIN_NOT_FOUND", exception.getMessage(), request);
     }
 
     @ExceptionHandler({

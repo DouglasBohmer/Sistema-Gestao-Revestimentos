@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import {
   clearCsrfToken,
+  completeAreaCentralLoginAttempt,
   getAuthSession,
   localLogin,
   logout as apiLogout,
@@ -12,6 +13,7 @@ interface AuthContextType {
   isLoading: boolean
   session: SessionResponse | null
   login: (username: string, password: string) => Promise<boolean>
+  completeAreaCentralLogin: (username: string) => Promise<boolean>
   logout: () => Promise<void>
 }
 
@@ -51,6 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function completeAreaCentralLogin(username: string) {
+    const authenticatedSession = await completeAreaCentralLoginAttempt({ username })
+    setSession(authenticatedSession)
+    return authenticatedSession.authenticated
+  }
+
   async function logout() {
     try {
       await apiLogout()
@@ -66,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       session,
       login,
+      completeAreaCentralLogin,
       logout,
     }}>
       {children}

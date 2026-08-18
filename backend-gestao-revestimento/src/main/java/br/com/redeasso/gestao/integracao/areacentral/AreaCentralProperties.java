@@ -12,12 +12,17 @@ import java.time.Duration;
 public record AreaCentralProperties(
         boolean enabled,
         @NotNull URI baseUrl,
+        @NotNull URI loginUrl,
+        @NotNull URI webDriverUrl,
+        String interactiveUrl,
         @NotNull Duration connectTimeout,
-        @NotNull Duration readTimeout
+        @NotNull Duration readTimeout,
+        @NotNull Duration loginAttemptTimeout
 ) {
     public AreaCentralProperties {
         requirePositive(connectTimeout, "connect-timeout");
         requirePositive(readTimeout, "read-timeout");
+        requirePositive(loginAttemptTimeout, "login-attempt-timeout");
     }
 
     private static void requirePositive(Duration duration, String propertyName) {

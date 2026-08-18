@@ -1,5 +1,9 @@
 package br.com.redeasso.gestao.shared.security;
 
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralSessionStore;
+import br.com.redeasso.gestao.integracao.areacentral.application.InMemoryAreaCentralSessionStore;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +15,7 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 import org.springframework.security.web.context.DelegatingSecurityContextRepository;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -25,7 +30,8 @@ public class SecurityConfiguration {
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler,
             SecurityContextRepository securityContextRepository,
-            CsrfTokenRepository csrfTokenRepository) throws Exception {
+            CsrfTokenRepository csrfTokenRepository,
+            AreaCentralSessionStore areaCentralSessionStore) throws Exception {
         CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
 
         http
@@ -38,7 +44,10 @@ public class SecurityConfiguration {
                                 "/actuator/health",
                                 "/api/auth/csrf",
                                 "/api/auth/session",
-                                "/api/auth/local/login")
+                                "/api/auth/local/login",
+                                "/api/auth/area-central/attempts",
+                                "/api/auth/area-central/attempts/complete",
+                                "/api/auth/area-central/attempts/current")
                         .permitAll()
                         .requestMatchers(request -> {
                             String path = request.getServletPath();
@@ -58,11 +67,20 @@ public class SecurityConfiguration {
                 .securityContext(context -> context
                         .requireExplicitSave(true)
                         .securityContextRepository(securityContextRepository))
+                .addFilterAfter(
+                        new AreaCentralSessionConsistencyFilter(areaCentralSessionStore),
+                        SecurityContextHolderFilter.class)
                 .requestCache(cache -> cache.disable())
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
+                        .addLogoutHandler((request, response, authentication) -> {
+                            HttpSession session = request.getSession(false);
+                            if (session != null) {
+                                areaCentralSessionStore.remove(session.getId());
+                            }
+                        })
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                         .deleteCookies("REDEASSO_SESSION", "JSESSIONID", "XSRF-TOKEN")
@@ -90,5 +108,11 @@ public class SecurityConfiguration {
         HttpSessionCsrfTokenRepository repository = new HttpSessionCsrfTokenRepository();
         repository.setHeaderName("X-XSRF-TOKEN");
         return repository;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(AreaCentralSessionStore.class)
+    AreaCentralSessionStore areaCentralSessionStore() {
+        return new InMemoryAreaCentralSessionStore();
     }
 }

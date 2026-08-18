@@ -16,6 +16,29 @@ export interface LocalLoginRequest {
   password: string;
 }
 
+export type AreaCentralLoginAttemptStatus = typeof AreaCentralLoginAttemptStatus[keyof typeof AreaCentralLoginAttemptStatus];
+
+
+export const AreaCentralLoginAttemptStatus = {
+  WAITING_FOR_USER: 'WAITING_FOR_USER',
+} as const;
+
+export interface AreaCentralLoginAttempt {
+  status: AreaCentralLoginAttemptStatus;
+  /** URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos. */
+  interactiveUrl: string;
+  expiresAt: string;
+}
+
+export interface CompleteAreaCentralLoginRequest {
+  /**
+     * Identificador da conta usada na Área Central, para a sessão e auditoria local.
+     * @minLength 1
+     * @maxLength 160
+     */
+  username: string;
+}
+
 /**
  * Forma usada para autenticar a identidade atual no RedeASSO.
  * @nullable

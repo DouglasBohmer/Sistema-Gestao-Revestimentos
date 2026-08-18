@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Lock, User, AlertCircle } from 'lucide-react'
+import { AreaCentralLoginFlow } from '@/components/auth/AreaCentralLoginFlow'
 
 export default function Login() {
   const { login } = useAuth()
@@ -20,7 +21,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-black mb-4">
             <Lock className="h-8 w-8 text-white" />
@@ -30,9 +31,17 @@ export default function Login() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Entrar no sistema</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Entrar no sistema</h2>
+          <p className="text-sm text-gray-500 mb-6">Área Central</p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <AreaCentralLoginFlow />
+
+          <details className="group mt-6 border-t border-zinc-200 pt-4">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-600 hover:text-black">
+              Acesso local de desenvolvimento
+            </summary>
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Usuário</label>
               <div className="relative">
@@ -79,6 +88,7 @@ export default function Login() {
               {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
+          </details>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">

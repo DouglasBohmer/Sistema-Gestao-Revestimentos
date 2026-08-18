@@ -73,9 +73,10 @@ O serviço usa o perfil `prod`, executa as migrations Flyway ao iniciar e aguard
 o health check do PostgreSQL. Os dados ficam no volume nomeado
 `redeasso-postgres`.
 
-Enquanto o login Área Central ainda não estiver implementado, o Compose mantém
-o acesso local de teste habilitado. Altere `REDEASSO_LOCAL_ADMIN_PASSWORD` ou
-defina `REDEASSO_LOCAL_ADMIN_ENABLED=false` antes de qualquer exposição externa.
+O Compose mantém o acesso local de teste habilitado por padrão. Altere
+`REDEASSO_LOCAL_ADMIN_PASSWORD` ou defina `REDEASSO_LOCAL_ADMIN_ENABLED=false`
+antes de qualquer exposição externa; ele não substitui uma sessão da Área
+Central para consultas externas.
 
 Por padrão, a porta é publicada apenas em `127.0.0.1:8080`, apropriado para
 um proxy local ou Tailscale Serve atuando no host. Não use Funnel enquanto o
@@ -113,4 +114,28 @@ ser usado apenas naquele ambiente.
 
 ## Área Central e CAPTCHA
 
-Esta fundação cria somente a fronteira de configuração da integração. Ela não tenta resolver ou contornar o CAPTCHA. Antes de implementar o login externo, ainda precisamos definir como a interação legítima do usuário chegará a um navegador controlado pelo backend quando ele estiver no servidor remoto.
+O login externo é assistido. Ao escolhê-lo no RedeASSO, o Spring abre um Chrome
+isolado no contêiner Selenium; o operador abre o noVNC, informa sua conta da
+Área Central e resolve o CAPTCHA manualmente. Ao confirmar no RedeASSO, o
+Spring coleta o cookie jar apenas na memória do processo, vinculado à sessão
+atual. Senhas e cookies externos não são devolvidos ao React, não vão para o
+PostgreSQL e não sobrevivem ao reinício da aplicação.
+
+O navegador não faz parte do Compose padrão. Para habilitá-lo localmente,
+copie `.env.example` para `.env`, defina uma senha forte e execute a partir da
+raiz do repositório:
+
+```powershell
+$env:AREA_CENTRAL_VNC_PASSWORD = "uma-senha-forte-e-exclusiva"
+$env:AREA_CENTRAL_INTERACTIVE_URL = "http://localhost:7900/?autoconnect=1&resize=scale"
+docker compose -f docker-compose.yml -f docker-compose.area-central.yml up -d --build
+```
+
+No servidor, publique a porta 7900 somente no IP Tailscale da máquina e use a
+URL MagicDNS correspondente em `AREA_CENTRAL_INTERACTIVE_URL`. Não use Funnel
+para essa porta. A janela noVNC pedirá a senha definida em
+`AREA_CENTRAL_VNC_PASSWORD`; ela não é enviada pela API nem incluída no link.
+
+O contêiner aceita somente uma tentativa de login interativo por vez. Uma
+tentativa expira em dez minutos, pode ser cancelada pela interface e fecha o
+navegador remoto. Não há resolução ou contorno automático de CAPTCHA.

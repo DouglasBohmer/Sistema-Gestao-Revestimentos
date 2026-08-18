@@ -70,9 +70,11 @@ Regras obrigatórias:
 - Qualquer conta válida da Área Central deve poder criar sua própria sessão externa.
 - A Área Central não oferece API oficial para este uso. A integração deverá reproduzir o fluxo autorizado da tela de login e as requisições do catálogo.
 - O CAPTCHA aparece em todos os logins. Normalmente basta selecionar a caixa e raramente há desafio de imagens; a solução não pode presumir que o desafio nunca ocorrerá nem tentar contorná-lo indevidamente.
-- A senha da Área Central só pode transitar pelo backend durante a autenticação. Não pode ser armazenada no React, `localStorage`, `sessionStorage`, logs ou banco em texto puro.
+- A interação humana com o CAPTCHA ocorrerá em um navegador Chromium isolado no servidor, exibido por noVNC somente durante uma tentativa de login. O acesso visual deverá ficar restrito à tailnet, sem Funnel, e a Área Central continuará vendo um navegador real.
+- A senha da Área Central é digitada exclusivamente no Chrome isolado exibido por noVNC. Ela não pode ser capturada ou armazenada pelo React, `localStorage`, `sessionStorage`, logs, banco ou APIs do RedeASSO.
 - Depois do login externo, o backend guarda o cookie jar da Área Central e o associa à sessão do usuário do RedeASSO.
 - Cookies da Área Central, incluindo `PHPSESSID`, jamais podem ser devolvidos ao navegador, incluídos em JSON, expostos em erros ou gravados em logs.
+- A Área Central entrega `PHPSESSID` também a visitantes anônimos; sua mera presença não prova autenticação. A conclusão do login assistido deve exigir cookie e ausência do formulário de senha no navegador remoto. A primeira consulta autorizada ao catálogo continuará sendo a validação definitiva da sessão.
 - O navegador recebe apenas uma sessão própria do RedeASSO, preferencialmente em cookie `HttpOnly`, `Secure` e `SameSite`, com proteção CSRF adequada.
 - As sessões externas devem ser isoladas por usuário/sessão. É proibido restaurar o arquivo global e compartilhado de cookies do legado.
 - Logout, expiração ou revogação devem eliminar o cookie jar correspondente.
@@ -86,6 +88,7 @@ Regras obrigatórias:
 - O servidor principal estava desligado durante esta análise; nenhuma configuração dele foi presumida como validada.
 - O endereço conhecido é `usuario-pc.tailbc9bf3.ts.net`; não o fixe no código do frontend. URLs variam por ambiente e devem vir de configuração.
 - O acesso preferencial será privado, por convite à tailnet do Tailscale.
+- A estação de desenvolvimento atual já tem acesso ao Tailscale. Ela poderá abrir o noVNC privado do servidor quando a porta estiver vinculada ao IP Tailscale; isso não equivale a acesso administrativo (SSH/RDP) ao servidor.
 - Se o usuário não puder receber/usar convite, o sistema poderá verificar e oferecer um endereço Tailscale Funnel como fallback de acesso. Funnel torna o serviço publicamente acessível e exige controles adicionais.
 - É proibido ativar Funnel enquanto o acesso temporário `admin/admin` estiver habilitado. Exposição pública só depois do login definitivo, remoção ou proteção forte do admin local, TLS, rate limiting e revisão de segurança; a API já usa sessão Spring e CSRF, mas isso não torna a credencial de teste adequada à internet.
 - Dados persistentes nunca podem depender do filesystem efêmero do container. Banco, uploads e artefatos necessários precisam de volumes e backup.
@@ -124,12 +127,12 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 - As migrations V1–V4 criam Spring Session, parâmetros-base, pisos/atividades e mapas/células. Dois pisos demonstrativos são carga inicial de V3; dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
 - O acesso temporário `admin/admin` agora cria uma sessão real no Spring, com cookie HttpOnly, CSRF e Spring Session JDBC. O booleano falso de `sessionStorage` foi removido.
-- O backend está organizado sob `br.com.redeasso.gestao`, por domínio/feature. A fronteira da Área Central existe, mas o login externo e o cookie jar ainda são a próxima fase.
+- O backend está organizado sob `br.com.redeasso.gestao`, por domínio/feature. O login assistido da Área Central usa Chrome isolado em Selenium/noVNC, tentativa única e cookie jar somente em memória por sessão; a autenticação real e a primeira consulta ainda precisam de homologação manual autorizada no portal.
 - O Maven Wrapper está completo e fixado no projeto; use `mvnw`/`mvnw.cmd` em vez de depender de Maven global.
 - O `pom.xml` aponta para PostgreSQL, agora confirmado como banco definitivo. O README técnico já foi atualizado; referências a Azure SQL no relatório acadêmico são históricas.
 - O antigo `groupId`/pacote com o erro de grafia `calolicasc` foi substituído por `br.com.redeasso:redeasso-backend` e `br.com.redeasso.gestao` durante a estruturação consciente do backend.
 - O pacote Drizzle/PostgreSQL antigo foi removido junto com o Express; JPA/Flyway são a única camada de persistência do sistema.
-- O OpenAPI cobre saúde, autenticação local/sessão, pisos, cálculo, dashboard e mapas; os clientes React e Zod são regenerados a partir dele. Área Central, orçamentos, snapshots e etiquetas continuam fora do contrato até suas fases.
+- O OpenAPI cobre saúde, autenticação local/sessão, login assistido da Área Central, pisos, cálculo, dashboard e mapas; os clientes React e Zod são regenerados a partir dele. Orçamentos, snapshots e etiquetas continuam fora do contrato até suas fases.
 - Todas as telas atuais consomem o cliente gerado, inclusive mapas; não há `fetch` manual para as APIs de negócio.
 - Toda rota de negócio sob `/api` exige sessão autenticada e CSRF nas mutações. Saúde e criação/consulta da sessão são as exceções intencionais.
 - O fallback da SPA exclui `/api` e `/actuator`, portanto uma API inexistente não é convertida em HTML do React.
@@ -148,7 +151,8 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 - `Ideias.md` menciona “GitHub Actions + Watchtower”. A atualização automática só acontece se o Watchtower estiver configurado no servidor para observar a imagem correta e tiver acesso ao GHCR; isso ainda não foi verificado.
 - O `docker-compose.yml` define Spring + PostgreSQL 17, volume persistente, health checks, dependência por saúde e configuração por `.env`; a imagem pode ser local ou indicada por `REDEASSO_IMAGE`.
 - O Dockerfile multi-stage compila React/pnpm e Spring/Maven e entrega uma imagem JRE 21 não-root com o React incorporado ao JAR.
-- O Compose habilita temporariamente o admin local por variáveis para permitir testes antes da fase Área Central. Não expor por Funnel; trocar/desativar essa credencial antes de qualquer exposição pública.
+- O Compose habilita temporariamente o admin local por variáveis para permitir testes e permite vincular a Área Central pela ação própria. Não expor por Funnel; trocar/desativar essa credencial antes de qualquer exposição pública.
+- `docker-compose.area-central.yml` é um overlay opcional: acrescenta Selenium Chrome e publica noVNC apenas no endereço configurado. Em servidor, o bind deve ser o IP Tailscale e a URL MagicDNS configurada; nunca publicar essa porta pelo Funnel.
 - Atualizar código em desenvolvimento não deve exigir reconstruir a imagem a cada alteração: use execução local/hot reload ou volumes de desenvolvimento. Em produção, uma nova imagem deve ser baixada e o container recriado; os dados permanecem porque ficam fora dele.
 - Releases de produção devem ter tags imutáveis e caminho de rollback. Não depender exclusivamente de `latest`.
 
@@ -371,8 +375,8 @@ O usuário confirmou em 15/08/2026 a seguinte ordem de execução. Não antecipa
 
 1. **Concluído:** migrar para Spring todos os endpoints e comportamentos anteriormente atendidos pelo Express: catálogo de pisos, cálculos, dashboard/atividades e mapas.
 2. **Concluído:** persistir esses módulos no PostgreSQL, cobri-los por testes, trocar o runtime/Docker para Spring e retirar integralmente o Express da aplicação.
-3. **Próxima fase:** implementar o login completo, incluindo a vinculação de sessões da Área Central e o fluxo legítimo do CAPTCHA ainda em aberto na Q04. O login local `admin/admin` permanece somente como acesso de desenvolvimento/testes durante a migração.
-4. Somente depois do login, implementar a configuração editável dos parâmetros de cálculo e sua auditoria/histórico.
+3. **Em homologação:** o login assistido já abre Chrome isolado por noVNC, captura o cookie jar apenas em memória e vincula-o à sessão RedeASSO. Validar manualmente o contrato real do portal e a primeira consulta externa antes de considerar a fase concluída. O login local `admin/admin` permanece somente como acesso de desenvolvimento/testes.
+4. Somente depois da homologação do login, implementar a configuração editável dos parâmetros de cálculo e sua auditoria/histórico.
 5. Depois dessas fases, avançar nos módulos ainda não especificados integralmente: orçamento/PDF/WhatsApp, snapshots e impressão de etiquetas.
 6. Implantar no servidor principal e ensaiar backup, rollback e fallback com os mesmos dados.
 
@@ -382,9 +386,9 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 
 ### Prioridade 1 — autenticação e Área Central
 
-- **Q04.** Qual é o contrato real de login — URL, campos, token CSRF/CAPTCHA, redirects e cookies — e como o usuário completará a caixa ou eventual desafio de imagens a partir do RedeASSO? O ponto crítico é que, no ambiente principal, o navegador que acessa o RedeASSO estará no PC do usuário, enquanto o navegador automatizado/controlado estará no backend Docker de outra máquina. Precisamos decidir um canal de interação legítima e seguro entre eles (inclusive para o raro desafio de imagens), compatível com Tailscale e fallback local, sem automatizar nem contornar o CAPTCHA. Levantar o contrato com DevTools em sessão autorizada, sem registrar a senha.
+- **Q04.** Qual é o contrato real de login — URL, campos, token CSRF/CAPTCHA, redirects e cookies? O canal de interação foi decidido: navegador Chromium isolado exibido por noVNC, restrito à tailnet, para que o usuário complete legitimamente a caixa ou eventual desafio de imagens. Foi caracterizado que a página pública já entrega `PHPSESSID`; não usá-lo sozinho como validação. Ainda é necessário levantar o contrato em sessão autorizada, sem registrar a senha, confirmar a transição da tela e validar uma consulta real ao catálogo no servidor.
 - **Q05.** Além da validade usual durante o expediente, um novo login invalida sessões anteriores? A mesma conta pode ser usada simultaneamente?
-- **Q07.** Ao entrar com `admin/admin`, como o usuário vincula uma conta externa: ação “Conectar Área Central”, conta de serviço configurada no servidor ou novo login completo?
+- **Decidido (Q07).** Quem entrou com `admin/admin` vincula a própria conta externa na ação “Conectar Área Central”, pelo mesmo fluxo noVNC e CAPTCHA manual. Não há conta de serviço global.
 - **Q08.** Todos os usuários externos terão as mesmas permissões no RedeASSO? Haverá papéis de vendedor, gestor e administrador?
 - **Q09.** O login externo também cria uma identidade persistente/auditoria local ou só uma sessão efêmera?
 - **Q10.** Quais limites, termos de uso e autorização se aplicam à automação? Qual frequência de consulta é aceitável?
