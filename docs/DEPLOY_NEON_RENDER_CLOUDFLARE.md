@@ -59,7 +59,7 @@ No Cloudflare Workers, conecte este repositório por **Workers Builds** e use:
 | --- | --- |
 | Diretório raiz | `frontend-gestao-revestimento` |
 | Comando de build | `corepack enable && corepack prepare pnpm@11.21.0 --activate && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build` |
-| Comando de deploy | `pnpm exec wrangler deploy --config wrangler.jsonc` |
+| Comando de deploy | `pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc` |
 | Branch de produção | `main` |
 
 Adicione a variável de runtime `API_ORIGIN` com a URL do Render obtida no

@@ -49,7 +49,7 @@ No Cloudflare Workers Builds, configure:
 
 - diretório raiz: `frontend-gestao-revestimento`;
 - comando de build: `corepack enable && corepack prepare pnpm@11.21.0 --activate && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build`;
-- comando de deploy: `pnpm exec wrangler deploy --config wrangler.jsonc`;
+- comando de deploy: `pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc`;
 - variável de runtime `API_ORIGIN`: URL HTTPS do serviço Render, sem barra final.
 
 Não habilite previews do Worker apontando para a API/dados de produção. Quando
