@@ -145,6 +145,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 ## 5. Estado atual de build e deploy
 
 - `render.yaml` define a API Docker do Render a partir de `backend-gestao-revestimento/Dockerfile.render`, com health check e variáveis sensíveis preenchidas apenas no painel Render.
+- A API Render usa inicialmente o plano `free`. Ela pode suspender após 15 minutos sem tráfego; qualquer agendamento futuro para mantê-la ativa deve considerar que o limite é de 750 horas de instância por workspace/mês e deve ser homologado antes de ativado.
 - `frontend-gestao-revestimento/wrangler.jsonc` publica assets estáticos e o Worker proxy para `/api`; `API_ORIGIN` é variável de runtime configurada no Cloudflare, não código nem segredo do frontend.
 - `.github/workflows/verify.yml` testa frontend, Worker em dry-run e Spring em todos os pushes. A `main` pode usar esse check para o `autoDeployTrigger: checksPass` do Render.
 - `.github/workflows/docker.yml` constrói a imagem Docker de fallback em branches fora da `main` e pull requests, sem publicar imagem ou alterar produção.

@@ -3,6 +3,7 @@ services:
     name: redeasso-api
     runtime: docker
     region: ohio
+    plan: free
     branch: main
     dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
     dockerContext: ./backend-gestao-revestimento

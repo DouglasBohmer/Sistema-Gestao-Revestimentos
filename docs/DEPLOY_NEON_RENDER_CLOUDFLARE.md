@@ -31,6 +31,12 @@ No painel Render, crie um **Blueprint** a partir deste repositório. O arquivo
 `backend-gestao-revestimento/Dockerfile.render`, já fixado em Ohio para ficar
 próximo do projeto Neon.
 
+O Blueprint usa `plan: free`, portanto não deve solicitar cartão. A instância
+fica suspensa após 15 minutos sem tráfego e o primeiro acesso posterior pode
+levar cerca de um minuto. A estratégia de ping periódico será avaliada somente
+depois da homologação inicial: ela mantém o serviço ativo, mas consome quase
+todas as 750 horas gratuitas mensais do workspace.
+
 Preencha os cinco segredos da tabela anterior. Mantenha os demais valores do
 Blueprint, em particular:
 
