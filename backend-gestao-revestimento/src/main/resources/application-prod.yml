@@ -8,6 +8,8 @@ redeasso:
   auth:
     local:
       enabled: ${REDEASSO_LOCAL_ADMIN_ENABLED:false}
+      username: ${REDEASSO_LOCAL_ADMIN_USERNAME:}
+      password: ${REDEASSO_LOCAL_ADMIN_PASSWORD:}
 
 server:
   servlet:
