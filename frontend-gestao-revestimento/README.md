@@ -48,7 +48,7 @@ pnpm.cmd --filter @workspace/redeasso run dev:cloudflare
 No Cloudflare Workers Builds, configure:
 
 - diretório raiz: `frontend-gestao-revestimento`;
-- comando de build: `corepack enable && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build`;
+- comando de build: `corepack enable && corepack prepare pnpm@11.21.0 --activate && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build`;
 - comando de deploy: `pnpm exec wrangler deploy --config wrangler.jsonc`;
 - variável de runtime `API_ORIGIN`: URL HTTPS do serviço Render, sem barra final.
 

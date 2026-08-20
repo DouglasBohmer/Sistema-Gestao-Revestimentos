@@ -2,6 +2,7 @@ services:
   - type: web
     name: redeasso-api
     runtime: docker
+    region: ohio
     branch: main
     dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
     dockerContext: ./backend-gestao-revestimento

@@ -397,7 +397,7 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 
 - **Q12.** Como o fallback local terá os mesmos dados: acesso ao PostgreSQL principal, réplica promovível ou restauração controlada de backup?
 - **Q13.** Qual RPO/RTO é aceitável e onde ficarão backups fora da máquina principal?
-- **Q15.** Qual região Neon e Render será usada? Elas devem ficar próximas para reduzir latência.
+- **Decidido (Q15).** Neon e Render usarão Ohio (`us-east-2` / `ohio`) para reduzir a latência entre API e banco.
 - **Q16.** Haverá ambiente de homologação próprio (Render + branch Neon) para os previews Cloudflare de branches?
 - **Decidido (Q17).** A `main` é a branch de produção: Render publica após CI e Cloudflare Workers Builds publica diretamente pela integração Git. Outras branches passam pelo build Docker; não podem tocar banco de produção.
 - **Q18.** Como será feito rollback e quem recebe alertas de falha de deploy/health check?

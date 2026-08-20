@@ -28,7 +28,8 @@ em cima de um banco Neon já iniciado sem backup e sem conferência prévia.
 
 No painel Render, crie um **Blueprint** a partir deste repositório. O arquivo
 `render.yaml` cria o serviço `redeasso-api` a partir de
-`backend-gestao-revestimento/Dockerfile.render`.
+`backend-gestao-revestimento/Dockerfile.render`, já fixado em Ohio para ficar
+próximo do projeto Neon.
 
 Preencha os cinco segredos da tabela anterior. Mantenha os demais valores do
 Blueprint, em particular:
@@ -51,12 +52,16 @@ No Cloudflare Workers, conecte este repositório por **Workers Builds** e use:
 | Campo | Valor |
 | --- | --- |
 | Diretório raiz | `frontend-gestao-revestimento` |
-| Comando de build | `corepack enable && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build` |
+| Comando de build | `corepack enable && corepack prepare pnpm@11.21.0 --activate && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build` |
 | Comando de deploy | `pnpm exec wrangler deploy --config wrangler.jsonc` |
 | Branch de produção | `main` |
 
 Adicione a variável de runtime `API_ORIGIN` com a URL do Render obtida no
 passo anterior. Ela é lida pelo Worker, nunca pelo bundle React.
+
+Também crie a variável **de build** `SKIP_DEPENDENCY_INSTALL=true`, evitando
+que o instalador automático do Cloudflare execute uma segunda instalação com
+uma versão diferente do pnpm.
 
 O Worker serve a SPA e encaminha `/api/*` ao Render. Isso faz com que sessão,
 CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
@@ -68,8 +73,9 @@ CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
 - `main`: depois de os checks passarem, o Render publica a API; o Workers
   Builds publica a SPA de produção diretamente da integração Git.
 - Outras branches e pull requests: `.github/workflows/docker.yml` constrói a
-  imagem Docker de fallback. Um preview Cloudflare só pode apontar para uma
-  API Render e branch Neon de homologação, nunca para produção.
+  imagem Docker de fallback. Mantenha os previews Cloudflare desativados até
+  existir uma API Render e branch Neon de homologação; eles nunca podem usar
+  os dados de produção.
 
 Cloudflare Workers não recebe nem executa imagens Docker. Portanto o Docker é
 a barreira de validação e contingência; o Worker recebe o bundle estático
