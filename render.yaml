@@ -8,7 +8,6 @@ services:
     dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
     dockerContext: ./backend-gestao-revestimento
     healthCheckPath: /actuator/health
-    maxShutdownDelaySeconds: 30
     # Em main, o Render aguarda a validação do GitHub Actions e então publica.
     autoDeployTrigger: checksPass
     envVars:
