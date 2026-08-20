@@ -13,6 +13,11 @@ node_modules/
 !.env.example
 !**/.env.example
 
+# Cloudflare Workers local configuration
+**/.wrangler/
+**/.dev.vars
+!**/.dev.vars.example
+
 # IDE and operating system
 .idea/
 .vscode/

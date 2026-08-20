@@ -1,0 +1,3 @@
+# Usado somente por `pnpm dev:cloudflare`. Nunca versione .dev.vars real.
+# Para produção, configure API_ORIGIN nas variáveis do Worker no painel Cloudflare.
+API_ORIGIN=http://localhost:8080

@@ -26,4 +26,32 @@ pnpm.cmd dev
 ```
 
 ## API
-Consome a API REST Spring Boot pelo cliente gerado a partir do OpenAPI. Em desenvolvimento, o Vite encaminha `/api` para o Spring em `localhost:8080`; na imagem Docker, React e API são servidos pelo Spring no mesmo endereço.
+Consome a API REST Spring Boot pelo cliente gerado a partir do OpenAPI. Em
+desenvolvimento, o Vite encaminha `/api` para o Spring em `localhost:8080`.
+No fallback Docker, React e API continuam no mesmo endereço.
+
+## Cloudflare Workers
+
+Em produção, a SPA é servida por um Worker com assets estáticos. O mesmo Worker
+encaminha apenas `/api/*` ao Spring no Render. Para o navegador, frontend e API
+continuam no mesmo domínio, portanto a sessão HTTP e CSRF não dependem de
+cookies de terceiros nem de CORS aberto.
+
+Para testar localmente o Worker, copie `.dev.vars.example` para `.dev.vars` e
+execute:
+
+```powershell
+pnpm.cmd --filter @workspace/redeasso run build
+pnpm.cmd --filter @workspace/redeasso run dev:cloudflare
+```
+
+No Cloudflare Workers Builds, configure:
+
+- diretório raiz: `frontend-gestao-revestimento`;
+- comando de build: `corepack enable && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build`;
+- comando de deploy: `pnpm exec wrangler deploy --config wrangler.jsonc`;
+- variável de runtime `API_ORIGIN`: URL HTTPS do serviço Render, sem barra final.
+
+Não habilite previews do Worker apontando para a API/dados de produção. Quando
+houver um ambiente de homologação com banco Neon próprio, configure uma
+`API_ORIGIN` de preview para ele.

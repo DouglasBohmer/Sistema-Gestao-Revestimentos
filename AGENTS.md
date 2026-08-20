@@ -84,22 +84,21 @@ Regras obrigatórias:
 ### 3.3 Infraestrutura
 
 - Hoje a aplicação é executada localmente por Docker e isso deve continuar disponível como fallback.
-- A fonte principal será outra máquina já preparada com Docker, acessada por Tailscale.
-- O servidor principal estava desligado durante esta análise; nenhuma configuração dele foi presumida como validada.
-- O endereço conhecido é `usuario-pc.tailbc9bf3.ts.net`; não o fixe no código do frontend. URLs variam por ambiente e devem vir de configuração.
-- O acesso preferencial será privado, por convite à tailnet do Tailscale.
-- A estação de desenvolvimento atual já tem acesso ao Tailscale. Ela poderá abrir o noVNC privado do servidor quando a porta estiver vinculada ao IP Tailscale; isso não equivale a acesso administrativo (SSH/RDP) ao servidor.
-- Se o usuário não puder receber/usar convite, o sistema poderá verificar e oferecer um endereço Tailscale Funnel como fallback de acesso. Funnel torna o serviço publicamente acessível e exige controles adicionais.
-- É proibido ativar Funnel enquanto o acesso temporário `admin/admin` estiver habilitado. Exposição pública só depois do login definitivo, remoção ou proteção forte do admin local, TLS, rate limiting e revisão de segurança; a API já usa sessão Spring e CSRF, mas isso não torna a credencial de teste adequada à internet.
+- A produção usará Neon como PostgreSQL principal, Render como hospedagem do Spring Boot e Cloudflare Workers para a SPA React e proxy de `/api`.
+- O servidor Docker/Tailscale deixa de ser dependência de produção e permanece apenas como fallback local ou ambiente de desenvolvimento.
+- O navegador acessa um único domínio Cloudflare. O Worker entrega os assets e encaminha `/api/*` ao Render, preservando sessão e CSRF no mesmo domínio sem CORS permissivo ou cookie de terceiros.
+- O serviço Render receberá deploy automático da `main` após os checks do GitHub; o Cloudflare Workers Builds receberá deploy da `main` diretamente da integração Git.
+- Branches fora da `main` devem passar na validação da imagem Docker local. Previews Cloudflare somente podem apontar para uma API Render de homologação e banco Neon isolado, nunca para os dados de produção.
 - Dados persistentes nunca podem depender do filesystem efêmero do container. Banco, uploads e artefatos necessários precisam de volumes e backup.
 - O ambiente local não pode virar uma segunda fonte de verdade gravável sem uma estratégia explícita de replicação/failover.
 
 ### 3.4 Banco e dados
 
 - O banco definitivo será PostgreSQL.
-- Há um PostgreSQL 17 de desenvolvimento configurado em `backend-gestao-revestimento/compose.dev.yml`, com volume local. O banco principal, a migração do XAMPP e a estratégia de dados compartilhados com o fallback ainda não foram configurados.
+- Neon será a fonte de verdade PostgreSQL de produção. A primeira instância Spring/Flyway usa a conexão direta Neon com SSL; avaliar o pooler somente após caracterizar migrations e multi-instância.
+- Há um PostgreSQL 17 de desenvolvimento no `docker-compose.yml`, com volume local. Ele não pode se tornar uma fonte concorrente de dados de produção.
 - Os dados atuais do sistema anterior estão em MySQL/MariaDB via XAMPP e serão exportados/migrados para PostgreSQL.
-- Servidor principal e fallback local devem trabalhar com os mesmos dados. A estratégia técnica de compartilhamento, réplica ou promoção ainda precisa ser definida para evitar split-brain.
+- O fallback local deve acessar o Neon de forma controlada ou restaurar backup; não pode gravar independentemente em banco divergente.
 
 ### 3.5 Parâmetros de negócio
 
@@ -122,7 +121,7 @@ Regras obrigatórias:
 
 Retrato confirmado após a conclusão da migração em 15/08/2026:
 
-- O Node/Express foi removido. O runtime é 100% Spring Boot; o próprio Spring serve a API e o bundle React no mesmo origin.
+- O Node/Express foi removido. O runtime de negócio é 100% Spring Boot. Em Docker local, o Spring ainda pode servir o bundle React; em produção, o React fica no Cloudflare Workers e o Spring Render expõe somente a API.
 - CRUD/busca de pisos, cálculo, dashboard/atividades e mapas estão implementados no Spring e persistidos no PostgreSQL por JPA/Flyway.
 - As migrations V1–V4 criam Spring Session, parâmetros-base, pisos/atividades e mapas/células. Dois pisos demonstrativos são carga inicial de V3; dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
@@ -145,14 +144,15 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 ## 5. Estado atual de build e deploy
 
-- `.github/workflows/docker.yml` apenas faz checkout, autentica no GHCR, constrói e publica a imagem após push em `main`.
-- O workflow não entra no servidor, não executa `git pull`, não executa `docker compose pull/up` e não comprova um deploy remoto.
-- Em 17/08/2026, o usuário confirmou que o Docker do servidor está ligado. A partir desta estação, `usuario-pc.tailbc9bf3.ts.net:8080` ainda não respondeu; confirmar porta, publicação via Tailscale e qual imagem/versão está em execução antes de tratá-lo como ambiente de homologação.
-- `Ideias.md` menciona “GitHub Actions + Watchtower”. A atualização automática só acontece se o Watchtower estiver configurado no servidor para observar a imagem correta e tiver acesso ao GHCR; isso ainda não foi verificado.
-- O `docker-compose.yml` define Spring + PostgreSQL 17, volume persistente, health checks, dependência por saúde e configuração por `.env`; a imagem pode ser local ou indicada por `REDEASSO_IMAGE`.
+- `render.yaml` define a API Docker do Render a partir de `backend-gestao-revestimento/Dockerfile.render`, com health check e variáveis sensíveis preenchidas apenas no painel Render.
+- `frontend-gestao-revestimento/wrangler.jsonc` publica assets estáticos e o Worker proxy para `/api`; `API_ORIGIN` é variável de runtime configurada no Cloudflare, não código nem segredo do frontend.
+- `.github/workflows/verify.yml` testa frontend, Worker em dry-run e Spring em todos os pushes. A `main` pode usar esse check para o `autoDeployTrigger: checksPass` do Render.
+- `.github/workflows/docker.yml` constrói a imagem Docker de fallback em branches fora da `main` e pull requests, sem publicar imagem ou alterar produção.
+- O roteiro operacional da primeira publicação fica em `docs/DEPLOY_NEON_RENDER_CLOUDFLARE.md`; ele exige segredos no painel do Render e validação explícita antes de importar dados já existentes.
+- O Docker local continua com Spring + PostgreSQL 17, volume persistente, health checks e `.env`; não é o banco de produção nem um deploy automático.
 - O Dockerfile multi-stage compila React/pnpm e Spring/Maven e entrega uma imagem JRE 21 não-root com o React incorporado ao JAR.
-- O Compose habilita temporariamente o admin local por variáveis para permitir testes e permite vincular a Área Central pela ação própria. Não expor por Funnel; trocar/desativar essa credencial antes de qualquer exposição pública.
-- `docker-compose.area-central.yml` é um overlay opcional: acrescenta Selenium Chrome e publica noVNC apenas no endereço configurado. Em servidor, o bind deve ser o IP Tailscale e a URL MagicDNS configurada; nunca publicar essa porta pelo Funnel.
+- O acesso local temporário no Render deve usar credenciais fortes fornecidas como segredos, jamais `admin/admin`. A credencial `admin/admin` continua restrita ao Docker local de desenvolvimento.
+- `docker-compose.area-central.yml` permanece um overlay local para Selenium/noVNC. A publicação legítima desse navegador em plataforma gerenciada ainda não foi desenhada; mantenha a integração Área Central desabilitada no Render até essa decisão.
 - Atualizar código em desenvolvimento não deve exigir reconstruir a imagem a cada alteração: use execução local/hot reload ou volumes de desenvolvimento. Em produção, uma nova imagem deve ser baixada e o container recriado; os dados permanecem porque ficam fora dele.
 - Releases de produção devem ter tags imutáveis e caminho de rollback. Não depender exclusivamente de `latest`.
 
@@ -378,7 +378,7 @@ O usuário confirmou em 15/08/2026 a seguinte ordem de execução. Não antecipa
 3. **Em homologação:** o login assistido já abre Chrome isolado por noVNC, captura o cookie jar apenas em memória e vincula-o à sessão RedeASSO. Validar manualmente o contrato real do portal e a primeira consulta externa antes de considerar a fase concluída. O login local `admin/admin` permanece somente como acesso de desenvolvimento/testes.
 4. Somente depois da homologação do login, implementar a configuração editável dos parâmetros de cálculo e sua auditoria/histórico.
 5. Depois dessas fases, avançar nos módulos ainda não especificados integralmente: orçamento/PDF/WhatsApp, snapshots e impressão de etiquetas.
-6. Implantar no servidor principal e ensaiar backup, rollback e fallback com os mesmos dados.
+6. Implantar em Neon/Render/Cloudflare, ensaiar backup/rollback e manter Docker local como fallback controlado.
 
 Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend, migre endpoint a endpoint e retire o Express somente quando o equivalente Spring estiver persistido, autenticado e testado.
 
@@ -397,9 +397,9 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 
 - **Q12.** Como o fallback local terá os mesmos dados: acesso ao PostgreSQL principal, réplica promovível ou restauração controlada de backup?
 - **Q13.** Qual RPO/RTO é aceitável e onde ficarão backups fora da máquina principal?
-- **Q15.** Qual é o SO/arquitetura do servidor, diretório de deploy, usuário de serviço, capacidade de disco/RAM e política de reinício?
-- **Q16.** O Watchtower está realmente instalado e autenticado no GHCR? A imagem é pública ou privada? Qual tag ele observa?
-- **Q17.** O servidor deve atualizar automaticamente todo push em `main`, ou produção terá aprovação/tag de release?
+- **Q15.** Qual região Neon e Render será usada? Elas devem ficar próximas para reduzir latência.
+- **Q16.** Haverá ambiente de homologação próprio (Render + branch Neon) para os previews Cloudflare de branches?
+- **Decidido (Q17).** A `main` é a branch de produção: Render publica após CI e Cloudflare Workers Builds publica diretamente pela integração Git. Outras branches passam pelo build Docker; não podem tocar banco de produção.
 - **Q18.** Como será feito rollback e quem recebe alertas de falha de deploy/health check?
 
 ### Prioridade 1 — dados e cálculos

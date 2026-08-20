@@ -112,6 +112,33 @@ interna com o PostgreSQL e mantém o cookie de sessão seguro por padrão. Para 
 fallback local acessado diretamente por HTTP, `SESSION_COOKIE_SECURE=false` pode
 ser usado apenas naquele ambiente.
 
+## Produção: Neon + Render
+
+O Render executa apenas a API Spring usando
+[`Dockerfile.render`](Dockerfile.render); a SPA é publicada separadamente no
+Cloudflare Workers. O arquivo [`../render.yaml`](../render.yaml) descreve o
+serviço `redeasso-api` e o Render faz deploy automático da `main` depois que os
+checks do GitHub passarem.
+
+Crie o banco no Neon e use a conexão **direta** para esta primeira instância
+Spring/Flyway. O pooler do Neon usa pooling por transação, que restringe
+recursos de sessão que ferramentas de migração podem necessitar. No Render,
+configure estes segredos:
+
+- `DATABASE_URL`: URL JDBC sem usuário/senha, por exemplo
+  `jdbc:postgresql://ep-exemplo.us-east-2.aws.neon.tech/neondb?sslmode=require`;
+- `DATABASE_USERNAME` e `DATABASE_PASSWORD`: extraídos da conexão Neon;
+- `REDEASSO_LOCAL_ADMIN_USERNAME` e `REDEASSO_LOCAL_ADMIN_PASSWORD`: fortes e
+  exclusivos enquanto o acesso local de apoio existir.
+
+Mantenha `SESSION_COOKIE_SECURE=true` e `SESSION_COOKIE_SAME_SITE=lax`. O
+Cloudflare Worker encaminha `/api/*` no mesmo domínio público e preserva os
+cabeçalhos de sessão; não é necessário liberar CORS para origens arbitrárias.
+
+Na primeira inicialização, o Flyway cria o schema no Neon. A migração dos dados
+locais deve ocorrer somente depois de confirmar backup e banco Neon vazio.
+Não aponte uma prévia de branch para o banco de produção.
+
 ## Área Central e CAPTCHA
 
 O login externo é assistido. Ao escolhê-lo no RedeASSO, o Spring abre um Chrome

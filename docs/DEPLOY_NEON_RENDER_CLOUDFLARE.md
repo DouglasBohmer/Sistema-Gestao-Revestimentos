@@ -1,0 +1,90 @@
+# Publicação gerenciada: Neon + Render + Cloudflare Workers
+
+Este é o caminho de produção do RedeASSO. O Docker Compose local continua
+disponível para desenvolvimento e contingência, mas não é parte da publicação
+na nuvem.
+
+## 1. Criar o banco no Neon
+
+1. Crie o projeto Neon na região mais próxima do serviço Render escolhido.
+2. Crie uma branch de produção vazia e obtenha a **conexão direta** (unpooled),
+   com SSL. Não use a URL que contém `-pooler` nesta primeira instância.
+3. No Render, configure os segredos abaixo a partir dessa conexão:
+
+| Variável | Valor |
+| --- | --- |
+| `DATABASE_URL` | URL JDBC, por exemplo `jdbc:postgresql://ep-...neon.tech/neondb?sslmode=require` |
+| `DATABASE_USERNAME` | usuário da conexão Neon |
+| `DATABASE_PASSWORD` | senha da conexão Neon |
+| `REDEASSO_LOCAL_ADMIN_USERNAME` | usuário local temporário forte |
+| `REDEASSO_LOCAL_ADMIN_PASSWORD` | senha local temporária forte |
+
+O primeiro deploy do Spring executa as migrations Flyway V1 a V4. Antes desse
+deploy, escolha explicitamente entre iniciar com os dados demonstrativos ou
+migrar a base local. A importação de dados existentes **não** deve ser feita
+em cima de um banco Neon já iniciado sem backup e sem conferência prévia.
+
+## 2. Criar o serviço Render
+
+No painel Render, crie um **Blueprint** a partir deste repositório. O arquivo
+`render.yaml` cria o serviço `redeasso-api` a partir de
+`backend-gestao-revestimento/Dockerfile.render`.
+
+Preencha os cinco segredos da tabela anterior. Mantenha os demais valores do
+Blueprint, em particular:
+
+- `SPRING_PROFILES_ACTIVE=prod`;
+- `SESSION_COOKIE_SECURE=true`;
+- `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`.
+
+O último item é deliberado: o noVNC/Selenium local não pode ser exposto no
+Render como se fosse uma API. O login assistido da Área Central será publicado
+somente quando houver um serviço de navegador isolado e protegido.
+
+Depois do deploy, guarde a URL HTTPS pública da API, sem barra final, por
+exemplo `https://redeasso-api.onrender.com`.
+
+## 3. Criar o Worker Cloudflare
+
+No Cloudflare Workers, conecte este repositório por **Workers Builds** e use:
+
+| Campo | Valor |
+| --- | --- |
+| Diretório raiz | `frontend-gestao-revestimento` |
+| Comando de build | `corepack enable && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build` |
+| Comando de deploy | `pnpm exec wrangler deploy --config wrangler.jsonc` |
+| Branch de produção | `main` |
+
+Adicione a variável de runtime `API_ORIGIN` com a URL do Render obtida no
+passo anterior. Ela é lida pelo Worker, nunca pelo bundle React.
+
+O Worker serve a SPA e encaminha `/api/*` ao Render. Isso faz com que sessão,
+CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
+
+## 4. Automação por branch
+
+- Todo push passa em `.github/workflows/verify.yml` (React, Worker em dry-run
+  e testes Spring).
+- `main`: depois de os checks passarem, o Render publica a API; o Workers
+  Builds publica a SPA de produção diretamente da integração Git.
+- Outras branches e pull requests: `.github/workflows/docker.yml` constrói a
+  imagem Docker de fallback. Um preview Cloudflare só pode apontar para uma
+  API Render e branch Neon de homologação, nunca para produção.
+
+Cloudflare Workers não recebe nem executa imagens Docker. Portanto o Docker é
+a barreira de validação e contingência; o Worker recebe o bundle estático
+gerado pelo Vite.
+
+## 5. Homologação após a primeira publicação
+
+1. Abra a URL Cloudflare e confirme que as rotas SPA, inclusive uma rota
+   interna como `/mapa-estoque`, retornam a aplicação.
+2. Confirme `GET /api/healthz` pelo mesmo domínio Cloudflare.
+3. Entre com as credenciais locais fortes configuradas no Render e execute uma
+   leitura de pisos e uma alteração de mapa.
+4. Confirme no Neon que migrations, sessões, pisos e mapas foram persistidos.
+5. Registre um backup Neon e faça um ensaio de rollback antes de habilitar o
+   uso operacional.
+
+Não publique `admin/admin`, URL de banco, senha ou cookies no Git, no Worker
+ou em variáveis `VITE_*`.

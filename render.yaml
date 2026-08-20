@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: redeasso-api
+    runtime: docker
+    branch: main
+    dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
+    dockerContext: ./backend-gestao-revestimento
+    healthCheckPath: /actuator/health
+    maxShutdownDelaySeconds: 30
+    # Em main, o Render aguarda a validação do GitHub Actions e então publica.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SESSION_COOKIE_SAME_SITE
+        value: lax
+      - key: SESSION_TIMEOUT
+        value: 12h
+      - key: DATABASE_MAX_POOL_SIZE
+        value: "5"
+      # Cole a URL JDBC direta do Neon (não a URL de pooler) na criação do
+      # Blueprint. Ex.: jdbc:postgresql://ep-...neon.tech/neondb?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      # O login local continua apenas enquanto a Área Central é homologada,
+      # mas sem qualquer valor padrão exposto no repositório.
+      - key: REDEASSO_LOCAL_ADMIN_ENABLED
+        value: "true"
+      - key: REDEASSO_LOCAL_ADMIN_USERNAME
+        sync: false
+      - key: REDEASSO_LOCAL_ADMIN_PASSWORD
+        sync: false
+      # O navegador noVNC ainda não é publicado no Render. Mantê-lo desligado
+      # impede que uma porta de interação humana seja exposta acidentalmente.
+      - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
+        value: "false"

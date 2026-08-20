@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1.7
+# Imagem exclusiva da API para o Render. O frontend é publicado pelo
+# Cloudflare Worker e não deve ser incorporado ao JAR de produção.
+FROM eclipse-temurin:21-jdk-jammy AS build
+
+WORKDIR /workspace
+
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+RUN --mount=type=cache,id=redeasso-render-maven,target=/root/.m2 \
+    ./mvnw -B -ntp dependency:go-offline
+
+COPY src src
+RUN --mount=type=cache,id=redeasso-render-maven,target=/root/.m2 \
+    ./mvnw -B -ntp package
+
+FROM eclipse-temurin:21-jre-alpine
+
+RUN addgroup -S redeasso && adduser -S -G redeasso redeasso
+WORKDIR /app
+
+COPY --from=build --chown=redeasso:redeasso /workspace/target/*.jar /app/redeasso.jar
+
+USER redeasso
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "/app/redeasso.jar"]

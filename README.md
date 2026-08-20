@@ -49,13 +49,13 @@ Para garantir a escalabilidade do código e uma fácil manutenção, o projeto u
 | **Frontend (Interface)** | React.js (com Vite), estruturado via HTML5 e CSS3 |
 | **Banco de Dados** | PostgreSQL com migrations Flyway |
 | **Geração de PDF** | Bibliotecas iTextPDF ou Apache PDFBox |
-| **Infraestrutura** | Docker; servidor principal privado via Tailscale e ambiente local como fallback |
+| **Infraestrutura** | Neon (PostgreSQL), Render (API), Cloudflare Workers (SPA); Docker local como fallback |
 
 A separação isola as regras de negócio das interações de tela. O design visual e o fluxo de interação foram prototipados previamente utilizando a plataforma Figma Make.
 
-O backend de catálogo, cálculo, dashboard/atividades e mapas está integralmente em Spring Boot, com persistência PostgreSQL e migrations Flyway. O Node/Express foi retirado do runtime; em produção, o próprio Spring também serve o bundle React no mesmo endereço.
+O backend de catálogo, cálculo, dashboard/atividades e mapas está integralmente em Spring Boot, com persistência PostgreSQL e migrations Flyway. O Node/Express foi retirado do runtime; em produção, o Cloudflare Worker serve o React e encaminha a API ao Spring no Render. O Docker local conserva o bundle React incorporado ao Spring para uso offline de desenvolvimento.
 
-## ▶️ Executar com Docker
+## ▶️ Executar com Docker (fallback local)
 
 Na raiz do repositório, copie `.env.example` para `.env`, ajuste pelo menos `POSTGRES_PASSWORD` e execute:
 
@@ -68,6 +68,26 @@ A aplicação abre em `http://localhost:8080`. O acesso local temporário de tes
 continua sendo `admin/admin`; ele pode vincular uma sessão da Área Central pela
 ação “Conectar Área Central”, mas não dá acesso externo por si só. Não use
 Funnel enquanto essa credencial estiver habilitada.
+
+## Produção gerenciada
+
+A produção passa a usar três serviços independentes: **Neon** como PostgreSQL,
+**Render** para a API Spring e **Cloudflare Workers** para o React. O navegador
+acessa um único domínio Cloudflare; o Worker entrega a SPA e encaminha `/api/*`
+ao Render, preservando cookies de sessão no mesmo domínio.
+
+O arquivo [render.yaml](render.yaml) provisiona a API no Render a partir da
+`main`, aguardando os checks do GitHub. O Worker está em
+[frontend-gestao-revestimento/wrangler.jsonc](frontend-gestao-revestimento/wrangler.jsonc)
+e deve ser conectado ao mesmo repositório no Cloudflare Workers Builds.
+
+Antes do primeiro deploy, crie um banco Neon e configure os segredos indicados
+no [README do backend](backend-gestao-revestimento/README.md). O Docker local
+continua disponível para desenvolvimento, testes e contingência, sem ser a
+fonte de dados de produção.
+
+O passo a passo para conectar as três contas e fazer a primeira publicação está
+em [docs/DEPLOY_NEON_RENDER_CLOUDFLARE.md](docs/DEPLOY_NEON_RENDER_CLOUDFLARE.md).
 
 ## Área Central com CAPTCHA
 
