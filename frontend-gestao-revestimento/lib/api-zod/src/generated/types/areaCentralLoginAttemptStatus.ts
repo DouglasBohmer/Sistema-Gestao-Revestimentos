@@ -10,5 +10,6 @@ export type AreaCentralLoginAttemptStatus = typeof AreaCentralLoginAttemptStatus
 
 
 export const AreaCentralLoginAttemptStatus = {
-  WAITING_FOR_USER: 'WAITING_FOR_USER',
+  WAITING_FOR_HUMAN: 'WAITING_FOR_HUMAN',
+  READY_TO_COMPLETE: 'READY_TO_COMPLETE',
 } as const;

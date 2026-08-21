@@ -20,7 +20,8 @@ export type AreaCentralLoginAttemptStatus = typeof AreaCentralLoginAttemptStatus
 
 
 export const AreaCentralLoginAttemptStatus = {
-  WAITING_FOR_USER: 'WAITING_FOR_USER',
+  WAITING_FOR_HUMAN: 'WAITING_FOR_HUMAN',
+  READY_TO_COMPLETE: 'READY_TO_COMPLETE',
 } as const;
 
 export interface AreaCentralLoginAttempt {
@@ -30,13 +31,19 @@ export interface AreaCentralLoginAttempt {
   expiresAt: string;
 }
 
-export interface CompleteAreaCentralLoginRequest {
+export interface StartAreaCentralLoginRequest {
   /**
-     * Identificador da conta usada na Área Central, para a sessão e auditoria local.
+     * Identificador da conta usada na Área Central durante esta tentativa.
      * @minLength 1
      * @maxLength 160
      */
   username: string;
+  /**
+     * Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.
+     * @minLength 1
+     * @maxLength 512
+     */
+  password: string;
 }
 
 /**

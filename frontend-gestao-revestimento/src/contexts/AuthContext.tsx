@@ -19,7 +19,7 @@ interface AuthContextType {
   isLoading: boolean
   session: SessionResponse | null
   login: (username: string, password: string) => Promise<LocalLoginResult>
-  completeAreaCentralLogin: (username: string) => Promise<boolean>
+  completeAreaCentralLogin: () => Promise<boolean>
   logout: () => Promise<void>
 }
 
@@ -61,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function completeAreaCentralLogin(username: string) {
-    const authenticatedSession = await completeAreaCentralLoginAttempt({ username })
+  async function completeAreaCentralLogin() {
+    const authenticatedSession = await completeAreaCentralLoginAttempt()
     setSession(authenticatedSession)
     return authenticatedSession.authenticated
   }

@@ -97,9 +97,16 @@ paths:
       tags: [auth]
       summary: Iniciar login assistido da Área Central
       description: >-
-        Abre um navegador isolado no servidor para que o usuário conclua o
-        login e o CAPTCHA legitimamente pelo noVNC. Não recebe credenciais nem
-        devolve cookies da Área Central.
+        Abre um navegador isolado no servidor e preenche as credenciais
+        recebidas somente para esta tentativa. O CAPTCHA não é automatizado e
+        deve ser confirmado pelo usuário no noVNC. A senha não é persistida,
+        devolvida nem registrada em logs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartAreaCentralLoginRequest"
       responses:
         "201":
           description: Navegador pronto para interação humana
@@ -128,12 +135,6 @@ paths:
       description: >-
         Captura o cookie jar apenas no backend depois que o usuário concluiu
         a interação no navegador remoto. Requer token CSRF.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CompleteAreaCentralLoginRequest"
       responses:
         "200":
           description: Sessão RedeASSO autenticada ou vinculada à Área Central
@@ -161,6 +162,27 @@ paths:
                 $ref: "#/components/schemas/ApiError"
 
   /auth/area-central/attempts/current:
+    get:
+      operationId: getCurrentAreaCentralLoginAttempt
+      tags: [auth]
+      summary: Consultar o estado do login assistido atual
+      description: >-
+        Informa se o navegador remoto ainda aguarda a confirmação humana ou se
+        o login externo já está pronto para concluir. Nunca devolve cookies,
+        senha ou conteúdo da Área Central.
+      responses:
+        "200":
+          description: Tentativa atual da sessão
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCentralLoginAttempt"
+        "404":
+          description: Não há tentativa de login nesta sessão
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
     delete:
       operationId: cancelCurrentAreaCentralLoginAttempt
       tags: [auth]
@@ -658,7 +680,7 @@ components:
       properties:
         status:
           type: string
-          enum: [WAITING_FOR_USER]
+          enum: [WAITING_FOR_HUMAN, READY_TO_COMPLETE]
         interactiveUrl:
           type: string
           format: uri
@@ -667,16 +689,22 @@ components:
           type: string
           format: date-time
 
-    CompleteAreaCentralLoginRequest:
+    StartAreaCentralLoginRequest:
       type: object
       additionalProperties: false
-      required: [username]
+      required: [username, password]
       properties:
         username:
           type: string
           minLength: 1
           maxLength: 160
-          description: Identificador da conta usada na Área Central, para a sessão e auditoria local.
+          description: Identificador da conta usada na Área Central durante esta tentativa.
+        password:
+          type: string
+          minLength: 1
+          maxLength: 512
+          writeOnly: true
+          description: Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.
 
     SessionResponse:
       type: object
