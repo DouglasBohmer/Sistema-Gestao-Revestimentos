@@ -27,6 +27,10 @@ function targetUrl(requestUrl: URL, apiOrigin: string): URL {
   return new URL(`${requestUrl.pathname}${requestUrl.search}`, origin);
 }
 
+function healthUrl(apiOrigin: string): URL {
+  return new URL("/actuator/health", new URL(apiOrigin));
+}
+
 function upstreamHeaders(request: Request, requestUrl: URL): Headers {
   const headers = new Headers(request.headers);
   HOP_BY_HOP_HEADERS.forEach((name) => headers.delete(name));
@@ -73,6 +77,25 @@ export default {
     } catch (error) {
       console.error("Não foi possível alcançar a API de origem.", error);
       return unavailableResponse("API_UPSTREAM_UNREACHABLE");
+    }
+  },
+
+  async scheduled(_controller: unknown, environment: Environment): Promise<void> {
+    if (!environment.API_ORIGIN) {
+      console.error("Ping não executado: API_ORIGIN não está configurada.");
+      return;
+    }
+
+    try {
+      const response = await fetch(healthUrl(environment.API_ORIGIN), {
+        headers: { "cache-control": "no-store" },
+      });
+
+      if (!response.ok) {
+        console.error("Ping do Render respondeu com erro.", response.status);
+      }
+    } catch (error) {
+      console.error("Ping do Render não conseguiu alcançar a API.", error);
     }
   },
 };

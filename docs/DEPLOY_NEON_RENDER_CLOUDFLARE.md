@@ -31,11 +31,10 @@ No painel Render, crie um **Blueprint** a partir deste repositório. O arquivo
 `backend-gestao-revestimento/Dockerfile.render`, já fixado em Ohio para ficar
 próximo do projeto Neon.
 
-O Blueprint usa `plan: free`, portanto não deve solicitar cartão. A instância
-fica suspensa após 15 minutos sem tráfego e o primeiro acesso posterior pode
-levar cerca de um minuto. A estratégia de ping periódico será avaliada somente
-depois da homologação inicial: ela mantém o serviço ativo, mas consome quase
-todas as 750 horas gratuitas mensais do workspace.
+O Blueprint usa `plan: free`, portanto não deve solicitar cartão. O Worker
+Cloudflare tem um cron de 10 minutos que consulta `/actuator/health` e evita a
+suspensão por inatividade. Isso mantém o serviço ativo, mas consome quase todas
+as 750 horas gratuitas mensais do workspace; acompanhe esse consumo no Render.
 
 Preencha os cinco segredos da tabela anterior. Mantenha os demais valores do
 Blueprint, em particular:
@@ -62,8 +61,9 @@ No Cloudflare Workers, conecte este repositório por **Workers Builds** e use:
 | Comando de deploy | `pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc` |
 | Branch de produção | `main` |
 
-Adicione a variável de runtime `API_ORIGIN` com a URL do Render obtida no
-passo anterior. Ela é lida pelo Worker, nunca pelo bundle React.
+`API_ORIGIN` já está versionada em `wrangler.jsonc` com a URL pública do Render.
+Se a URL da API mudar, atualize esse arquivo e publique uma nova versão do
+Worker. Ela é lida pelo Worker, nunca pelo bundle React.
 
 Também crie a variável **de build** `SKIP_DEPENDENCY_INSTALL=true`, evitando
 que o instalador automático do Cloudflare execute uma segunda instalação com
@@ -71,6 +71,9 @@ uma versão diferente do pnpm.
 
 O Worker serve a SPA e encaminha `/api/*` ao Render. Isso faz com que sessão,
 CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
+O mesmo Worker executa um Cron Trigger `*/10 * * * *`, que faz uma chamada
+`GET /actuator/health` ao Render. Esse ping não acessa dados de negócio, banco
+nem sessões de usuários.
 
 ## 4. Automação por branch
 

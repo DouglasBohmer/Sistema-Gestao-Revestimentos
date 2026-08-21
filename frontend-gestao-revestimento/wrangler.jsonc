@@ -6,6 +6,9 @@
   "vars": {
     "API_ORIGIN": "https://redeasso-api.onrender.com"
   },
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  },
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
