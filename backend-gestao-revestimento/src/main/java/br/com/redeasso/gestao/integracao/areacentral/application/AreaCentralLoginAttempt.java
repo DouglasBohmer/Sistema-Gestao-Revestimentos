@@ -6,11 +6,13 @@ final class AreaCentralLoginAttempt {
 
     private final String applicationSessionId;
     private final String browserSessionId;
+    private final String username;
     private final Instant expiresAt;
 
-    AreaCentralLoginAttempt(String applicationSessionId, String browserSessionId, Instant expiresAt) {
+    AreaCentralLoginAttempt(String applicationSessionId, String browserSessionId, String username, Instant expiresAt) {
         this.applicationSessionId = applicationSessionId;
         this.browserSessionId = browserSessionId;
+        this.username = username;
         this.expiresAt = expiresAt;
     }
 
@@ -20,6 +22,10 @@ final class AreaCentralLoginAttempt {
 
     String browserSessionId() {
         return browserSessionId;
+    }
+
+    String username() {
+        return username;
     }
 
     Instant expiresAt() {

@@ -69,9 +69,10 @@ Regras obrigatórias:
 - Para uma consulta externa após entrar como `admin/admin`, deve existir uma sessão externa válida vinculada; a experiência exata ainda será definida.
 - Qualquer conta válida da Área Central deve poder criar sua própria sessão externa.
 - A Área Central não oferece API oficial para este uso. A integração deverá reproduzir o fluxo autorizado da tela de login e as requisições do catálogo.
-- O CAPTCHA aparece em todos os logins. Normalmente basta selecionar a caixa e raramente há desafio de imagens; a solução não pode presumir que o desafio nunca ocorrerá nem tentar contorná-lo indevidamente.
-- A interação humana com o CAPTCHA ocorrerá em um navegador Chromium isolado no servidor, exibido por noVNC somente durante uma tentativa de login. O acesso visual deverá ficar restrito à tailnet, sem Funnel, e a Área Central continuará vendo um navegador real.
-- A senha da Área Central é digitada exclusivamente no Chrome isolado exibido por noVNC. Ela não pode ser capturada ou armazenada pelo React, `localStorage`, `sessionStorage`, logs, banco ou APIs do RedeASSO.
+- O CAPTCHA aparece em todos os logins e, no fluxo atualmente observado, basta selecionar a caixa “Sou humano”; não há desafio de imagens. A solução não deve tentar automatizar ou contornar essa confirmação humana.
+- O RedeASSO coleta usuário e senha da Área Central somente para uma tentativa de login e os envia por HTTPS ao Spring, que preenche o Chrome isolado. A senha é efêmera: não pode ser persistida, devolvida em JSON, registrada em log, trace, auditoria, `localStorage` ou `sessionStorage`; deve ser descartada após o preenchimento do navegador.
+- O CAPTCHA nunca será clicado, resolvido ou contornado por automação. O Chromium isolado é exibido por noVNC dentro de um modal do próprio RedeASSO, sem abrir nova guia; a pessoa confirma manualmente a caixa “Sou humano” na página real da Área Central.
+- O noVNC local continua restrito à tailnet. Para produção em nuvem, o navegador isolado exigirá serviço dedicado e URL de acesso temporária/protegida antes de habilitar a integração no Render.
 - Depois do login externo, o backend guarda o cookie jar da Área Central e o associa à sessão do usuário do RedeASSO.
 - Cookies da Área Central, incluindo `PHPSESSID`, jamais podem ser devolvidos ao navegador, incluídos em JSON, expostos em erros ou gravados em logs.
 - A Área Central entrega `PHPSESSID` também a visitantes anônimos; sua mera presença não prova autenticação. A conclusão do login assistido deve exigir cookie e ausência do formulário de senha no navegador remoto. A primeira consulta autorizada ao catálogo continuará sendo a validação definitiva da sessão.
@@ -153,7 +154,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 - O Docker local continua com Spring + PostgreSQL 17, volume persistente, health checks e `.env`; não é o banco de produção nem um deploy automático.
 - O Dockerfile multi-stage compila React/pnpm e Spring/Maven e entrega uma imagem JRE 21 não-root com o React incorporado ao JAR.
 - O acesso local temporário no Render deve usar credenciais fortes fornecidas como segredos, jamais `admin/admin`. A credencial `admin/admin` continua restrita ao Docker local de desenvolvimento.
-- `docker-compose.area-central.yml` permanece um overlay local para Selenium/noVNC. A publicação legítima desse navegador em plataforma gerenciada ainda não foi desenhada; mantenha a integração Área Central desabilitada no Render até essa decisão.
+- `docker-compose.area-central.yml` permanece um overlay local para Selenium/noVNC. O fluxo de UI integrado preenche credenciais temporárias no navegador e mostra o noVNC em modal apenas para a confirmação humana; mantenha a integração Área Central desabilitada no Render até existir um serviço de navegador gerenciado, isolado e com acesso temporário.
 - Atualizar código em desenvolvimento não deve exigir reconstruir a imagem a cada alteração: use execução local/hot reload ou volumes de desenvolvimento. Em produção, uma nova imagem deve ser baixada e o container recriado; os dados permanecem porque ficam fora dele.
 - Releases de produção devem ter tags imutáveis e caminho de rollback. Não depender exclusivamente de `latest`.
 

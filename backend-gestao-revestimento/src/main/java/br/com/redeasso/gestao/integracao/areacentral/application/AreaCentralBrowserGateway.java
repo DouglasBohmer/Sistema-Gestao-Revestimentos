@@ -5,12 +5,13 @@ import java.util.List;
 
 /**
  * Controla um navegador remoto exclusivamente para o login assistido. O
- * contrato deliberadamente não oferece acesso ao conteúdo da página nem a
- * credenciais: somente à sessão opaca criada pelo usuário.
+ * contrato não expõe conteúdo da página ao frontend nem aceita ações no
+ * CAPTCHA. As credenciais são usadas uma única vez para preencher o formulário
+ * no navegador remoto e jamais devem ser persistidas ou registradas em log.
  */
 public interface AreaCentralBrowserGateway {
 
-    AreaCentralBrowserSession open(URI loginUrl);
+    AreaCentralBrowserSession open(URI loginUrl, String username, char[] password);
 
     List<AreaCentralCookie> cookies(String browserSessionId);
 

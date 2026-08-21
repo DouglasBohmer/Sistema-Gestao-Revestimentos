@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,10 @@ public class AreaCentralLoginService {
         this.browserGateway = browserGateway;
     }
 
-    public synchronized AreaCentralLoginAttemptState start(String applicationSessionId) {
+    public synchronized AreaCentralLoginAttemptState start(
+            String applicationSessionId,
+            String username,
+            String password) {
         validateConfiguration();
         expireAttempts();
 
@@ -36,25 +40,36 @@ public class AreaCentralLoginService {
             throw new AreaCentralLoginBusyException();
         }
 
-        AreaCentralBrowserSession browserSession = browserGateway.open(properties.loginUrl());
+        char[] passwordChars = password.toCharArray();
+        AreaCentralBrowserSession browserSession;
+        try {
+            browserSession = browserGateway.open(properties.loginUrl(), username, passwordChars);
+        } finally {
+            Arrays.fill(passwordChars, '\0');
+        }
         AreaCentralLoginAttempt attempt = new AreaCentralLoginAttempt(
                 applicationSessionId,
                 browserSession.id(),
+                username,
                 Instant.now().plus(properties.loginAttemptTimeout()));
         attempts.put(applicationSessionId, attempt);
         return stateOf(attempt);
     }
 
-    public synchronized AreaCentralCookieJar complete(String applicationSessionId) {
+    public synchronized AreaCentralAuthenticatedLogin complete(String applicationSessionId) {
         expireAttempts();
         AreaCentralLoginAttempt attempt = attemptFor(applicationSessionId);
-        AreaCentralCookieJar cookieJar = new AreaCentralCookieJar(browserGateway.cookies(attempt.browserSessionId()));
-        if (!cookieJar.hasAuthenticatedSessionCookie()
-                || browserGateway.loginFormDisplayed(attempt.browserSessionId())) {
+        AreaCentralCookieJar cookieJar = authenticatedCookieJar(attempt);
+        if (cookieJar == null) {
             throw new AreaCentralLoginIncompleteException();
         }
         removeAttempt(attempt);
-        return cookieJar;
+        return new AreaCentralAuthenticatedLogin(attempt.username(), cookieJar);
+    }
+
+    public synchronized AreaCentralLoginAttemptState current(String applicationSessionId) {
+        expireAttempts();
+        return stateOf(attemptFor(applicationSessionId));
     }
 
     public synchronized void cancel(String applicationSessionId) {
@@ -88,7 +103,19 @@ public class AreaCentralLoginService {
     }
 
     private AreaCentralLoginAttemptState stateOf(AreaCentralLoginAttempt attempt) {
-        return AreaCentralLoginAttemptState.waitingForUser(properties.interactiveUrl(), attempt.expiresAt());
+        if (authenticatedCookieJar(attempt) != null) {
+            return AreaCentralLoginAttemptState.readyToComplete(properties.interactiveUrl(), attempt.expiresAt());
+        }
+        return AreaCentralLoginAttemptState.waitingForHuman(properties.interactiveUrl(), attempt.expiresAt());
+    }
+
+    private AreaCentralCookieJar authenticatedCookieJar(AreaCentralLoginAttempt attempt) {
+        AreaCentralCookieJar cookieJar = new AreaCentralCookieJar(browserGateway.cookies(attempt.browserSessionId()));
+        if (!cookieJar.hasAuthenticatedSessionCookie()
+                || browserGateway.loginFormDisplayed(attempt.browserSessionId())) {
+            return null;
+        }
+        return cookieJar;
     }
 
     private void removeAttempt(AreaCentralLoginAttempt attempt) {

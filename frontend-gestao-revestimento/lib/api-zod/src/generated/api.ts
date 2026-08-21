@@ -50,11 +50,22 @@ export const LocalLoginResponse = zod.object({
 
 
 /**
- * Abre um navegador isolado no servidor para que o usuário conclua o login e o CAPTCHA legitimamente pelo noVNC. Não recebe credenciais nem devolve cookies da Área Central.
+ * Abre um navegador isolado no servidor e preenche as credenciais recebidas somente para esta tentativa. O CAPTCHA não é automatizado e deve ser confirmado pelo usuário no noVNC. A senha não é persistida, devolvida nem registrada em logs.
  * @summary Iniciar login assistido da Área Central
  */
+export const startAreaCentralLoginAttemptBodyUsernameMax = 160;
+
+export const startAreaCentralLoginAttemptBodyPasswordMax = 512;
+
+
+
+export const StartAreaCentralLoginAttemptBody = zod.object({
+  "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.'),
+  "password": zod.string().min(1).max(startAreaCentralLoginAttemptBodyPasswordMax).describe('Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.')
+})
+
 export const StartAreaCentralLoginAttemptResponse = zod.object({
-  "status": zod.enum(['WAITING_FOR_USER']),
+  "status": zod.enum(['WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
   "interactiveUrl": zod.string().url().describe('URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.'),
   "expiresAt": zod.coerce.date()
 })
@@ -64,19 +75,22 @@ export const StartAreaCentralLoginAttemptResponse = zod.object({
  * Captura o cookie jar apenas no backend depois que o usuário concluiu a interação no navegador remoto. Requer token CSRF.
  * @summary Confirmar login assistido da Área Central
  */
-export const completeAreaCentralLoginAttemptBodyUsernameMax = 160;
-
-
-
-export const CompleteAreaCentralLoginAttemptBody = zod.object({
-  "username": zod.string().min(1).max(completeAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central, para a sessão e auditoria local.')
-})
-
 export const CompleteAreaCentralLoginAttemptResponse = zod.object({
   "authenticated": zod.boolean(),
   "username": zod.string().nullish(),
   "authType": zod.union([zod.literal('LOCAL'),zod.literal('AREA_CENTRAL'),zod.literal(null)]).nullish().describe('Forma usada para autenticar a identidade atual no RedeASSO.'),
   "areaCentralConnected": zod.boolean().describe('Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.')
+})
+
+
+/**
+ * Informa se o navegador remoto ainda aguarda a confirmação humana ou se o login externo já está pronto para concluir. Nunca devolve cookies, senha ou conteúdo da Área Central.
+ * @summary Consultar o estado do login assistido atual
+ */
+export const GetCurrentAreaCentralLoginAttemptResponse = zod.object({
+  "status": zod.enum(['WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
+  "interactiveUrl": zod.string().url().describe('URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.'),
+  "expiresAt": zod.coerce.date()
 })
 
 

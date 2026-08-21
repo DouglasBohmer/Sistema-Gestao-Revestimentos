@@ -23,6 +23,10 @@ import java.util.List;
 @Component
 public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
 
+    private static final String W3C_ELEMENT_ID = "element-6066-11e4-a52e-4f735466cecf";
+    private static final String USERNAME_SELECTOR = "#USR_APELIDO";
+    private static final String PASSWORD_SELECTOR = "#USR_SENHA";
+
     private final AreaCentralProperties properties;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
@@ -37,7 +41,7 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
     }
 
     @Override
-    public AreaCentralBrowserSession open(URI loginUrl) {
+    public AreaCentralBrowserSession open(URI loginUrl, String username, char[] password) {
         ObjectNode capability = objectMapper.createObjectNode();
         capability.put("browserName", "chrome");
         capability.putObject("goog:chromeOptions").putArray("args");
@@ -57,11 +61,38 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
             ObjectNode navigation = objectMapper.createObjectNode();
             navigation.put("url", loginUrl.toString());
             send("POST", "/session/%s/url".formatted(browserSessionId), navigation);
+            fillCredentials(browserSessionId, username, password);
             return new AreaCentralBrowserSession(browserSessionId);
         } catch (RuntimeException exception) {
             close(browserSessionId);
             throw exception;
         }
+    }
+
+    private void fillCredentials(String browserSessionId, String username, char[] password) {
+        type(browserSessionId, USERNAME_SELECTOR, username);
+        type(browserSessionId, PASSWORD_SELECTOR, new String(password));
+    }
+
+    private void type(String browserSessionId, String selector, String value) {
+        ObjectNode findPayload = objectMapper.createObjectNode();
+        findPayload.put("using", "css selector");
+        findPayload.put("value", selector);
+        JsonNode element = send("POST", "/session/%s/element".formatted(browserSessionId), findPayload)
+                .path("value");
+        String elementId = element.path(W3C_ELEMENT_ID).asText();
+        if (elementId.isBlank()) {
+            elementId = element.path("ELEMENT").asText();
+        }
+        if (elementId.isBlank()) {
+            throw new AreaCentralBrowserUnavailableException();
+        }
+
+        ObjectNode keysPayload = objectMapper.createObjectNode();
+        keysPayload.put("text", value);
+        var values = keysPayload.putArray("value");
+        value.codePoints().forEach(codePoint -> values.add(new String(Character.toChars(codePoint))));
+        send("POST", "/session/%s/element/%s/value".formatted(browserSessionId, elementId), keysPayload);
     }
 
     @Override

@@ -44,8 +44,11 @@ Blueprint, em particular:
 - `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`.
 
 O último item é deliberado: o noVNC/Selenium local não pode ser exposto no
-Render como se fosse uma API. O login assistido da Área Central será publicado
-somente quando houver um serviço de navegador isolado e protegido.
+Render como se fosse uma API. A tela do RedeASSO pode enviar credenciais
+efêmeras ao Spring para preencher o Chrome isolado, mas o CAPTCHA continua
+manual e aparece em modal. O login assistido será habilitado em produção
+somente quando houver um serviço de navegador isolado, protegido e com URL de
+acesso temporária.
 
 Depois do deploy, guarde a URL HTTPS pública da API, sem barra final, por
 exemplo `https://redeasso-api.onrender.com`.

@@ -3,8 +3,8 @@ package br.com.redeasso.gestao.integracao.areacentral.api;
 import br.com.redeasso.gestao.auth.api.dto.SessionResponse;
 import br.com.redeasso.gestao.auth.application.AreaCentralAuthenticationService;
 import br.com.redeasso.gestao.integracao.areacentral.api.dto.AreaCentralLoginAttemptResponse;
-import br.com.redeasso.gestao.integracao.areacentral.api.dto.CompleteAreaCentralLoginRequest;
-import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralCookieJar;
+import br.com.redeasso.gestao.integracao.areacentral.api.dto.StartAreaCentralLoginRequest;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralAuthenticatedLogin;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginAttemptState;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -34,25 +35,32 @@ public class AreaCentralLoginController {
     }
 
     @PostMapping("/attempts")
-    public ResponseEntity<AreaCentralLoginAttemptResponse> start(HttpServletRequest request) {
-        AreaCentralLoginAttemptState state = loginService.start(sessionId(request));
+    public ResponseEntity<AreaCentralLoginAttemptResponse> start(
+            @Valid @RequestBody StartAreaCentralLoginRequest start,
+            HttpServletRequest request) {
+        AreaCentralLoginAttemptState state = loginService.start(sessionId(request), start.username(), start.password());
         return ResponseEntity.status(201).body(AreaCentralLoginAttemptResponse.from(state));
     }
 
     @PostMapping("/attempts/complete")
     public ResponseEntity<SessionResponse> complete(
-            @Valid @RequestBody CompleteAreaCentralLoginRequest completion,
             HttpServletRequest request,
             HttpServletResponse response) {
-        AreaCentralCookieJar cookieJar = loginService.complete(sessionId(request));
+        AreaCentralAuthenticatedLogin completion = loginService.complete(sessionId(request));
         Authentication authentication = authenticationService.authenticateOrAttach(
-                completion.username(), cookieJar, request, response);
+                completion.username(), completion.cookieJar(), request, response);
 
         return ResponseEntity.ok(new SessionResponse(
                 true,
                 authentication.getName(),
                 authType(request),
                 true));
+    }
+
+    @GetMapping("/attempts/current")
+    public ResponseEntity<AreaCentralLoginAttemptResponse> current(HttpServletRequest request) {
+        AreaCentralLoginAttemptState state = loginService.current(sessionId(request));
+        return ResponseEntity.ok(AreaCentralLoginAttemptResponse.from(state));
     }
 
     @DeleteMapping("/attempts/current")

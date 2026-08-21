@@ -25,7 +25,6 @@ import type {
   Atividade,
   CalculoInput,
   CalculoResult,
-  CompleteAreaCentralLoginRequest,
   CsrfTokenResponse,
   DashboardStats,
   ErrorResponse,
@@ -39,7 +38,8 @@ import type {
   MapaUpdateRequest,
   Piso,
   PisoInput,
-  SessionResponse
+  SessionResponse,
+  StartAreaCentralLoginRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -306,17 +306,17 @@ export const getStartAreaCentralLoginAttemptUrl = () => {
 }
 
 /**
- * Abre um navegador isolado no servidor para que o usuário conclua o login e o CAPTCHA legitimamente pelo noVNC. Não recebe credenciais nem devolve cookies da Área Central.
+ * Abre um navegador isolado no servidor e preenche as credenciais recebidas somente para esta tentativa. O CAPTCHA não é automatizado e deve ser confirmado pelo usuário no noVNC. A senha não é persistida, devolvida nem registrada em logs.
  * @summary Iniciar login assistido da Área Central
  */
-export const startAreaCentralLoginAttempt = async ( options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {
+export const startAreaCentralLoginAttempt = async (startAreaCentralLoginRequest: StartAreaCentralLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {
 
   return customFetch<AreaCentralLoginAttempt>(getStartAreaCentralLoginAttemptUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(startAreaCentralLoginRequest)
   }
 );}
 
@@ -325,8 +325,8 @@ export const startAreaCentralLoginAttempt = async ( options?: Parameters<typeof 
 
 
 export const getStartAreaCentralLoginAttemptMutationOptions = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,{data: BodyType<StartAreaCentralLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,{data: BodyType<StartAreaCentralLoginRequest>}, TContext> => {
 
 const mutationKey = ['startAreaCentralLoginAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -338,10 +338,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, {data: BodyType<StartAreaCentralLoginRequest>}> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  startAreaCentralLoginAttempt(requestOptions)
+          return  startAreaCentralLoginAttempt(data,requestOptions)
         }
 
 
@@ -352,18 +352,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type StartAreaCentralLoginAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>>
-
+    export type StartAreaCentralLoginAttemptMutationBody = BodyType<StartAreaCentralLoginRequest>
     export type StartAreaCentralLoginAttemptMutationError = ErrorType<ApiError>
 
     /**
  * @summary Iniciar login assistido da Área Central
  */
 export const useStartAreaCentralLoginAttempt = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,{data: BodyType<StartAreaCentralLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>,
         TError,
-        void,
+        {data: BodyType<StartAreaCentralLoginRequest>},
         TContext
       > => {
       return useMutation(getStartAreaCentralLoginAttemptMutationOptions(options));
@@ -381,14 +381,14 @@ export const getCompleteAreaCentralLoginAttemptUrl = () => {
  * Captura o cookie jar apenas no backend depois que o usuário concluiu a interação no navegador remoto. Requer token CSRF.
  * @summary Confirmar login assistido da Área Central
  */
-export const completeAreaCentralLoginAttempt = async (completeAreaCentralLoginRequest: CompleteAreaCentralLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<SessionResponse> => {
+export const completeAreaCentralLoginAttempt = async ( options?: Parameters<typeof customFetch>[1]): Promise<SessionResponse> => {
 
   return customFetch<SessionResponse>(getCompleteAreaCentralLoginAttemptUrl(),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(completeAreaCentralLoginRequest)
+    method: 'POST'
+
+
   }
 );}
 
@@ -397,8 +397,8 @@ export const completeAreaCentralLoginAttempt = async (completeAreaCentralLoginRe
 
 
 export const getCompleteAreaCentralLoginAttemptMutationOptions = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,{data: BodyType<CompleteAreaCentralLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,{data: BodyType<CompleteAreaCentralLoginRequest>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,void, TContext> => {
 
 const mutationKey = ['completeAreaCentralLoginAttempt'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -410,10 +410,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, {data: BodyType<CompleteAreaCentralLoginRequest>}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, void> = () => {
 
-          return  completeAreaCentralLoginAttempt(data,requestOptions)
+
+          return  completeAreaCentralLoginAttempt(requestOptions)
         }
 
 
@@ -424,22 +424,100 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CompleteAreaCentralLoginAttemptMutationResult = NonNullable<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>>
-    export type CompleteAreaCentralLoginAttemptMutationBody = BodyType<CompleteAreaCentralLoginRequest>
+
     export type CompleteAreaCentralLoginAttemptMutationError = ErrorType<ApiError>
 
     /**
  * @summary Confirmar login assistido da Área Central
  */
 export const useCompleteAreaCentralLoginAttempt = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,{data: BodyType<CompleteAreaCentralLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof completeAreaCentralLoginAttempt>>,
         TError,
-        {data: BodyType<CompleteAreaCentralLoginRequest>},
+        void,
         TContext
       > => {
       return useMutation(getCompleteAreaCentralLoginAttemptMutationOptions(options));
     }
+
+export const getGetCurrentAreaCentralLoginAttemptUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/attempts/current`
+}
+
+/**
+ * Informa se o navegador remoto ainda aguarda a confirmação humana ou se o login externo já está pronto para concluir. Nunca devolve cookies, senha ou conteúdo da Área Central.
+ * @summary Consultar o estado do login assistido atual
+ */
+export const getCurrentAreaCentralLoginAttempt = async ( options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {
+
+  return customFetch<AreaCentralLoginAttempt>(getGetCurrentAreaCentralLoginAttemptUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentAreaCentralLoginAttemptQueryKey = () => {
+    return [
+    `/api/auth/area-central/attempts/current`
+    ] as const;
+    }
+
+
+export const getGetCurrentAreaCentralLoginAttemptQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>, TError = ErrorType<ApiError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentAreaCentralLoginAttemptQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>> = ({ signal }) => getCurrentAreaCentralLoginAttempt({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCurrentAreaCentralLoginAttemptQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>>
+export type GetCurrentAreaCentralLoginAttemptQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Consultar o estado do login assistido atual
+ */
+
+export function useGetCurrentAreaCentralLoginAttempt<TData = Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>, TError = ErrorType<ApiError>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralLoginAttempt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCurrentAreaCentralLoginAttemptQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCancelCurrentAreaCentralLoginAttemptUrl = () => {
 
