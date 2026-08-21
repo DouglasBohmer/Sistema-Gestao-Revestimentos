@@ -3,6 +3,9 @@
   "name": "redeasso",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-08-20",
+  "vars": {
+    "API_ORIGIN": "https://redeasso-api.onrender.com"
+  },
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
