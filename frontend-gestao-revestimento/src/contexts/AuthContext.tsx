@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import {
+  ApiError,
   clearCsrfToken,
   completeAreaCentralLoginAttempt,
   getAuthSession,
@@ -8,11 +9,16 @@ import {
   type SessionResponse,
 } from '@workspace/api-client-react'
 
+export interface LocalLoginResult {
+  authenticated: boolean
+  errorMessage?: string
+}
+
 interface AuthContextType {
   isAuthenticated: boolean
   isLoading: boolean
   session: SessionResponse | null
-  login: (username: string, password: string) => Promise<boolean>
+  login: (username: string, password: string) => Promise<LocalLoginResult>
   completeAreaCentralLogin: (username: string) => Promise<boolean>
   logout: () => Promise<void>
 }
@@ -42,14 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function login(username: string, password: string) {
+  async function login(username: string, password: string): Promise<LocalLoginResult> {
     try {
       const authenticatedSession = await localLogin({ username, password })
       setSession(authenticatedSession)
       return authenticatedSession.authenticated
-    } catch {
+        ? { authenticated: true }
+        : { authenticated: false, errorMessage: 'Não foi possível iniciar a sessão.' }
+    } catch (error) {
       setSession(null)
-      return false
+      return { authenticated: false, errorMessage: localLoginErrorMessage(error) }
     }
   }
 
@@ -80,6 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
+}
+
+function localLoginErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) return 'Usuário ou senha incorretos.'
+    if (error.status === 403) return 'A sessão de segurança expirou. Atualize a página e tente novamente.'
+    if ([502, 503, 504].includes(error.status)) {
+      return 'A API do sistema está indisponível no momento. Aguarde um instante e tente novamente.'
+    }
+  }
+
+  return 'Não foi possível comunicar com a API do sistema. Tente novamente em instantes.'
 }
 
 export function useAuth() {

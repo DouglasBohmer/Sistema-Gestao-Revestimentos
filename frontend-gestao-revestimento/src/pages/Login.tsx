@@ -1,12 +1,13 @@
 import { useState, FormEvent } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Lock, User, AlertCircle } from 'lucide-react'
+import { Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { AreaCentralLoginFlow } from '@/components/auth/AreaCentralLoginFlow'
 
 export default function Login() {
   const { login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -14,8 +15,8 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const ok = await login(username.trim(), password)
-    if (!ok) setError('Usuário ou senha incorretos.')
+    const result = await login(username.trim(), password)
+    if (!result.authenticated) setError(result.errorMessage ?? 'Não foi possível iniciar a sessão.')
     setLoading(false)
   }
 
@@ -38,7 +39,7 @@ export default function Login() {
 
           <details className="group mt-6 border-t border-zinc-200 pt-4">
             <summary className="cursor-pointer text-sm font-medium text-zinc-600 hover:text-black">
-              Acesso local de desenvolvimento
+              Acesso administrativo temporário
             </summary>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-5">
@@ -63,13 +64,22 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Digite sua senha"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition"
+                  className="w-full pl-10 pr-11 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-black/30 focus:border-black transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(visible => !visible)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-500 hover:text-black focus:outline-none focus:ring-2 focus:ring-black/30"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
