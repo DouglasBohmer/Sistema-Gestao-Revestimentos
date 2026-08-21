@@ -36,9 +36,15 @@ function upstreamHeaders(request: Request, requestUrl: URL): Headers {
   return headers;
 }
 
-function unavailableResponse(): Response {
+type UnavailableReason = "API_ORIGIN_MISSING" | "API_UPSTREAM_UNREACHABLE";
+
+function unavailableResponse(reason: UnavailableReason): Response {
+  const error = reason === "API_ORIGIN_MISSING"
+    ? "A API do RedeASSO ainda não foi configurada no Worker."
+    : "A API do RedeASSO não respondeu.";
+
   return Response.json(
-    { error: "A API do RedeASSO está temporariamente indisponível." },
+    { error, code: reason },
     {
       status: 503,
       headers: { "Cache-Control": "no-store" },
@@ -54,7 +60,7 @@ export default {
     }
 
     if (!environment.API_ORIGIN) {
-      return unavailableResponse();
+      return unavailableResponse("API_ORIGIN_MISSING");
     }
 
     try {
@@ -64,8 +70,9 @@ export default {
         body: request.body,
         redirect: "manual",
       });
-    } catch {
-      return unavailableResponse();
+    } catch (error) {
+      console.error("Não foi possível alcançar a API de origem.", error);
+      return unavailableResponse("API_UPSTREAM_UNREACHABLE");
     }
   },
 };

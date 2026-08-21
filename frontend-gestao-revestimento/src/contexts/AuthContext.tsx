@@ -95,11 +95,24 @@ function localLoginErrorMessage(error: unknown): string {
     if (error.status === 401) return 'Usuário ou senha incorretos.'
     if (error.status === 403) return 'A sessão de segurança expirou. Atualize a página e tente novamente.'
     if ([502, 503, 504].includes(error.status)) {
+      const errorCode = getErrorCode(error.data)
+      if (errorCode === 'API_ORIGIN_MISSING') {
+        return 'A conexão entre Cloudflare e Render ainda não foi publicada. Salve e publique a variável API_ORIGIN no Worker.'
+      }
+      if (errorCode === 'API_UPSTREAM_UNREACHABLE') {
+        return 'O Render não respondeu à chamada do Cloudflare. Verifique o endpoint de saúde do Render.'
+      }
       return 'A API do sistema está indisponível no momento. Aguarde um instante e tente novamente.'
     }
   }
 
   return 'Não foi possível comunicar com a API do sistema. Tente novamente em instantes.'
+}
+
+function getErrorCode(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const code = (data as Record<string, unknown>).code
+  return typeof code === 'string' ? code : undefined
 }
 
 export function useAuth() {
