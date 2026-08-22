@@ -61,6 +61,41 @@ func TestInteractiveRequestRequiresActiveGrant(t *testing.T) {
 	}
 }
 
+func TestNoVncResponseAllowsOnlyConfiguredFrameOrigin(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("X-Frame-Options", "SAMEORIGIN")
+		writer.Header().Set("Content-Security-Policy", "frame-ancestors 'self'")
+		writer.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	noVNC, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	webDriver, _ := url.Parse("http://127.0.0.1:4444")
+	app := newApp(configuration{
+		browserServiceKey:      []byte("chave"),
+		interactiveTokenSecret: []byte("segredo"),
+		allowedFrameOrigin:     "https://redeasso.example",
+		webDriverUpstream:      webDriver,
+		noVNCUpstream:          noVNC,
+	})
+
+	response := httptest.NewRecorder()
+	app.ServeHTTP(response, testRequest("/vnc.html"))
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status inesperado: %d", response.Code)
+	}
+	if value := response.Header().Get("X-Frame-Options"); value != "" {
+		t.Fatalf("X-Frame-Options não deve chegar ao navegador: %q", value)
+	}
+	if value := response.Header().Get("Content-Security-Policy"); value != "frame-ancestors https://redeasso.example" {
+		t.Fatalf("CSP inesperada: %q", value)
+	}
+}
+
 func signedToken(accessID string, expiresAt time.Time, secret []byte) string {
 	payload := base64.RawURLEncoding.EncodeToString([]byte(accessID + "\n" + strconv.FormatInt(expiresAt.Unix(), 10)))
 	mac := hmac.New(sha256.New, secret)

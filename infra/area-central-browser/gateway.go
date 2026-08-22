@@ -229,6 +229,11 @@ func reverseProxy(target *url.URL, stripPrefix string, frameSafe bool, frameOrig
 	}
 	if frameSafe {
 		proxy.ModifyResponse = func(response *http.Response) error {
+			// O noVNC pode enviar X-Frame-Options: SAMEORIGIN. Como o
+			// navegador é exibido exclusivamente dentro do app RedeASSO,
+			// substituímos a política legada pela CSP restrita à origem
+			// configurada. Manter ambos faria o navegador bloquear o iframe.
+			response.Header.Del("X-Frame-Options")
 			response.Header.Set("Content-Security-Policy", "frame-ancestors "+frameOrigin)
 			response.Header.Set("Referrer-Policy", "no-referrer")
 			response.Header.Set("Cache-Control", "no-store")
