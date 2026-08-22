@@ -60,7 +60,7 @@ estiverem ligados.
    ```text
    AREA_CENTRAL_BROWSER_SERVICE_KEY=<mesmo valor da API Render>
    AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET=<mesmo valor da API Render>
-   AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.douglas-bohmer-senai.workers.dev
+   AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.assocom.workers.dev
    AREA_CENTRAL_BROWSER_BIND_ADDRESS=127.0.0.1
    AREA_CENTRAL_BROWSER_PORT=7900
    ```
