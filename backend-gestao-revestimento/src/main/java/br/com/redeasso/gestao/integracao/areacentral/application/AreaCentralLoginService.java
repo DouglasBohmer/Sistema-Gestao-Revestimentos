@@ -6,7 +6,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,8 +27,7 @@ public class AreaCentralLoginService {
 
     public synchronized AreaCentralLoginAttemptState start(
             String applicationSessionId,
-            String username,
-            String password) {
+            String username) {
         validateConfiguration();
         expireAttempts();
 
@@ -43,14 +41,8 @@ public class AreaCentralLoginService {
 
         Instant expiresAt = Instant.now().plus(properties.loginAttemptTimeout());
         String interactiveAccessId = UUID.randomUUID().toString();
-        char[] passwordChars = password.toCharArray();
-        AreaCentralBrowserSession browserSession;
-        try {
-            browserSession = browserGateway.open(
-                    properties.loginUrl(), username, passwordChars, interactiveAccessId, expiresAt);
-        } finally {
-            Arrays.fill(passwordChars, '\0');
-        }
+        AreaCentralBrowserSession browserSession = browserGateway.open(
+                properties.loginUrl(), interactiveAccessId, expiresAt);
         AreaCentralLoginAttempt attempt = new AreaCentralLoginAttempt(
                 applicationSessionId,
                 browserSession.id(),

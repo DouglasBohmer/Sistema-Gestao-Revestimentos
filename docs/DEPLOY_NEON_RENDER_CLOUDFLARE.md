@@ -49,10 +49,11 @@ exemplo `https://redeasso-api.onrender.com`.
 
 ### 2.1 Habilitar o navegador assistido da Área Central
 
-Chrome/Selenium/noVNC não cabe com confiabilidade na memória do plano Free do
+Chrome gráfico/noVNC não cabe com confiabilidade na memória do plano Free do
 Render. Ele roda no servidor Docker da loja; API, banco e frontend continuam
 na nuvem. O login externo só fica disponível enquanto esse servidor e o Funnel
-estiverem ligados.
+estiverem ligados. O usuário digita a senha e confirma o CAPTCHA diretamente
+nesse Chrome; o RedeASSO não usa WebDriver no login.
 
 1. No servidor, copie `.env.example` para `.env` caso ainda não exista e
    preencha, com os mesmos valores configurados na API Render:
@@ -98,7 +99,7 @@ estiverem ligados.
 
    | Variável | Valor |
    | --- | --- |
-   | `AREA_CENTRAL_WEBDRIVER_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443/webdriver` |
+   | `AREA_CENTRAL_BROWSER_GATEWAY_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443` |
    | `AREA_CENTRAL_INTERACTIVE_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443/vnc.html` |
    | `AREA_CENTRAL_READ_TIMEOUT` | `90s` |
    | `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED` | `true` |
@@ -118,7 +119,7 @@ docker compose -f docker-compose.area-central-browser.server.yml logs --tail 200
 docker compose -f docker-compose.area-central-browser.server.yml ps
 ```
 
-Nunca abra `/webdriver` ou `/internal/access/*` no navegador: sem a chave
+Nunca abra `/internal/browser/*` ou `/internal/access/*` no navegador: sem a chave
 interna eles retornam `401`. O `/vnc.html` isoladamente também não dá acesso à
 sessão; o websocket exige uma concessão ativa e o token temporário emitido
 pelo Spring. Não coloque nenhum desses segredos em Cloudflare, `wrangler`,

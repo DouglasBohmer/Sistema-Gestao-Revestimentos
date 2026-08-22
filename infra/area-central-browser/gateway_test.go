@@ -36,13 +36,11 @@ func TestParseAndVerifyTokenRejectsModifiedToken(t *testing.T) {
 
 func TestInteractiveRequestRequiresActiveGrant(t *testing.T) {
 	secret := []byte("segredo-de-teste")
-	webDriver, _ := url.Parse("http://127.0.0.1:4444")
 	noVNC, _ := url.Parse("http://127.0.0.1:7900")
 	config := configuration{
 		browserServiceKey:      []byte("chave"),
 		interactiveTokenSecret: secret,
 		allowedFrameOrigin:     "https://redeasso.example",
-		webDriverUpstream:      webDriver,
 		noVNCUpstream:          noVNC,
 	}
 	app := newApp(config)
@@ -73,12 +71,10 @@ func TestNoVncResponseAllowsOnlyConfiguredFrameOrigin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	webDriver, _ := url.Parse("http://127.0.0.1:4444")
 	app := newApp(configuration{
 		browserServiceKey:      []byte("chave"),
 		interactiveTokenSecret: []byte("segredo"),
 		allowedFrameOrigin:     "https://redeasso.example",
-		webDriverUpstream:      webDriver,
 		noVNCUpstream:          noVNC,
 	})
 

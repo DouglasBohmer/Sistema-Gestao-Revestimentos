@@ -58,7 +58,7 @@ redeasso:
       enabled: false
       base-url: ${AREA_CENTRAL_BASE_URL:https://redeasso.areacentral.com.br}
       login-url: ${AREA_CENTRAL_LOGIN_URL:https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc}
-      web-driver-url: ${AREA_CENTRAL_WEBDRIVER_URL:http://area-central-browser:4444}
+      browser-gateway-url: ${AREA_CENTRAL_BROWSER_GATEWAY_URL:http://area-central-browser:10000}
       interactive-url: ${AREA_CENTRAL_INTERACTIVE_URL:}
       browser-service-key: ${AREA_CENTRAL_BROWSER_SERVICE_KEY:}
       interactive-token-secret: ${AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET:}

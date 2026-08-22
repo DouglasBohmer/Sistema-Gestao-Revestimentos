@@ -5,7 +5,7 @@ import {
   startAreaCentralLoginAttempt,
   type AreaCentralLoginAttempt,
 } from '@workspace/api-client-react'
-import { AlertCircle, Eye, EyeOff, LoaderCircle, Lock, ShieldCheck, User, X } from 'lucide-react'
+import { AlertCircle, LoaderCircle, ShieldCheck, User, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 function errorMessage(error: unknown) {
@@ -18,8 +18,6 @@ export function AreaCentralLoginFlow() {
   const { completeAreaCentralLogin } = useAuth()
   const [attempt, setAttempt] = useState<AreaCentralLoginAttempt | null>(null)
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -75,21 +73,19 @@ export function AreaCentralLoginFlow() {
 
   async function start(event: FormEvent) {
     event.preventDefault()
-    if (!username.trim() || !password) return
+    if (!username.trim()) return
 
     setError('')
     setLoading(true)
     try {
       const nextAttempt = await startAreaCentralLoginAttempt({
         username: username.trim(),
-        password,
       })
       setAttempt(nextAttempt)
       setModalOpen(true)
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
-      setPassword('')
       setLoading(false)
     }
   }
@@ -112,7 +108,7 @@ export function AreaCentralLoginFlow() {
     <>
       <form onSubmit={event => void start(event)} className="space-y-5">
         <p className="text-sm leading-relaxed text-gray-600">
-          Informe a conta da Área Central. As credenciais serão usadas uma única vez para preencher um navegador isolado e não são armazenadas.
+          Informe seu usuário para identificar a sessão. A senha será digitada somente no navegador isolado da Área Central e não passa pelo RedeASSO.
         </p>
 
         <div>
@@ -132,40 +128,13 @@ export function AreaCentralLoginFlow() {
           </div>
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Senha da Área Central</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={event => setPassword(event.target.value)}
-              placeholder="Sua senha"
-              autoComplete="current-password"
-              required
-              disabled={loading || Boolean(attempt)}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-11 text-sm transition focus:border-black focus:outline-none focus:ring-2 focus:ring-black/30 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(visible => !visible)}
-              disabled={loading || Boolean(attempt)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-gray-500 hover:text-black focus:outline-none focus:ring-2 focus:ring-black/30 disabled:cursor-not-allowed disabled:opacity-60"
-              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-              title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
-        </div>
-
         <button
           type="submit"
           disabled={loading || Boolean(attempt)}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-          {loading ? 'Conectando à Área Central...' : 'Entrar com Área Central'}
+          {loading ? 'Abrindo a Área Central...' : 'Abrir login da Área Central'}
         </button>
       </form>
 
@@ -182,10 +151,10 @@ export function AreaCentralLoginFlow() {
             <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
               <div>
                 <h3 id="area-central-modal-title" className="font-semibold text-zinc-900">
-                  {attempt.status === 'READY_TO_COMPLETE' ? 'Concluindo acesso...' : 'Confirme que você é humano'}
+                  {attempt.status === 'READY_TO_COMPLETE' ? 'Concluindo acesso...' : 'Entre na Área Central'}
                 </h3>
                 <p className="mt-1 text-sm text-zinc-600">
-                  O usuário e a senha já foram preenchidos. Clique apenas na confirmação da Área Central nesta janela.
+                  Digite seu usuário e senha na página real e confirme “Sou humano”. O RedeASSO não preenche nem recebe sua senha.
                 </p>
               </div>
               <button

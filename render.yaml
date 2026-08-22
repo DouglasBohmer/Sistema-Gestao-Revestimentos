@@ -42,7 +42,7 @@ services:
       # operacionais e ficam somente no painel Render.
       - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
         sync: false
-      - key: AREA_CENTRAL_WEBDRIVER_URL
+      - key: AREA_CENTRAL_BROWSER_GATEWAY_URL
         sync: false
       - key: AREA_CENTRAL_INTERACTIVE_URL
         sync: false

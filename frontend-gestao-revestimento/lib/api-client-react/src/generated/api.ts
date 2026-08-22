@@ -306,7 +306,7 @@ export const getStartAreaCentralLoginAttemptUrl = () => {
 }
 
 /**
- * Abre um navegador isolado no servidor e preenche as credenciais recebidas somente para esta tentativa. O CAPTCHA não é automatizado e deve ser confirmado pelo usuário no noVNC. A senha não é persistida, devolvida nem registrada em logs.
+ * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são informados manualmente na página real pelo noVNC; a senha não é recebida, persistida, devolvida nem registrada pelo RedeASSO.
  * @summary Iniciar login assistido da Área Central
  */
 export const startAreaCentralLoginAttempt = async (startAreaCentralLoginRequest: StartAreaCentralLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {

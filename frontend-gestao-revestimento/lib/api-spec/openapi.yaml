@@ -97,10 +97,9 @@ paths:
       tags: [auth]
       summary: Iniciar login assistido da Área Central
       description: >-
-        Abre um navegador isolado no servidor e preenche as credenciais
-        recebidas somente para esta tentativa. O CAPTCHA não é automatizado e
-        deve ser confirmado pelo usuário no noVNC. A senha não é persistida,
-        devolvida nem registrada em logs.
+        Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA
+        são digitados manualmente no noVNC; a senha não passa pela API, não é
+        persistida, devolvida nem registrada em logs.
       requestBody:
         required: true
         content:
@@ -692,19 +691,13 @@ components:
     StartAreaCentralLoginRequest:
       type: object
       additionalProperties: false
-      required: [username, password]
+      required: [username]
       properties:
         username:
           type: string
           minLength: 1
           maxLength: 160
           description: Identificador da conta usada na Área Central durante esta tentativa.
-        password:
-          type: string
-          minLength: 1
-          maxLength: 512
-          writeOnly: true
-          description: Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.
 
     SessionResponse:
       type: object

@@ -1,7 +1,7 @@
 # Ative este arquivo somente quando for usar o login assistido da Área Central:
 # docker compose -f docker-compose.yml -f docker-compose.area-central.yml up -d --build
 #
-# O gateway protege WebDriver e noVNC com uma chave interna e um token temporário
+# O gateway protege o Chrome gráfico/noVNC com uma chave interna e um token temporário
 # por tentativa. A porta publicada é somente a do gateway; 4444 e 7900 nunca
 # são expostas diretamente.
 services:
@@ -10,7 +10,7 @@ services:
       REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED: "true"
       AREA_CENTRAL_BASE_URL: ${AREA_CENTRAL_BASE_URL:-https://redeasso.areacentral.com.br}
       AREA_CENTRAL_LOGIN_URL: ${AREA_CENTRAL_LOGIN_URL:-https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc}
-      AREA_CENTRAL_WEBDRIVER_URL: http://area-central-browser:10000/webdriver
+      AREA_CENTRAL_BROWSER_GATEWAY_URL: http://area-central-browser:10000
       AREA_CENTRAL_INTERACTIVE_URL: ${AREA_CENTRAL_INTERACTIVE_URL:-http://localhost:${AREA_CENTRAL_BROWSER_PORT:-7900}/vnc.html}
       AREA_CENTRAL_BROWSER_SERVICE_KEY: ${AREA_CENTRAL_BROWSER_SERVICE_KEY:?Defina uma chave interna forte em .env}
       AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET: ${AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET:?Defina um segredo HMAC forte em .env}

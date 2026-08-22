@@ -38,12 +38,6 @@ export interface StartAreaCentralLoginRequest {
      * @maxLength 160
      */
   username: string;
-  /**
-     * Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.
-     * @minLength 1
-     * @maxLength 512
-     */
-  password: string;
 }
 
 /**

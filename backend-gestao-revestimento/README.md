@@ -142,12 +142,12 @@ Não aponte uma prévia de branch para o banco de produção.
 ## Área Central e CAPTCHA
 
 O login externo é assistido. Ao escolhê-lo no RedeASSO, o Spring abre um Chrome
-isolado no contêiner Selenium e preenche uma única vez as credenciais enviadas
-pela própria tela. O noVNC aparece em um modal do RedeASSO exclusivamente para
-a confirmação humana do CAPTCHA. Ao concluir, o Spring coleta o cookie jar
-apenas na memória do processo, vinculado à sessão atual. Senhas e cookies
-externos não são devolvidos ao React, não vão para o PostgreSQL e não
-sobrevivem ao reinício da aplicação.
+gráfico isolado e o noVNC aparece em um modal do RedeASSO. A pessoa digita
+usuário, senha e confirma o CAPTCHA na página real; o Spring não recebe a senha
+nem usa WebDriver nessa etapa. Ao concluir, o Spring coleta o cookie jar apenas
+na memória do processo, vinculado à sessão atual. Senhas e cookies externos não
+são devolvidos ao React, não vão para o PostgreSQL e não sobrevivem ao reinício
+da aplicação.
 
 O navegador não faz parte do Compose padrão. Para habilitá-lo localmente,
 copie `.env.example` para `.env`, defina dois segredos diferentes com pelo
@@ -160,10 +160,10 @@ docker compose -f docker-compose.yml -f docker-compose.area-central.yml up -d --
 ```
 
 O gateway local publica apenas a porta configurada em
-`AREA_CENTRAL_BROWSER_PORT` (padrão `7900`). Ele mantém Selenium na porta 4444
-e noVNC na 7900 internamente, exigindo a chave interna do Spring e um token
-HMAC curto por tentativa antes de encaminhar qualquer websocket. Para usar o
-Vite local, defina `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=http://localhost:5000`.
+`AREA_CENTRAL_BROWSER_PORT` (padrão `7900`). Ele mantém Chrome DevTools na
+porta 9222 e noVNC na 7900 internamente, exigindo a chave interna do Spring e
+um token HMAC curto por tentativa antes de encaminhar qualquer websocket. Para
+usar o Vite local, defina `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=http://localhost:5000`.
 
 O contêiner aceita somente uma tentativa de login interativo por vez. Uma
 tentativa expira em dez minutos, pode ser cancelada pela interface e fecha o

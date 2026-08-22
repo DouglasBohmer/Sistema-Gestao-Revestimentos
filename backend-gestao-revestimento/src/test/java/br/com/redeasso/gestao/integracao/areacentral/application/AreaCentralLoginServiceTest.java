@@ -18,16 +18,13 @@ class AreaCentralLoginServiceTest {
         FakeBrowserGateway browser = new FakeBrowserGateway();
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
 
-        AreaCentralLoginAttemptState attempt = service.start("sessao-1", "usuario-area-central", "senha-efemera");
+        AreaCentralLoginAttemptState attempt = service.start("sessao-1", "usuario-area-central");
 
         assertThat(attempt.status()).isEqualTo("WAITING_FOR_HUMAN");
         assertThat(attempt.interactiveUrl()).startsWith("https://browser-exemplo.onrender.com/vnc.html?autoconnect=1");
         assertThat(attempt.interactiveUrl()).contains("path=websockify%3Ftoken%3Dv1.");
         assertThat(attempt.expiresAt()).isAfter(java.time.Instant.now());
         assertThat(browser.openedUrl).isEqualTo(properties(true).loginUrl());
-        assertThat(browser.openedUsername).isEqualTo("usuario-area-central");
-        assertThat(browser.passwordAtGatewayInvocation).containsExactly('s', 'e', 'n', 'h', 'a', '-', 'e', 'f', 'e', 'm', 'e', 'r', 'a');
-        assertThat(browser.passwordReferenceAfterInvocation).containsOnly('\0');
         assertThat(attempt.toString()).doesNotContain("PHPSESSID");
     }
 
@@ -35,9 +32,9 @@ class AreaCentralLoginServiceTest {
     void impedeDuasVerificacoesInterativasSimultaneas() {
         FakeBrowserGateway browser = new FakeBrowserGateway();
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
-        service.start("sessao-1", "usuario", "senha");
+        service.start("sessao-1", "usuario");
 
-        assertThatThrownBy(() -> service.start("sessao-2", "outro-usuario", "outra-senha"))
+        assertThatThrownBy(() -> service.start("sessao-2", "outro-usuario"))
                 .isInstanceOf(AreaCentralLoginBusyException.class);
     }
 
@@ -45,7 +42,7 @@ class AreaCentralLoginServiceTest {
     void exigeCookieDaSessaoAntesDeConcluirESemFecharJanelaPrematuramente() {
         FakeBrowserGateway browser = new FakeBrowserGateway();
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
-        service.start("sessao-1", "usuario", "senha");
+        service.start("sessao-1", "usuario");
 
         assertThatThrownBy(() -> service.complete("sessao-1"))
                 .isInstanceOf(AreaCentralLoginIncompleteException.class);
@@ -58,7 +55,7 @@ class AreaCentralLoginServiceTest {
         browser.cookies = List.of(new AreaCentralCookie(
                 "PHPSESSID", "valor-externo-que-nao-pode-vazar", ".areacentral.com.br", "/", true, true, "Lax", null));
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
-        service.start("sessao-1", "usuario", "senha");
+        service.start("sessao-1", "usuario");
 
         AreaCentralAuthenticatedLogin completedLogin = service.complete("sessao-1");
 
@@ -67,7 +64,7 @@ class AreaCentralLoginServiceTest {
         assertThat(completedLogin.cookieJar().toString()).doesNotContain("valor-externo-que-nao-pode-vazar");
         assertThat(browser.closedSessionIds).containsExactly("browser-session-1");
         assertThat(browser.revokedAccessIds).hasSize(1);
-        assertThat(service.start("sessao-2", "outro", "senha").status()).isEqualTo("READY_TO_COMPLETE");
+        assertThat(service.start("sessao-2", "outro").status()).isEqualTo("READY_TO_COMPLETE");
     }
 
     @Test
@@ -77,7 +74,7 @@ class AreaCentralLoginServiceTest {
                 "PHPSESSID", "cookie-de-visitante", ".areacentral.com.br", "/", true, true, "Lax", null));
         browser.loginFormDisplayed = true;
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
-        service.start("sessao-1", "usuario", "senha");
+        service.start("sessao-1", "usuario");
 
         assertThatThrownBy(() -> service.complete("sessao-1"))
                 .isInstanceOf(AreaCentralLoginIncompleteException.class);
@@ -90,7 +87,7 @@ class AreaCentralLoginServiceTest {
         browser.cookies = List.of(new AreaCentralCookie(
                 "PHPSESSID", "sessao-autenticada", ".areacentral.com.br", "/", true, true, "Lax", null));
         AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
-        service.start("sessao-1", "usuario", "senha");
+        service.start("sessao-1", "usuario");
 
         assertThat(service.current("sessao-1").status()).isEqualTo("READY_TO_COMPLETE");
         assertThat(browser.closedSessionIds).isEmpty();
@@ -101,16 +98,16 @@ class AreaCentralLoginServiceTest {
         FakeBrowserGateway browser = new FakeBrowserGateway();
         AreaCentralLoginService service = new AreaCentralLoginService(properties(false), browser);
 
-        assertThatThrownBy(() -> service.start("sessao-1", "usuario", "senha"))
+        assertThatThrownBy(() -> service.start("sessao-1", "usuario"))
                 .isInstanceOf(AreaCentralIntegrationUnavailableException.class);
         assertThat(browser.openedUrl).isNull();
     }
 
     @Test
-    void credencialDeEntradaNuncaApareceEmRepresentacaoTextual() {
-        StartAreaCentralLoginRequest request = new StartAreaCentralLoginRequest("usuario", "senha-secreta");
+    void identificadorDeEntradaNuncaIncluiSenhaEmRepresentacaoTextual() {
+        StartAreaCentralLoginRequest request = new StartAreaCentralLoginRequest("usuario");
 
-        assertThat(request).hasToString("StartAreaCentralLoginRequest[username=usuario, password=[REDACTED]]");
+        assertThat(request).hasToString("StartAreaCentralLoginRequest[username=usuario]");
     }
 
     private static AreaCentralProperties properties(boolean enabled) {
@@ -118,7 +115,7 @@ class AreaCentralLoginServiceTest {
                 enabled,
                 URI.create("https://redeasso.areacentral.com.br"),
                 URI.create("https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos"),
-                URI.create("https://browser-exemplo.onrender.com/webdriver"),
+                URI.create("https://browser-exemplo.onrender.com"),
                 "https://browser-exemplo.onrender.com/vnc.html",
                 "chave-interna-de-teste",
                 "segredo-hmac-de-teste",
@@ -129,9 +126,6 @@ class AreaCentralLoginServiceTest {
 
     private static final class FakeBrowserGateway implements AreaCentralBrowserGateway {
         private URI openedUrl;
-        private String openedUsername;
-        private char[] passwordAtGatewayInvocation;
-        private char[] passwordReferenceAfterInvocation;
         private List<AreaCentralCookie> cookies = List.of();
         private boolean loginFormDisplayed;
         private final java.util.ArrayList<String> closedSessionIds = new java.util.ArrayList<>();
@@ -139,14 +133,9 @@ class AreaCentralLoginServiceTest {
         @Override
         public AreaCentralBrowserSession open(
                 URI loginUrl,
-                String username,
-                char[] password,
                 String interactiveAccessId,
                 java.time.Instant expiresAt) {
             openedUrl = loginUrl;
-            openedUsername = username;
-            passwordAtGatewayInvocation = password.clone();
-            passwordReferenceAfterInvocation = password;
             return new AreaCentralBrowserSession("browser-session-1");
         }
 

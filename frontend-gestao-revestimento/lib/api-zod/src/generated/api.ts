@@ -50,18 +50,13 @@ export const LocalLoginResponse = zod.object({
 
 
 /**
- * Abre um navegador isolado no servidor e preenche as credenciais recebidas somente para esta tentativa. O CAPTCHA não é automatizado e deve ser confirmado pelo usuário no noVNC. A senha não é persistida, devolvida nem registrada em logs.
+ * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são digitados manualmente no noVNC; a senha não passa pela API, não é persistida, devolvida nem registrada em logs.
  * @summary Iniciar login assistido da Área Central
  */
 export const startAreaCentralLoginAttemptBodyUsernameMax = 160;
 
-export const startAreaCentralLoginAttemptBodyPasswordMax = 512;
-
-
-
 export const StartAreaCentralLoginAttemptBody = zod.object({
-  "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.'),
-  "password": zod.string().min(1).max(startAreaCentralLoginAttemptBodyPasswordMax).describe('Usada somente para preencher o navegador isolado; nunca é persistida ou devolvida.')
+  "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.')
 })
 
 export const StartAreaCentralLoginAttemptResponse = zod.object({

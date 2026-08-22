@@ -13,7 +13,7 @@ public record AreaCentralProperties(
         boolean enabled,
         @NotNull URI baseUrl,
         @NotNull URI loginUrl,
-        @NotNull URI webDriverUrl,
+        @NotNull URI browserGatewayUrl,
         String interactiveUrl,
         String browserServiceKey,
         String interactiveTokenSecret,

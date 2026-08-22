@@ -7,15 +7,13 @@ import java.util.List;
 /**
  * Controla um navegador remoto exclusivamente para o login assistido. O
  * contrato não expõe conteúdo da página ao frontend nem aceita ações no
- * CAPTCHA. As credenciais são usadas uma única vez para preencher o formulário
- * no navegador remoto e jamais devem ser persistidas ou registradas em log.
+ * CAPTCHA. O usuário digita as credenciais manualmente no Chrome gráfico
+ * isolado, sem WebDriver, e elas jamais passam pelo backend.
  */
 public interface AreaCentralBrowserGateway {
 
     AreaCentralBrowserSession open(
             URI loginUrl,
-            String username,
-            char[] password,
             String interactiveAccessId,
             Instant expiresAt);
 
