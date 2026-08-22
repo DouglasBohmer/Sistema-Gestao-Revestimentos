@@ -49,48 +49,74 @@ exemplo `https://redeasso-api.onrender.com`.
 
 ### 2.1 Habilitar o navegador assistido da Área Central
 
-O mesmo Blueprint cria `redeasso-area-central-browser`: um serviço Docker que
-executa Chrome/Selenium/noVNC, mas expõe publicamente apenas um gateway HTTPS.
-Ele não recebe o cron de 10 minutos, para não duplicar o consumo das horas
-gratuitas do Render. Por isso, o primeiro login após inatividade pode levar o
-tempo de retomada do serviço.
+Chrome/Selenium/noVNC não cabe com confiabilidade na memória do plano Free do
+Render. Ele roda no servidor Docker da loja; API, banco e frontend continuam
+na nuvem. O login externo só fica disponível enquanto esse servidor e o Funnel
+estiverem ligados.
 
-1. No serviço do navegador, defina dois segredos novos e diferentes. No
-   PowerShell, gere cada um com:
+1. No servidor, copie `.env.example` para `.env` caso ainda não exista e
+   preencha, com os mesmos valores configurados na API Render:
 
-   ```powershell
-   $bytes = New-Object byte[] 48
-   [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-   [Convert]::ToBase64String($bytes)
+   ```text
+   AREA_CENTRAL_BROWSER_SERVICE_KEY=<mesmo valor da API Render>
+   AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET=<mesmo valor da API Render>
+   AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.douglas-bohmer-senai.workers.dev
+   AREA_CENTRAL_BROWSER_BIND_ADDRESS=127.0.0.1
+   AREA_CENTRAL_BROWSER_PORT=7900
    ```
 
-2. Preencha os dois serviços com os mesmos valores pareados:
+2. A `main` publica a imagem do navegador no GHCR. No servidor, puxe e inicie
+   somente o navegador:
 
-   | Serviço Render | Variável | Valor |
-   | --- | --- | --- |
-   | `redeasso-area-central-browser` | `BROWSER_SERVICE_KEY` | primeiro valor gerado |
-   | `redeasso-api` | `AREA_CENTRAL_BROWSER_SERVICE_KEY` | o mesmo primeiro valor |
-   | `redeasso-area-central-browser` | `INTERACTIVE_TOKEN_SECRET` | segundo valor gerado |
-   | `redeasso-api` | `AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET` | o mesmo segundo valor |
+   ```powershell
+   docker compose -f docker-compose.area-central-browser.server.yml pull area-central-browser
+   docker compose -f docker-compose.area-central-browser.server.yml up -d area-central-browser
+   docker compose -f docker-compose.area-central-browser.server.yml ps
+   curl.exe http://127.0.0.1:7900/healthz
+   ```
 
-3. No serviço `redeasso-area-central-browser`, defina
-   `ALLOWED_FRAME_ORIGIN` como a origem exata da SPA, por exemplo
-   `https://redeasso.douglas-bohmer-senai.workers.dev` — sem barra final.
-   O gateway devolve `frame-ancestors` restrito a essa origem.
-4. No serviço `redeasso-api`, defina:
+   O Watchtower já instalado verifica a tag
+   `area-central-browser-main` a cada cinco minutos. Assim, commits futuros na
+   `main` atualizam tanto a API (`main`) quanto o navegador sem `git pull` no
+   servidor.
+
+3. O Funnel atual em `https://usuario-pc.tailbc9bf3.ts.net` encaminha para o
+   Apache e deve ser preservado. Em um PowerShell administrativo no servidor,
+   publique o gateway em uma segunda porta HTTPS:
+
+   ```powershell
+   tailscale funnel --bg --https=8443 http://127.0.0.1:7900
+   tailscale funnel status
+   curl.exe https://usuario-pc.tailbc9bf3.ts.net:8443/healthz
+   ```
+
+   O `--bg` faz o Funnel voltar após reiniciar o computador ou o Tailscale.
+   Nunca aponte o Funnel para 4444 ou 7900 dentro do contêiner: a única porta
+   publicada deve ser a do gateway local `127.0.0.1:7900`.
+
+4. No serviço `redeasso-api` do Render, configure:
 
    | Variável | Valor |
    | --- | --- |
-   | `AREA_CENTRAL_WEBDRIVER_URL` | `https://redeasso-area-central-browser.onrender.com/webdriver` |
-   | `AREA_CENTRAL_INTERACTIVE_URL` | `https://redeasso-area-central-browser.onrender.com/vnc.html` |
+   | `AREA_CENTRAL_WEBDRIVER_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443/webdriver` |
+   | `AREA_CENTRAL_INTERACTIVE_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443/vnc.html` |
    | `AREA_CENTRAL_READ_TIMEOUT` | `90s` |
    | `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED` | `true` |
 
-   Se o Render atribuir outro subdomínio ao serviço do navegador, substitua os
-   dois primeiros valores pela URL realmente exibida no painel.
-5. Faça um deploy manual do navegador e aguarde `/healthz` ficar saudável.
-   Depois redeploy a API. No login, o modal recebe uma URL com token HMAC que
-   expira em até 10 minutos e é revogado ao cancelar ou concluir a tentativa.
+   `AREA_CENTRAL_BROWSER_SERVICE_KEY` e
+   `AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET` continuam com os mesmos valores do
+   `.env` do servidor. Depois, faça redeploy da API.
+
+5. Quando o endpoint local estiver saudável, suspenda ou remova do painel
+   Render o antigo `redeasso-area-central-browser`, que não é mais usado e
+   excede a memória do plano Free. O `render.yaml` não o declara mais.
+
+Se o contêiner reiniciar, colete o diagnóstico antes de tentar novamente:
+
+```powershell
+docker compose -f docker-compose.area-central-browser.server.yml logs --tail 200 area-central-browser
+docker compose -f docker-compose.area-central-browser.server.yml ps
+```
 
 Nunca abra `/webdriver` ou `/internal/access/*` no navegador: sem a chave
 interna eles retornam `401`. O `/vnc.html` isoladamente também não dá acesso à

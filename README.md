@@ -71,10 +71,14 @@ Funnel enquanto essa credencial estiver habilitada.
 
 ## Produção gerenciada
 
-A produção passa a usar três serviços independentes: **Neon** como PostgreSQL,
-**Render** para a API Spring e **Cloudflare Workers** para o React. O navegador
-acessa um único domínio Cloudflare; o Worker entrega a SPA e encaminha `/api/*`
-ao Render, preservando cookies de sessão no mesmo domínio.
+A produção usa **Neon** como PostgreSQL, **Render** para a API Spring e
+**Cloudflare Workers** para o React. O navegador acessa um único domínio
+Cloudflare; o Worker entrega a SPA e encaminha `/api/*` ao Render, preservando
+cookies de sessão no mesmo domínio. O Chrome assistido da Área Central roda no
+servidor Docker da loja e é publicado exclusivamente pelo gateway protegido via
+Tailscale Funnel; sem esse servidor ligado, apenas esse fluxo de login externo
+fica indisponível. A `main` publica imagens da API e do navegador no GHCR; o
+Watchtower do servidor instala novas tags automaticamente.
 
 O arquivo [render.yaml](render.yaml) provisiona a API no Render a partir da
 `main`, aguardando os checks do GitHub. O Worker está em

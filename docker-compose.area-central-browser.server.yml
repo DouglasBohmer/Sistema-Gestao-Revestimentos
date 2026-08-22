@@ -1,0 +1,27 @@
+# Navegador assistido hospedado no servidor da loja.
+#
+# Este arquivo inicia somente Chrome + Selenium + noVNC protegidos pelo gateway.
+# A API permanece no Render e alcanca o gateway por Tailscale Funnel. Nao use
+# este Compose para publicar Spring ou PostgreSQL no servidor.
+#
+# A imagem e publicada pelo GitHub Actions na main. O Watchtower instalado no
+# servidor a atualiza automaticamente; para a primeira inicializacao use:
+#   docker compose -f docker-compose.area-central-browser.server.yml up -d
+services:
+  area-central-browser:
+    image: ${REDEASSO_BROWSER_IMAGE:-ghcr.io/douglasbohmer/sistema-gestao-revestimentos:area-central-browser-main}
+    environment:
+      BROWSER_SERVICE_KEY: ${AREA_CENTRAL_BROWSER_SERVICE_KEY:?Defina uma chave interna forte em .env}
+      INTERACTIVE_TOKEN_SECRET: ${AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET:?Defina um segredo HMAC forte em .env}
+      ALLOWED_FRAME_ORIGIN: ${AREA_CENTRAL_ALLOWED_FRAME_ORIGIN:?Defina a origem HTTPS exata do Cloudflare em .env}
+    # O host nao expoe Selenium (4444) nem noVNC (7900) diretamente. O
+    # Tailscale Funnel aponta para esta porta do gateway em loopback.
+    ports:
+      - "${AREA_CENTRAL_BROWSER_BIND_ADDRESS:-127.0.0.1}:${AREA_CENTRAL_BROWSER_PORT:-7900}:10000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:10000/healthz >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped

@@ -168,3 +168,9 @@ Vite local, defina `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=http://localhost:5000`.
 O contêiner aceita somente uma tentativa de login interativo por vez. Uma
 tentativa expira em dez minutos, pode ser cancelada pela interface e fecha o
 navegador remoto. Não há resolução ou contorno automático de CAPTCHA.
+
+Em produção, este mesmo contêiner pode rodar apenas no servidor da loja com
+`docker-compose.area-central-browser.server.yml`. O Render continua hospedando
+a API, que acessa o gateway HTTPS publicado por Tailscale Funnel; os dois
+serviços compartilham as mesmas duas chaves, configuradas apenas como segredos.
+O servidor e o Funnel precisam estar ligados para o login externo funcionar.

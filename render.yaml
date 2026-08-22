@@ -37,10 +37,11 @@ services:
         sync: false
       - key: REDEASSO_LOCAL_ADMIN_PASSWORD
         sync: false
-      # Só ative depois de preencher a URL e os dois segredos do serviço
-      # redeasso-area-central-browser criado neste mesmo Blueprint.
+      # O navegador assistido roda no servidor Docker da loja e e alcancado
+      # pela URL HTTPS publica do Tailscale Funnel. Estes valores sao
+      # operacionais e ficam somente no painel Render.
       - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
-        value: "false"
+        sync: false
       - key: AREA_CENTRAL_WEBDRIVER_URL
         sync: false
       - key: AREA_CENTRAL_INTERACTIVE_URL
@@ -51,24 +52,3 @@ services:
         sync: false
       - key: AREA_CENTRAL_READ_TIMEOUT
         value: 90s
-
-  # Chrome + Selenium + noVNC em serviço separado. Somente o gateway HTTPS
-  # escuta a porta pública; os endpoints internos exigem chave e o websocket
-  # do noVNC exige token curto emitido pelo Spring.
-  - type: web
-    name: redeasso-area-central-browser
-    runtime: docker
-    region: ohio
-    plan: free
-    branch: main
-    dockerfilePath: ./infra/area-central-browser/Dockerfile
-    dockerContext: .
-    healthCheckPath: /healthz
-    autoDeployTrigger: checksPass
-    envVars:
-      - key: BROWSER_SERVICE_KEY
-        sync: false
-      - key: INTERACTIVE_TOKEN_SECRET
-        sync: false
-      - key: ALLOWED_FRAME_ORIGIN
-        sync: false
