@@ -41,17 +41,62 @@ Blueprint, em particular:
 
 - `SPRING_PROFILES_ACTIVE=prod`;
 - `SESSION_COOKIE_SECURE=true`;
-- `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`.
-
-O último item é deliberado: o noVNC/Selenium local não pode ser exposto no
-Render como se fosse uma API. A tela do RedeASSO pode enviar credenciais
-efêmeras ao Spring para preencher o Chrome isolado, mas o CAPTCHA continua
-manual e aparece em modal. O login assistido será habilitado em produção
-somente quando houver um serviço de navegador isolado, protegido e com URL de
-acesso temporária.
+- `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`, até concluir a seção 3.1
+  abaixo.
 
 Depois do deploy, guarde a URL HTTPS pública da API, sem barra final, por
 exemplo `https://redeasso-api.onrender.com`.
+
+### 2.1 Habilitar o navegador assistido da Área Central
+
+O mesmo Blueprint cria `redeasso-area-central-browser`: um serviço Docker que
+executa Chrome/Selenium/noVNC, mas expõe publicamente apenas um gateway HTTPS.
+Ele não recebe o cron de 10 minutos, para não duplicar o consumo das horas
+gratuitas do Render. Por isso, o primeiro login após inatividade pode levar o
+tempo de retomada do serviço.
+
+1. No serviço do navegador, defina dois segredos novos e diferentes. No
+   PowerShell, gere cada um com:
+
+   ```powershell
+   $bytes = New-Object byte[] 48
+   [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+   [Convert]::ToBase64String($bytes)
+   ```
+
+2. Preencha os dois serviços com os mesmos valores pareados:
+
+   | Serviço Render | Variável | Valor |
+   | --- | --- | --- |
+   | `redeasso-area-central-browser` | `BROWSER_SERVICE_KEY` | primeiro valor gerado |
+   | `redeasso-api` | `AREA_CENTRAL_BROWSER_SERVICE_KEY` | o mesmo primeiro valor |
+   | `redeasso-area-central-browser` | `INTERACTIVE_TOKEN_SECRET` | segundo valor gerado |
+   | `redeasso-api` | `AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET` | o mesmo segundo valor |
+
+3. No serviço `redeasso-area-central-browser`, defina
+   `ALLOWED_FRAME_ORIGIN` como a origem exata da SPA, por exemplo
+   `https://redeasso.douglas-bohmer-senai.workers.dev` — sem barra final.
+   O gateway devolve `frame-ancestors` restrito a essa origem.
+4. No serviço `redeasso-api`, defina:
+
+   | Variável | Valor |
+   | --- | --- |
+   | `AREA_CENTRAL_WEBDRIVER_URL` | `https://redeasso-area-central-browser.onrender.com/webdriver` |
+   | `AREA_CENTRAL_INTERACTIVE_URL` | `https://redeasso-area-central-browser.onrender.com/vnc.html` |
+   | `AREA_CENTRAL_READ_TIMEOUT` | `90s` |
+   | `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED` | `true` |
+
+   Se o Render atribuir outro subdomínio ao serviço do navegador, substitua os
+   dois primeiros valores pela URL realmente exibida no painel.
+5. Faça um deploy manual do navegador e aguarde `/healthz` ficar saudável.
+   Depois redeploy a API. No login, o modal recebe uma URL com token HMAC que
+   expira em até 10 minutos e é revogado ao cancelar ou concluir a tentativa.
+
+Nunca abra `/webdriver` ou `/internal/access/*` no navegador: sem a chave
+interna eles retornam `401`. O `/vnc.html` isoladamente também não dá acesso à
+sessão; o websocket exige uma concessão ativa e o token temporário emitido
+pelo Spring. Não coloque nenhum desses segredos em Cloudflare, `wrangler`,
+`VITE_*`, URL fixa ou Git.
 
 ## 3. Criar o Worker Cloudflare
 

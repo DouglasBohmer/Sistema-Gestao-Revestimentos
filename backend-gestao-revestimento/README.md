@@ -142,26 +142,28 @@ Não aponte uma prévia de branch para o banco de produção.
 ## Área Central e CAPTCHA
 
 O login externo é assistido. Ao escolhê-lo no RedeASSO, o Spring abre um Chrome
-isolado no contêiner Selenium; o operador abre o noVNC, informa sua conta da
-Área Central e resolve o CAPTCHA manualmente. Ao confirmar no RedeASSO, o
-Spring coleta o cookie jar apenas na memória do processo, vinculado à sessão
-atual. Senhas e cookies externos não são devolvidos ao React, não vão para o
-PostgreSQL e não sobrevivem ao reinício da aplicação.
+isolado no contêiner Selenium e preenche uma única vez as credenciais enviadas
+pela própria tela. O noVNC aparece em um modal do RedeASSO exclusivamente para
+a confirmação humana do CAPTCHA. Ao concluir, o Spring coleta o cookie jar
+apenas na memória do processo, vinculado à sessão atual. Senhas e cookies
+externos não são devolvidos ao React, não vão para o PostgreSQL e não
+sobrevivem ao reinício da aplicação.
 
 O navegador não faz parte do Compose padrão. Para habilitá-lo localmente,
-copie `.env.example` para `.env`, defina uma senha forte e execute a partir da
-raiz do repositório:
+copie `.env.example` para `.env`, defina dois segredos diferentes com pelo
+menos 32 caracteres e execute a partir da raiz do repositório:
 
 ```powershell
-$env:AREA_CENTRAL_VNC_PASSWORD = "uma-senha-forte-e-exclusiva"
-$env:AREA_CENTRAL_INTERACTIVE_URL = "http://localhost:7900/?autoconnect=1&resize=scale"
+$env:AREA_CENTRAL_BROWSER_SERVICE_KEY = "chave-interna-aleatoria-e-exclusiva"
+$env:AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET = "segredo-hmac-aleatorio-e-exclusivo"
 docker compose -f docker-compose.yml -f docker-compose.area-central.yml up -d --build
 ```
 
-No servidor, publique a porta 7900 somente no IP Tailscale da máquina e use a
-URL MagicDNS correspondente em `AREA_CENTRAL_INTERACTIVE_URL`. Não use Funnel
-para essa porta. A janela noVNC pedirá a senha definida em
-`AREA_CENTRAL_VNC_PASSWORD`; ela não é enviada pela API nem incluída no link.
+O gateway local publica apenas a porta configurada em
+`AREA_CENTRAL_BROWSER_PORT` (padrão `7900`). Ele mantém Selenium na porta 4444
+e noVNC na 7900 internamente, exigindo a chave interna do Spring e um token
+HMAC curto por tentativa antes de encaminhar qualquer websocket. Para usar o
+Vite local, defina `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=http://localhost:5000`.
 
 O contêiner aceita somente uma tentativa de login interativo por vez. Uma
 tentativa expira em dez minutos, pode ser cancelada pela interface e fecha o

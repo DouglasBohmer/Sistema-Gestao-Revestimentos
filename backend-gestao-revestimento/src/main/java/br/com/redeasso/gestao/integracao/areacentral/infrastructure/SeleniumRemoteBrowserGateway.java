@@ -41,7 +41,12 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
     }
 
     @Override
-    public AreaCentralBrowserSession open(URI loginUrl, String username, char[] password) {
+    public AreaCentralBrowserSession open(
+            URI loginUrl,
+            String username,
+            char[] password,
+            String interactiveAccessId,
+            Instant expiresAt) {
         ObjectNode capability = objectMapper.createObjectNode();
         capability.put("browserName", "chrome");
         capability.putObject("goog:chromeOptions").putArray("args");
@@ -62,8 +67,10 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
             navigation.put("url", loginUrl.toString());
             send("POST", "/session/%s/url".formatted(browserSessionId), navigation);
             fillCredentials(browserSessionId, username, password);
+            grantInteractiveAccess(interactiveAccessId, expiresAt);
             return new AreaCentralBrowserSession(browserSessionId);
         } catch (RuntimeException exception) {
+            revokeInteractiveAccess(interactiveAccessId);
             close(browserSessionId);
             throw exception;
         }
@@ -138,6 +145,15 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
     }
 
     @Override
+    public void revokeInteractiveAccess(String interactiveAccessId) {
+        try {
+            sendToBrowserService("DELETE", "/internal/access/" + interactiveAccessId, null);
+        } catch (AreaCentralBrowserUnavailableException ignored) {
+            // A sessão Selenium também será fechada; o gateway expira o token curto.
+        }
+    }
+
+    @Override
     public void close(String browserSessionId) {
         try {
             send("DELETE", "/session/%s".formatted(browserSessionId), null);
@@ -146,11 +162,29 @@ public class SeleniumRemoteBrowserGateway implements AreaCentralBrowserGateway {
         }
     }
 
+    private void grantInteractiveAccess(String interactiveAccessId, Instant expiresAt) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("expiresAt", expiresAt.toString());
+        sendToBrowserService("PUT", "/internal/access/" + interactiveAccessId, payload);
+    }
+
     private JsonNode send(String method, String path, JsonNode body) {
+        return send(method, endpoint(path), body);
+    }
+
+    private JsonNode sendToBrowserService(String method, String path, JsonNode body) {
+        URI endpoint = properties.webDriverUrl().resolve("/" + path.replaceFirst("^/+", ""));
+        return send(method, endpoint, body);
+    }
+
+    private JsonNode send(String method, URI endpoint, JsonNode body) {
         try {
-            HttpRequest.Builder request = HttpRequest.newBuilder(endpoint(path))
+            HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
                     .timeout(properties.readTimeout())
                     .header("Accept", "application/json");
+            if (properties.browserServiceKey() != null && !properties.browserServiceKey().isBlank()) {
+                request.header("X-Redeasso-Browser-Key", properties.browserServiceKey());
+            }
             if (body != null) {
                 request.header("Content-Type", "application/json")
                         .method(method, HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)));

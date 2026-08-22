@@ -1,6 +1,7 @@
 package br.com.redeasso.gestao.integracao.areacentral.application;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -11,7 +12,12 @@ import java.util.List;
  */
 public interface AreaCentralBrowserGateway {
 
-    AreaCentralBrowserSession open(URI loginUrl, String username, char[] password);
+    AreaCentralBrowserSession open(
+            URI loginUrl,
+            String username,
+            char[] password,
+            String interactiveAccessId,
+            Instant expiresAt);
 
     List<AreaCentralCookie> cookies(String browserSessionId);
 
@@ -21,6 +27,9 @@ public interface AreaCentralBrowserGateway {
      * cookie created for an anonymous visitor is never accepted as a login.
      */
     boolean loginFormDisplayed(String browserSessionId);
+
+    /** Revoga imediatamente o token que permite visualizar o noVNC da tentativa. */
+    void revokeInteractiveAccess(String interactiveAccessId);
 
     void close(String browserSessionId);
 }

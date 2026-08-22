@@ -37,7 +37,38 @@ services:
         sync: false
       - key: REDEASSO_LOCAL_ADMIN_PASSWORD
         sync: false
-      # O navegador noVNC ainda não é publicado no Render. Mantê-lo desligado
-      # impede que uma porta de interação humana seja exposta acidentalmente.
+      # Só ative depois de preencher a URL e os dois segredos do serviço
+      # redeasso-area-central-browser criado neste mesmo Blueprint.
       - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
         value: "false"
+      - key: AREA_CENTRAL_WEBDRIVER_URL
+        sync: false
+      - key: AREA_CENTRAL_INTERACTIVE_URL
+        sync: false
+      - key: AREA_CENTRAL_BROWSER_SERVICE_KEY
+        sync: false
+      - key: AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET
+        sync: false
+      - key: AREA_CENTRAL_READ_TIMEOUT
+        value: 90s
+
+  # Chrome + Selenium + noVNC em serviço separado. Somente o gateway HTTPS
+  # escuta a porta pública; os endpoints internos exigem chave e o websocket
+  # do noVNC exige token curto emitido pelo Spring.
+  - type: web
+    name: redeasso-area-central-browser
+    runtime: docker
+    region: ohio
+    plan: free
+    branch: main
+    dockerfilePath: ./infra/area-central-browser/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: BROWSER_SERVICE_KEY
+        sync: false
+      - key: INTERACTIVE_TOKEN_SECRET
+        sync: false
+      - key: ALLOWED_FRAME_ORIGIN
+        sync: false

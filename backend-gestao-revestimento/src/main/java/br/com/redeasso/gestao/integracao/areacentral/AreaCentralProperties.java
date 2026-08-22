@@ -15,6 +15,8 @@ public record AreaCentralProperties(
         @NotNull URI loginUrl,
         @NotNull URI webDriverUrl,
         String interactiveUrl,
+        String browserServiceKey,
+        String interactiveTokenSecret,
         @NotNull Duration connectTimeout,
         @NotNull Duration readTimeout,
         @NotNull Duration loginAttemptTimeout

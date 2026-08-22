@@ -21,7 +21,8 @@ class AreaCentralLoginServiceTest {
         AreaCentralLoginAttemptState attempt = service.start("sessao-1", "usuario-area-central", "senha-efemera");
 
         assertThat(attempt.status()).isEqualTo("WAITING_FOR_HUMAN");
-        assertThat(attempt.interactiveUrl()).isEqualTo("http://tailnet-exemplo:7900/?autoconnect=1");
+        assertThat(attempt.interactiveUrl()).startsWith("https://browser-exemplo.onrender.com/vnc.html?autoconnect=1");
+        assertThat(attempt.interactiveUrl()).contains("path=websockify%3Ftoken%3Dv1.");
         assertThat(attempt.expiresAt()).isAfter(java.time.Instant.now());
         assertThat(browser.openedUrl).isEqualTo(properties(true).loginUrl());
         assertThat(browser.openedUsername).isEqualTo("usuario-area-central");
@@ -65,6 +66,7 @@ class AreaCentralLoginServiceTest {
         assertThat(completedLogin.cookieJar().hasAuthenticatedSessionCookie()).isTrue();
         assertThat(completedLogin.cookieJar().toString()).doesNotContain("valor-externo-que-nao-pode-vazar");
         assertThat(browser.closedSessionIds).containsExactly("browser-session-1");
+        assertThat(browser.revokedAccessIds).hasSize(1);
         assertThat(service.start("sessao-2", "outro", "senha").status()).isEqualTo("READY_TO_COMPLETE");
     }
 
@@ -116,8 +118,10 @@ class AreaCentralLoginServiceTest {
                 enabled,
                 URI.create("https://redeasso.areacentral.com.br"),
                 URI.create("https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos"),
-                URI.create("http://area-central-browser:4444"),
-                "http://tailnet-exemplo:7900/?autoconnect=1",
+                URI.create("https://browser-exemplo.onrender.com/webdriver"),
+                "https://browser-exemplo.onrender.com/vnc.html",
+                "chave-interna-de-teste",
+                "segredo-hmac-de-teste",
                 Duration.ofSeconds(5),
                 Duration.ofSeconds(10),
                 Duration.ofMinutes(10));
@@ -133,7 +137,12 @@ class AreaCentralLoginServiceTest {
         private final java.util.ArrayList<String> closedSessionIds = new java.util.ArrayList<>();
 
         @Override
-        public AreaCentralBrowserSession open(URI loginUrl, String username, char[] password) {
+        public AreaCentralBrowserSession open(
+                URI loginUrl,
+                String username,
+                char[] password,
+                String interactiveAccessId,
+                java.time.Instant expiresAt) {
             openedUrl = loginUrl;
             openedUsername = username;
             passwordAtGatewayInvocation = password.clone();
@@ -149,6 +158,13 @@ class AreaCentralLoginServiceTest {
         @Override
         public boolean loginFormDisplayed(String browserSessionId) {
             return loginFormDisplayed;
+        }
+
+        private final java.util.ArrayList<String> revokedAccessIds = new java.util.ArrayList<>();
+
+        @Override
+        public void revokeInteractiveAccess(String interactiveAccessId) {
+            revokedAccessIds.add(interactiveAccessId);
         }
 
         @Override

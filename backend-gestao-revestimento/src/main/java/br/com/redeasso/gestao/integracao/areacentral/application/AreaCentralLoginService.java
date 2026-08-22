@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class AreaCentralLoginService {
@@ -40,18 +41,22 @@ public class AreaCentralLoginService {
             throw new AreaCentralLoginBusyException();
         }
 
+        Instant expiresAt = Instant.now().plus(properties.loginAttemptTimeout());
+        String interactiveAccessId = UUID.randomUUID().toString();
         char[] passwordChars = password.toCharArray();
         AreaCentralBrowserSession browserSession;
         try {
-            browserSession = browserGateway.open(properties.loginUrl(), username, passwordChars);
+            browserSession = browserGateway.open(
+                    properties.loginUrl(), username, passwordChars, interactiveAccessId, expiresAt);
         } finally {
             Arrays.fill(passwordChars, '\0');
         }
         AreaCentralLoginAttempt attempt = new AreaCentralLoginAttempt(
                 applicationSessionId,
                 browserSession.id(),
+                interactiveAccessId,
                 username,
-                Instant.now().plus(properties.loginAttemptTimeout()));
+                expiresAt);
         attempts.put(applicationSessionId, attempt);
         return stateOf(attempt);
     }
@@ -103,10 +108,15 @@ public class AreaCentralLoginService {
     }
 
     private AreaCentralLoginAttemptState stateOf(AreaCentralLoginAttempt attempt) {
+        String interactiveUrl = AreaCentralInteractiveAccessToken.issue(
+                properties.interactiveUrl(),
+                properties.interactiveTokenSecret(),
+                attempt.interactiveAccessId(),
+                attempt.expiresAt());
         if (authenticatedCookieJar(attempt) != null) {
-            return AreaCentralLoginAttemptState.readyToComplete(properties.interactiveUrl(), attempt.expiresAt());
+            return AreaCentralLoginAttemptState.readyToComplete(interactiveUrl, attempt.expiresAt());
         }
-        return AreaCentralLoginAttemptState.waitingForHuman(properties.interactiveUrl(), attempt.expiresAt());
+        return AreaCentralLoginAttemptState.waitingForHuman(interactiveUrl, attempt.expiresAt());
     }
 
     private AreaCentralCookieJar authenticatedCookieJar(AreaCentralLoginAttempt attempt) {
@@ -120,6 +130,7 @@ public class AreaCentralLoginService {
 
     private void removeAttempt(AreaCentralLoginAttempt attempt) {
         attempts.remove(attempt.applicationSessionId());
+        browserGateway.revokeInteractiveAccess(attempt.interactiveAccessId());
         browserGateway.close(attempt.browserSessionId());
     }
 
@@ -131,6 +142,11 @@ public class AreaCentralLoginService {
         if (properties.interactiveUrl() == null || properties.interactiveUrl().isBlank()) {
             throw new AreaCentralIntegrationUnavailableException(
                     "A URL segura do navegador assistido não está configurada");
+        }
+        if (properties.browserServiceKey() == null || properties.browserServiceKey().isBlank()
+                || properties.interactiveTokenSecret() == null || properties.interactiveTokenSecret().isBlank()) {
+            throw new AreaCentralIntegrationUnavailableException(
+                    "As credenciais seguras do navegador assistido não estão configuradas");
         }
     }
 }
