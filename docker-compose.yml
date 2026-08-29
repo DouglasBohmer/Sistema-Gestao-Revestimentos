@@ -29,6 +29,7 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       SESSION_TIMEOUT: ${SESSION_TIMEOUT:-12h}
+      SESSION_CLEANUP_CRON: "${SESSION_CLEANUP_CRON:-0 0 6 * * *}"
       # Temporário até o login Área Central ser concluído. Em ambiente exposto,
       # troque a senha ou desative explicitamente este acesso.
       REDEASSO_LOCAL_ADMIN_ENABLED: ${REDEASSO_LOCAL_ADMIN_ENABLED:-true}

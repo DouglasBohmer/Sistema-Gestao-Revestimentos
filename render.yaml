@@ -21,6 +21,10 @@ services:
         value: lax
       - key: SESSION_TIMEOUT
         value: 12h
+      # Limpa sessões expiradas uma vez ao dia (06:00 UTC / 03:00 Brasília),
+      # em vez do padrão do Spring Session de uma consulta por minuto.
+      - key: SESSION_CLEANUP_CRON
+        value: "0 0 6 * * *"
       - key: DATABASE_MAX_POOL_SIZE
         value: "5"
       # Cole a URL JDBC direta do Neon (não a URL de pooler) na criação do

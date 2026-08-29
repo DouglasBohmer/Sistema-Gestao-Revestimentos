@@ -134,6 +134,9 @@ configure estes segredos:
 Mantenha `SESSION_COOKIE_SECURE=true` e `SESSION_COOKIE_SAME_SITE=lax`. O
 Cloudflare Worker encaminha `/api/*` no mesmo domínio público e preserva os
 cabeçalhos de sessão; não é necessário liberar CORS para origens arbitrárias.
+Em produção, `SESSION_CLEANUP_CRON=0 0 6 * * *` limpa sessões JDBC expiradas
+uma vez ao dia, às 06:00 UTC (03:00 em Brasília). O padrão por minuto do Spring
+Session não deve ser usado com Neon autosuspend.
 
 Na primeira inicialização, o Flyway cria o schema no Neon. A migração dos dados
 locais deve ocorrer somente depois de confirmar backup e banco Neon vazio.

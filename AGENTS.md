@@ -128,6 +128,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 - As migrations V1–V4 criam Spring Session, parâmetros-base, pisos/atividades e mapas/células. Dois pisos demonstrativos são carga inicial de V3; dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
 - O acesso temporário `admin/admin` agora cria uma sessão real no Spring, com cookie HttpOnly, CSRF e Spring Session JDBC. O booleano falso de `sessionStorage` foi removido.
+- A limpeza de sessões expiradas do Spring Session JDBC roda uma vez ao dia, às `06:00 UTC` (`03:00` em Brasília), por `SESSION_CLEANUP_CRON`. Não restaurar o padrão de uma execução por minuto, pois isso mantém o Neon acordado sem uso real.
 - O backend está organizado sob `br.com.redeasso.gestao`, por domínio/feature. O login assistido da Área Central usa Chrome gráfico isolado em noVNC, tentativa única e cookie jar somente em memória por sessão; usuário, senha e CAPTCHA são preenchidos manualmente na página real. A autenticação real e a primeira consulta ainda precisam de homologação manual autorizada no portal.
 - O Maven Wrapper está completo e fixado no projeto; use `mvnw`/`mvnw.cmd` em vez de depender de Maven global.
 - O `pom.xml` aponta para PostgreSQL, agora confirmado como banco definitivo. O README técnico já foi atualizado; referências a Azure SQL no relatório acadêmico são históricas.

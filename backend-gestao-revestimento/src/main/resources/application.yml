@@ -27,6 +27,9 @@ spring:
     timeout: ${SESSION_TIMEOUT:12h}
     jdbc:
       initialize-schema: never
+      # O padrão do Spring Session é limpar sessões a cada minuto, mantendo o
+      # Neon acordado. No Render (UTC), 06:00 corresponde a 03:00 em Brasília.
+      cleanup-cron: "${SESSION_CLEANUP_CRON:0 0 6 * * *}"
 
 server:
   port: ${PORT:8080}

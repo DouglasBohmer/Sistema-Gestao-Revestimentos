@@ -41,6 +41,8 @@ Blueprint, em particular:
 
 - `SPRING_PROFILES_ACTIVE=prod`;
 - `SESSION_COOKIE_SECURE=true`;
+- `SESSION_CLEANUP_CRON=0 0 6 * * *` para limpar sessões expiradas uma vez ao
+  dia, às 06:00 UTC (03:00 em Brasília), sem manter o Neon acordado por minuto;
 - `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`, até concluir a seção 3.1
   abaixo.
 
