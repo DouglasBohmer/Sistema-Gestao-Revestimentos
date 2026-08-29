@@ -7,7 +7,9 @@ services:
     branch: main
     dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
     dockerContext: ./backend-gestao-revestimento
-    healthCheckPath: /actuator/health
+    # Sonda de processo sem o indicador Actuator de DataSource: não mantém o
+    # PostgreSQL Neon acordado apenas por verificações de disponibilidade.
+    healthCheckPath: /api/healthz
     # Em main, o Render aguarda a validação do GitHub Actions e então publica.
     autoDeployTrigger: checksPass
     envVars:

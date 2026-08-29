@@ -32,7 +32,7 @@ No painel Render, crie um **Blueprint** a partir deste repositório. O arquivo
 próximo do projeto Neon.
 
 O Blueprint usa `plan: free`, portanto não deve solicitar cartão. O Worker
-Cloudflare tem um cron de 10 minutos que consulta `/actuator/health` e evita a
+Cloudflare tem um cron de 10 minutos que consulta `/api/healthz` e evita a
 suspensão por inatividade. Isso mantém o serviço ativo, mas consome quase todas
 as 750 horas gratuitas mensais do workspace; acompanhe esse consumo no Render.
 
@@ -147,8 +147,9 @@ uma versão diferente do pnpm.
 O Worker serve a SPA e encaminha `/api/*` ao Render. Isso faz com que sessão,
 CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
 O mesmo Worker executa um Cron Trigger `*/10 * * * *`, que faz uma chamada
-`GET /actuator/health` ao Render. Esse ping não acessa dados de negócio, banco
-nem sessões de usuários.
+`GET /api/healthz` ao Render. Esse ping não acessa dados de negócio, banco
+nem sessões de usuários; ele também não executa a verificação de `DataSource`
+do Actuator e, portanto, não mantém o Neon ativo sozinho.
 
 ## 4. Automação por branch
 

@@ -146,8 +146,8 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 ## 5. Estado atual de build e deploy
 
-- `render.yaml` define a API Docker do Render a partir de `backend-gestao-revestimento/Dockerfile.render`, com health check e variáveis sensíveis preenchidas apenas no painel Render.
-- A API Render usa inicialmente o plano `free`. O Worker Cloudflare mantém um cron `*/10 * * * *` que consulta somente `/actuator/health` para evitar suspensão; ele deixa a instância ativa e consome praticamente todas as 750 horas gratuitas mensais do workspace. Manter este agendamento apenas enquanto a conta Cloudflare aceitar esse intervalo e houver saldo de horas no Render.
+- `render.yaml` define a API Docker do Render a partir de `backend-gestao-revestimento/Dockerfile.render`, com health check em `/api/healthz` e variáveis sensíveis preenchidas apenas no painel Render. Esse endpoint é deliberadamente independente do banco.
+- A API Render usa inicialmente o plano `free`. O Worker Cloudflare mantém um cron `*/10 * * * *` que consulta somente `/api/healthz` para evitar suspensão; ele deixa a instância ativa sem validar o `DataSource`, permitindo que o Neon suspenda quando não houver uso real. Manter este agendamento apenas enquanto a conta Cloudflare aceitar esse intervalo e houver saldo de horas no Render.
 - `frontend-gestao-revestimento/wrangler.jsonc` é a fonte de verdade do Worker: publica assets estáticos, proxy para `/api`, `API_ORIGIN` público e o cron de health check. A URL da API não é segredo e não vai para o bundle React.
 - A origem de produção do Worker é `https://redeasso.assocom.workers.dev`. É a origem exata que deve constar em `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN` no servidor do navegador; não usar o antigo subdomínio `douglas-bohmer-senai`.
 - `.github/workflows/verify.yml` testa frontend, Worker em dry-run e Spring em todos os pushes. A `main` pode usar esse check para o `autoDeployTrigger: checksPass` do Render.

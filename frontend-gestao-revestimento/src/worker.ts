@@ -28,7 +28,9 @@ function targetUrl(requestUrl: URL, apiOrigin: string): URL {
 }
 
 function healthUrl(apiOrigin: string): URL {
-  return new URL("/actuator/health", new URL(apiOrigin));
+  // Este endpoint responde sem consultar o banco. O cron mantém somente a
+  // instância Render acordada, permitindo que o Neon suspenda sem uso real.
+  return new URL("/api/healthz", new URL(apiOrigin));
 }
 
 function upstreamHeaders(request: Request, requestUrl: URL): Headers {
