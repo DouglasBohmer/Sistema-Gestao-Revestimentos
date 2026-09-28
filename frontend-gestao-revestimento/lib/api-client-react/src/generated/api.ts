@@ -306,7 +306,7 @@ export const getStartAreaCentralLoginAttemptUrl = () => {
 }
 
 /**
- * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são informados manualmente na página real pelo noVNC; a senha não é recebida, persistida, devolvida nem registrada pelo RedeASSO.
+ * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são digitados manualmente no noVNC; a senha não passa pela API, não é persistida, devolvida nem registrada em logs.
  * @summary Iniciar login assistido da Área Central
  */
 export const startAreaCentralLoginAttempt = async (startAreaCentralLoginRequest: StartAreaCentralLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {
@@ -1116,7 +1116,7 @@ export const useDeletePiso = <TError = ErrorType<ErrorResponse>,
       return useMutation(getDeletePisoMutationOptions(options));
     }
 
-export const getGetPisoByCodigoUrl = (codigo: string,) => {
+export const getListPisosByCodigoUrl = (codigo: string,) => {
 
 
 
@@ -1125,11 +1125,11 @@ export const getGetPisoByCodigoUrl = (codigo: string,) => {
 }
 
 /**
- * @summary Buscar piso pelo código (loja ou rede)
+ * @summary Listar pisos encontrados pelo código (CTC ou ASSO)
  */
-export const getPisoByCodigo = async (codigo: string, options?: Parameters<typeof customFetch>[1]): Promise<Piso> => {
+export const listPisosByCodigo = async (codigo: string, options?: Parameters<typeof customFetch>[1]): Promise<Piso[]> => {
 
-  return customFetch<Piso>(getGetPisoByCodigoUrl(codigo),
+  return customFetch<Piso[]>(getListPisosByCodigoUrl(codigo),
   {
     ...options,
     method: 'GET'
@@ -1142,45 +1142,45 @@ export const getPisoByCodigo = async (codigo: string, options?: Parameters<typeo
 
 
 
-export const getGetPisoByCodigoQueryKey = (codigo: string,) => {
+export const getListPisosByCodigoQueryKey = (codigo: string,) => {
     return [
     `/api/pisos/codigo/${codigo}`
     ] as const;
     }
 
 
-export const getGetPisoByCodigoQueryOptions = <TData = Awaited<ReturnType<typeof getPisoByCodigo>>, TError = ErrorType<ErrorResponse>>(codigo: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPisoByCodigo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListPisosByCodigoQueryOptions = <TData = Awaited<ReturnType<typeof listPisosByCodigo>>, TError = ErrorType<ErrorResponse>>(codigo: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPisosByCodigo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetPisoByCodigoQueryKey(codigo);
+  const queryKey =  queryOptions?.queryKey ?? getListPisosByCodigoQueryKey(codigo);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPisoByCodigo>>> = ({ signal }) => getPisoByCodigo(codigo, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPisosByCodigo>>> = ({ signal }) => listPisosByCodigo(codigo, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: codigo !== null && codigo !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPisoByCodigo>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: codigo !== null && codigo !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPisosByCodigo>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetPisoByCodigoQueryResult = NonNullable<Awaited<ReturnType<typeof getPisoByCodigo>>>
-export type GetPisoByCodigoQueryError = ErrorType<ErrorResponse>
+export type ListPisosByCodigoQueryResult = NonNullable<Awaited<ReturnType<typeof listPisosByCodigo>>>
+export type ListPisosByCodigoQueryError = ErrorType<ErrorResponse>
 
 
 /**
- * @summary Buscar piso pelo código (loja ou rede)
+ * @summary Listar pisos encontrados pelo código (CTC ou ASSO)
  */
 
-export function useGetPisoByCodigo<TData = Awaited<ReturnType<typeof getPisoByCodigo>>, TError = ErrorType<ErrorResponse>>(
- codigo: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPisoByCodigo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListPisosByCodigo<TData = Awaited<ReturnType<typeof listPisosByCodigo>>, TError = ErrorType<ErrorResponse>>(
+ codigo: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPisosByCodigo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetPisoByCodigoQueryOptions(codigo,options)
+  const queryOptions = getListPisosByCodigoQueryOptions(codigo,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

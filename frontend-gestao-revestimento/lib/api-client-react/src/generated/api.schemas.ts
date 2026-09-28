@@ -84,12 +84,42 @@ export interface ApiError {
   path: string;
 }
 
+export type ClassificacaoUso = typeof ClassificacaoUso[keyof typeof ClassificacaoUso];
+
+
+export const ClassificacaoUso = {
+  LA: 'LA',
+  LB: 'LB',
+  LC: 'LC',
+  LD: 'LD',
+  LE: 'LE',
+  LF: 'LF',
+} as const;
+
+export type AcabamentoBordas = typeof AcabamentoBordas[keyof typeof AcabamentoBordas];
+
+
+export const AcabamentoBordas = {
+  RETIFICADO: 'RETIFICADO',
+  BOLD: 'BOLD',
+} as const;
+
+export type OrigemDadoProduto = typeof OrigemDadoProduto[keyof typeof OrigemDadoProduto];
+
+
+export const OrigemDadoProduto = {
+  NAO_INFORMADO: 'NAO_INFORMADO',
+  MANUAL: 'MANUAL',
+  AREA_CENTRAL: 'AREA_CENTRAL',
+} as const;
+
 export interface Piso {
   id: number;
   nome: string;
   /** @nullable */
   codigoRede?: string | null;
-  codigoLoja: string;
+  /** @nullable */
+  codigoLoja?: string | null;
   /**
      * Largura em cm
      * @nullable
@@ -119,22 +149,31 @@ export interface Piso {
      * @nullable
      */
   tipoPiso?: string | null;
-  /**
-     * Classe PEI (1-5)
-     * @nullable
-     */
-  pei?: number | null;
-  /** @nullable */
-  retificado?: boolean | null;
+  /** Maior classe de uso aplicável ao produto */
+  classificacaoUso?: ClassificacaoUso | null;
+  acabamentoBordas: AcabamentoBordas;
   /** @nullable */
   linkSite?: string | null;
-  /** @nullable */
-  linkFoto?: string | null;
   /**
-     * Preço de venda em reais por metro quadrado (R$/m²)
+     * URL efetiva da imagem, no R2 ou no endereço original como fallback
      * @nullable
      */
-  valor?: number | null;
+  linkFoto?: string | null;
+  /** @nullable */
+  linkFotoOrigem?: string | null;
+  /** @nullable */
+  linkAreaCentral?: string | null;
+  /** Preço de venda em reais por metro quadrado (R$/m²) */
+  valor: number;
+  /** Estoque em metros quadrados */
+  estoqueM2: number;
+  /** @nullable */
+  statusAreaCentral?: string | null;
+  /** @nullable */
+  ultimaConsultaAreaCentralEm?: string | null;
+  ativo: boolean;
+  origemValor: OrigemDadoProduto;
+  origemEstoque: OrigemDadoProduto;
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
@@ -142,8 +181,10 @@ export interface Piso {
 
 export interface PisoInput {
   nome: string;
+  /** Código ASSO. Ao menos ASSO ou CTC deve ser informado. */
   codigoRede?: string;
-  codigoLoja: string;
+  /** Código CTC. Ao menos ASSO ou CTC deve ser informado. */
+  codigoLoja?: string;
   largura?: number;
   altura?: number;
   rejunte?: number;
@@ -151,16 +192,23 @@ export interface PisoInput {
   m2PorCaixa: number;
   localDeUso?: string;
   tipoPiso?: string;
-  pei?: number;
-  retificado?: boolean;
+  classificacaoUso?: ClassificacaoUso;
+  acabamentoBordas: AcabamentoBordas;
   linkSite?: string;
-  linkFoto?: string;
+  linkFotoOrigem?: string;
+  linkAreaCentral?: string;
+  /** @minimum 0 */
   valor?: number;
+  /** @minimum 0 */
+  estoqueM2?: number;
+  ativo?: boolean;
 }
 
 export interface CalculoInput {
   /** Código Loja ou Código Rede do piso */
-  codigoPiso: string;
+  codigoPiso?: string;
+  /** Identificador escolhido quando o código retorna mais de um produto */
+  pisoId?: number;
   /** Área total do cliente em metros quadrados */
   metragemM2: number;
   /** Margem de quebra em percentual (ex 10 = 10%). Padrão 10. */
@@ -322,5 +370,9 @@ localDeUso?: string;
  * Filtrar por tipo de piso
  */
 tipoPiso?: string;
+/**
+ * Filtrar produtos ativos ou inativos
+ */
+ativo?: boolean;
 };
 

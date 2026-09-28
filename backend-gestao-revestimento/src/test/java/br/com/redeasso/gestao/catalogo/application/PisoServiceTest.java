@@ -3,6 +3,8 @@ package br.com.redeasso.gestao.catalogo.application;
 import br.com.redeasso.gestao.auditoria.application.AtividadeService;
 import br.com.redeasso.gestao.catalogo.domain.DadosPiso;
 import br.com.redeasso.gestao.catalogo.domain.Piso;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
+import br.com.redeasso.gestao.catalogo.domain.ClassificacaoUso;
 import br.com.redeasso.gestao.catalogo.infrastructure.PisoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,20 +58,42 @@ class PisoServiceTest {
     @Test
     void buscaPeloCodigoDaLojaOuDaRede() {
         Piso piso = Piso.cadastrar(dados("Piso", "LOJA-10"));
-        when(pisoRepository.findFirstByCodigoLojaOrCodigoRedeOrderByIdAsc("REDE-10", "REDE-10"))
-                .thenReturn(Optional.of(piso));
+        when(pisoRepository.findAllByCodigoLojaOrCodigoRedeOrderByIdAsc("REDE-10", "REDE-10"))
+                .thenReturn(List.of(piso));
 
         assertThat(pisoService.buscarPorCodigo(" REDE-10 ")).isSameAs(piso);
     }
 
     @Test
     void informaQuandoCodigoNaoExiste() {
-        when(pisoRepository.findFirstByCodigoLojaOrCodigoRedeOrderByIdAsc("INEXISTENTE", "INEXISTENTE"))
-                .thenReturn(Optional.empty());
+        when(pisoRepository.findAllByCodigoLojaOrCodigoRedeOrderByIdAsc("INEXISTENTE", "INEXISTENTE"))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> pisoService.buscarPorCodigo("INEXISTENTE"))
                 .isInstanceOf(PisoNaoEncontradoException.class)
                 .hasMessage("Piso não encontrado");
+    }
+
+    @Test
+    void exigeEscolhaQuandoUmCodigoIdentificaMaisDeUmProduto() {
+        Piso primeiro = Piso.cadastrar(dados("Primeiro", "LOJA-10"));
+        Piso segundo = Piso.cadastrar(dados("Segundo", "LOJA-10"));
+        when(pisoRepository.findAllByCodigoLojaOrCodigoRedeOrderByIdAsc("LOJA-10", "LOJA-10"))
+                .thenReturn(List.of(primeiro, segundo));
+
+        assertThatThrownBy(() -> pisoService.buscarPorCodigo("LOJA-10"))
+                .isInstanceOf(CodigoPisoAmbiguoException.class)
+                .hasMessage("Mais de um produto foi encontrado para o código informado");
+    }
+
+    @Test
+    void impedeNomeRepetidoIgnorandoCaixaEEspacos() {
+        when(pisoRepository.contarPorNomeNormalizado("piso existente", null)).thenReturn(1L);
+
+        assertThatThrownBy(() -> pisoService.cadastrar(dados(" piso existente ", "LOJA-20")))
+                .isInstanceOf(PisoNomeDuplicadoException.class)
+                .hasMessage("Já existe um produto com esse nome");
+        verifyNoInteractions(atividadeService);
     }
 
     @Test
@@ -111,10 +136,13 @@ class PisoServiceTest {
                 new BigDecimal("1.44"),
                 "Interno",
                 "Porcelanato",
-                4,
-                true,
+                ClassificacaoUso.LD,
+                AcabamentoBorda.RETIFICADO,
                 null,
                 null,
-                new BigDecimal("89.90"));
+                null,
+                new BigDecimal("89.90"),
+                BigDecimal.ZERO,
+                false);
     }
 }

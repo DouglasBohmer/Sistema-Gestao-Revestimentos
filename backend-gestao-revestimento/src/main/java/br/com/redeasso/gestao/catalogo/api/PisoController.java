@@ -34,8 +34,9 @@ public class PisoController {
     public List<PisoResponse> listar(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String localDeUso,
-            @RequestParam(required = false) String tipoPiso) {
-        return pisoService.listar(search, localDeUso, tipoPiso).stream()
+            @RequestParam(required = false) String tipoPiso,
+            @RequestParam(required = false) Boolean ativo) {
+        return pisoService.listar(search, localDeUso, tipoPiso, ativo).stream()
                 .map(PisoResponse::from)
                 .toList();
     }
@@ -52,8 +53,8 @@ public class PisoController {
     }
 
     @GetMapping("/codigo/{codigo}")
-    public PisoResponse buscarPorCodigo(@PathVariable @Size(max = 100) String codigo) {
-        return PisoResponse.from(pisoService.buscarPorCodigo(codigo));
+    public List<PisoResponse> buscarPorCodigo(@PathVariable @Size(max = 100) String codigo) {
+        return pisoService.buscarTodosPorCodigo(codigo).stream().map(PisoResponse::from).toList();
     }
 
     @PutMapping("/{id}")

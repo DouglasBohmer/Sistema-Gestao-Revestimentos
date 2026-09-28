@@ -492,7 +492,7 @@ function CelulaDialog({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-gray-800">Piso {indice + 1}: {piso?.nome ?? `Piso #${item.pisoId}`}</p>
-                    <p className="text-xs text-gray-500">{piso?.codigoLoja ?? "Código indisponível"} • {piso?.m2PorCaixa ?? "-"} m²/caixa</p>
+                    <p className="text-xs text-gray-500">{piso?.codigoLoja ?? piso?.codigoRede ?? "Código indisponível"} • {piso?.m2PorCaixa ?? "-"} m²/caixa</p>
                   </div>
                   <div className="flex gap-1">
                     <Button type="button" variant="ghost" size="sm" onClick={() => { setIndiceSelecionando(indice); setBusca("") }}>
@@ -542,7 +542,7 @@ function CelulaDialog({
                         className="w-full text-left p-3 transition-colors hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <p className="font-medium text-gray-800 text-sm">{piso.nome}</p>
-                        <p className="text-xs text-gray-500">{piso.codigoLoja} • {piso.m2PorCaixa} m²/caixa</p>
+                        <p className="text-xs text-gray-500">{piso.codigoLoja ?? piso.codigoRede ?? "Código indisponível"} • {piso.m2PorCaixa} m²/caixa</p>
                       </button>
                     )
                   })

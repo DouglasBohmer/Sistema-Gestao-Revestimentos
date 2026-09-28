@@ -259,6 +259,11 @@ paths:
           schema:
             type: string
           description: Filtrar por tipo de piso
+        - name: ativo
+          in: query
+          schema:
+            type: boolean
+          description: Filtrar produtos ativos ou inativos
       responses:
         "200":
           description: Lista de pisos
@@ -375,9 +380,9 @@ paths:
 
   /pisos/codigo/{codigo}:
     get:
-      operationId: getPisoByCodigo
+      operationId: listPisosByCodigo
       tags: [pisos]
-      summary: Buscar piso pelo código (loja ou rede)
+      summary: Listar pisos encontrados pelo código (CTC ou ASSO)
       parameters:
         - name: codigo
           in: path
@@ -387,11 +392,13 @@ paths:
           description: Código Loja ou Código Rede
       responses:
         "200":
-          description: Piso encontrado
+          description: Um ou mais pisos encontrados; o usuário escolhe quando houver duplicidade
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Piso"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Piso"
         "404":
           description: Piso não encontrado
           content:
@@ -419,6 +426,12 @@ paths:
                 $ref: "#/components/schemas/CalculoResult"
         "400":
           description: Código, metragem ou margem inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: O código identificou mais de um piso sem uma escolha explícita
           content:
             application/json:
               schema:
@@ -764,8 +777,13 @@ components:
       required:
         - id
         - nome
-        - codigoLoja
         - m2PorCaixa
+        - acabamentoBordas
+        - valor
+        - estoqueM2
+        - ativo
+        - origemValor
+        - origemEstoque
         - createdAt
       properties:
         id:
@@ -775,7 +793,7 @@ components:
         codigoRede:
           type: ["string", "null"]
         codigoLoja:
-          type: string
+          type: ["string", "null"]
         largura:
           type: ["number", "null"]
           description: Largura em cm
@@ -796,18 +814,39 @@ components:
         tipoPiso:
           type: ["string", "null"]
           description: Porcelanato, Cerâmica, etc.
-        pei:
-          type: ["number", "null"]
-          description: Classe PEI (1-5)
-        retificado:
-          type: ["boolean", "null"]
+        classificacaoUso:
+          oneOf:
+            - $ref: "#/components/schemas/ClassificacaoUso"
+            - type: "null"
+          description: Maior classe de uso aplicável ao produto
+        acabamentoBordas:
+          $ref: "#/components/schemas/AcabamentoBordas"
         linkSite:
           type: ["string", "null"]
         linkFoto:
           type: ["string", "null"]
+          description: URL efetiva da imagem, no R2 ou no endereço original como fallback
+        linkFotoOrigem:
+          type: ["string", "null"]
+        linkAreaCentral:
+          type: ["string", "null"]
         valor:
-          type: ["number", "null"]
+          type: number
           description: Preço de venda em reais por metro quadrado (R$/m²)
+        estoqueM2:
+          type: number
+          description: Estoque em metros quadrados
+        statusAreaCentral:
+          type: ["string", "null"]
+        ultimaConsultaAreaCentralEm:
+          type: ["string", "null"]
+          format: date-time
+        ativo:
+          type: boolean
+        origemValor:
+          $ref: "#/components/schemas/OrigemDadoProduto"
+        origemEstoque:
+          $ref: "#/components/schemas/OrigemDadoProduto"
         createdAt:
           type: string
           format: date-time
@@ -819,15 +858,17 @@ components:
       type: object
       required:
         - nome
-        - codigoLoja
         - m2PorCaixa
+        - acabamentoBordas
       properties:
         nome:
           type: string
         codigoRede:
           type: string
+          description: Código ASSO. Ao menos ASSO ou CTC deve ser informado.
         codigoLoja:
           type: string
+          description: Código CTC. Ao menos ASSO ou CTC deve ser informado.
         largura:
           type: number
         altura:
@@ -842,26 +883,49 @@ components:
           type: string
         tipoPiso:
           type: string
-        pei:
-          type: number
-        retificado:
-          type: boolean
+        classificacaoUso:
+          $ref: "#/components/schemas/ClassificacaoUso"
+        acabamentoBordas:
+          $ref: "#/components/schemas/AcabamentoBordas"
         linkSite:
           type: string
-        linkFoto:
+        linkFotoOrigem:
+          type: string
+        linkAreaCentral:
           type: string
         valor:
           type: number
+          minimum: 0
+        estoqueM2:
+          type: number
+          minimum: 0
+        ativo:
+          type: boolean
+
+    ClassificacaoUso:
+      type: string
+      enum: [LA, LB, LC, LD, LE, LF]
+
+    AcabamentoBordas:
+      type: string
+      enum: [RETIFICADO, BOLD]
+
+    OrigemDadoProduto:
+      type: string
+      enum: [NAO_INFORMADO, MANUAL, AREA_CENTRAL]
 
     CalculoInput:
       type: object
       required:
-        - codigoPiso
         - metragemM2
       properties:
         codigoPiso:
           type: string
           description: Código Loja ou Código Rede do piso
+        pisoId:
+          type: integer
+          format: int64
+          description: Identificador escolhido quando o código retorna mais de um produto
         metragemM2:
           type: number
           description: Área total do cliente em metros quadrados

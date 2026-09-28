@@ -101,6 +101,15 @@ Regras obrigatórias:
 - Há um PostgreSQL 17 de desenvolvimento no `docker-compose.yml`, com volume local. Ele não pode se tornar uma fonte concorrente de dados de produção.
 - Os dados atuais do sistema anterior estão em MySQL/MariaDB via XAMPP e serão exportados/migrados para PostgreSQL.
 - O fallback local deve acessar o Neon de forma controlada ou restaurar backup; não pode gravar independentemente em banco divergente.
+- A carga legada oficial analisada em 28/09/2026 contém 264 linhas. Três pares representam o mesmo produto e serão consolidados durante a importação, resultando em 261 produtos.
+- `Piso` mantém `id` técnico como chave primária. O nome é obrigatório e único após remover espaços nas extremidades e ignorar maiúsculas/minúsculas.
+- Código ASSO e código CTC são individualmente opcionais, mas todo produto deve possuir ao menos um deles. Somente o código ASSO permite consulta automática à Área Central; produtos apenas com CTC usam preço/estoque manual.
+- Códigos ASSO/CTC não são únicos. Uma busca que encontre mais de um produto deve avisar e permitir que o usuário escolha, nunca selecionar silenciosamente o primeiro.
+- A classificação de uso é um único valor entre `LA` e `LF`, sempre a maior classe aplicável. Na migração: `1..5` viram `LA..LE`, `LCI` vira `LC`, `LS`/`LR`/“Alto Tráfego” viram `LD` e `FL` vira `LF`.
+- O antigo booleano `retificado` passa a ser “Acabamento das bordas”, com as opções `Retificado` e `Bold`.
+- Produtos importados começam inativos, com preço R$ 0,00 e estoque 0 m². Produtos sem ASSO têm ativação manual; a origem de preço e estoque deve distinguir ao menos `MANUAL` e `AREA_CENTRAL`.
+- Consulta externa bem-sucedida ativa o produto e atualiza preço, estoque em m², status e instante da consulta. Somente “Produto não encontrado” o desativa; estoque zero, “Fora de linha”, timeout e falhas temporárias não desativam. Ao desativar, preserve os últimos preço/estoque conhecidos.
+- Links de foto legados devem ser preservados como origem. A cópia própria irá para Cloudflare R2; enquanto ela não existir ou falhar, o link original continua sendo o fallback visível.
 
 ### 3.5 Parâmetros de negócio
 
@@ -409,8 +418,8 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 
 ### Prioridade 1 — dados e cálculos
 
-- **Q19.** Os 264 produtos/dados do XAMPP ainda são a carga oficial a exportar? Quais campos são locais e quais devem sempre ser atualizados pela Área Central?
-- **Q20.** Código ASSO, código CTC e nome devem ser únicos? Como resolver as duplicidades e vazios existentes?
+- **Decidido (Q19).** O dump de 264 linhas em `BK_banco` é a carga oficial. Três duplicidades confirmadas serão consolidadas para 261 produtos; preço, estoque, status e instante da consulta são atualizados pela Área Central quando houver ASSO, com edição/ativação manual para produtos apenas com CTC.
+- **Decidido (Q20).** Nome é único por comparação normalizada, mantendo `id` como PK. ASSO e CTC podem repetir e são opcionais individualmente, mas ao menos um é obrigatório; resultados duplicados exigem escolha explícita do usuário.
 - **Q21.** O campo externo “múltiplo” é sempre o m² por caixa e pode atualizar automaticamente o cadastro local?
 - **Q23.** Qual é o padrão e os limites da margem de quebra? Ela se aplica antes do arredondamento de caixas e pode ser alterada por quem?
 - **Q25.** Os kg exibidos devem ser consumo teórico ou quantidade efetivamente vendida após arredondar embalagens?

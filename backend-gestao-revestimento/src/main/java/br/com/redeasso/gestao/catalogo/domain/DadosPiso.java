@@ -13,9 +13,12 @@ public record DadosPiso(
         BigDecimal m2PorCaixa,
         String localDeUso,
         String tipoPiso,
-        Integer pei,
-        Boolean retificado,
+        ClassificacaoUso classificacaoUso,
+        AcabamentoBorda acabamentoBordas,
         String linkSite,
-        String linkFoto,
-        BigDecimal valor) {
+        String linkFotoOrigem,
+        String linkAreaCentral,
+        BigDecimal valor,
+        BigDecimal estoqueM2,
+        Boolean ativo) {
 }

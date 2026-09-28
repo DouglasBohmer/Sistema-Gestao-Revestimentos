@@ -30,7 +30,18 @@ public class CalculoService {
             String codigoPiso,
             BigDecimal metragemM2,
             BigDecimal margemQuebra) {
-        Piso piso = pisoService.buscarPorCodigo(codigoPiso);
+        return calcular(null, codigoPiso, metragemM2, margemQuebra);
+    }
+
+    @Transactional
+    public CalculoResponse calcular(
+            Long pisoId,
+            String codigoPiso,
+            BigDecimal metragemM2,
+            BigDecimal margemQuebra) {
+        Piso piso = pisoId == null
+                ? pisoService.buscarPorCodigo(codigoPiso)
+                : pisoService.buscarPorId(pisoId);
         BigDecimal margemAplicada = margemQuebra == null ? MARGEM_PADRAO : margemQuebra;
         BigDecimal fatorMargem = BigDecimal.ONE.add(margemAplicada.divide(CEM));
         BigDecimal metragemComMargem = metragemM2
@@ -56,7 +67,7 @@ public class CalculoService {
     }
 
     private static BigDecimal calcularValorTotal(Piso piso, long quantidadeCaixas) {
-        if (piso.getValor() == null) {
+        if (piso.getValor().signum() == 0) {
             return null;
         }
 

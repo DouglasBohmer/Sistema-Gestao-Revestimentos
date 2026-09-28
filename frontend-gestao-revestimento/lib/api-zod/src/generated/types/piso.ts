@@ -5,13 +5,17 @@
  * API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
  * OpenAPI spec version: 0.1.0
  */
+import type { AcabamentoBordas } from './acabamentoBordas';
+import type { ClassificacaoUso } from './classificacaoUso';
+import type { OrigemDadoProduto } from './origemDadoProduto';
 
 export interface Piso {
   id: number;
   nome: string;
   /** @nullable */
   codigoRede?: string | null;
-  codigoLoja: string;
+  /** @nullable */
+  codigoLoja?: string | null;
   /**
      * Largura em cm
      * @nullable
@@ -41,22 +45,31 @@ export interface Piso {
      * @nullable
      */
   tipoPiso?: string | null;
-  /**
-     * Classe PEI (1-5)
-     * @nullable
-     */
-  pei?: number | null;
-  /** @nullable */
-  retificado?: boolean | null;
+  /** Maior classe de uso aplicável ao produto */
+  classificacaoUso?: ClassificacaoUso | null;
+  acabamentoBordas: AcabamentoBordas;
   /** @nullable */
   linkSite?: string | null;
-  /** @nullable */
-  linkFoto?: string | null;
   /**
-     * Preço de venda em reais por metro quadrado (R$/m²)
+     * URL efetiva da imagem, no R2 ou no endereço original como fallback
      * @nullable
      */
-  valor?: number | null;
+  linkFoto?: string | null;
+  /** @nullable */
+  linkFotoOrigem?: string | null;
+  /** @nullable */
+  linkAreaCentral?: string | null;
+  /** Preço de venda em reais por metro quadrado (R$/m²) */
+  valor: number;
+  /** Estoque em metros quadrados */
+  estoqueM2: number;
+  /** @nullable */
+  statusAreaCentral?: string | null;
+  /** @nullable */
+  ultimaConsultaAreaCentralEm?: Date | null;
+  ativo: boolean;
+  origemValor: OrigemDadoProduto;
+  origemEstoque: OrigemDadoProduto;
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;

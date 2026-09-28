@@ -55,6 +55,8 @@ export const LocalLoginResponse = zod.object({
  */
 export const startAreaCentralLoginAttemptBodyUsernameMax = 160;
 
+
+
 export const StartAreaCentralLoginAttemptBody = zod.object({
   "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.')
 })
@@ -121,14 +123,15 @@ export const LogoutResponse = zod.void()
 export const ListPisosQueryParams = zod.object({
   "search": zod.coerce.string().optional().describe('Busca por nome, código rede ou código loja'),
   "localDeUso": zod.coerce.string().optional().describe('Filtrar por local de uso'),
-  "tipoPiso": zod.coerce.string().optional().describe('Filtrar por tipo de piso')
+  "tipoPiso": zod.coerce.string().optional().describe('Filtrar por tipo de piso'),
+  "ativo": zod.coerce.boolean().optional().describe('Filtrar produtos ativos ou inativos')
 })
 
 export const ListPisosResponseItem = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -136,11 +139,19 @@ export const ListPisosResponseItem = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -150,10 +161,16 @@ export const ListPisosResponse = zod.array(ListPisosResponseItem)
 /**
  * @summary Cadastrar um novo piso
  */
+export const createPisoBodyValorMin = 0;
+
+export const createPisoBodyEstoqueM2Min = 0;
+
+
+
 export const CreatePisoBody = zod.object({
   "nome": zod.string(),
-  "codigoRede": zod.string().optional(),
-  "codigoLoja": zod.string(),
+  "codigoRede": zod.string().optional().describe('Código ASSO. Ao menos ASSO ou CTC deve ser informado.'),
+  "codigoLoja": zod.string().optional().describe('Código CTC. Ao menos ASSO ou CTC deve ser informado.'),
   "largura": zod.number().optional(),
   "altura": zod.number().optional(),
   "rejunte": zod.number().optional(),
@@ -161,18 +178,21 @@ export const CreatePisoBody = zod.object({
   "m2PorCaixa": zod.number(),
   "localDeUso": zod.string().optional(),
   "tipoPiso": zod.string().optional(),
-  "pei": zod.number().optional(),
-  "retificado": zod.boolean().optional(),
+  "classificacaoUso": zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']).optional(),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().optional(),
-  "linkFoto": zod.string().optional(),
-  "valor": zod.number().optional()
+  "linkFotoOrigem": zod.string().optional(),
+  "linkAreaCentral": zod.string().optional(),
+  "valor": zod.number().min(createPisoBodyValorMin).optional(),
+  "estoqueM2": zod.number().min(createPisoBodyEstoqueM2Min).optional(),
+  "ativo": zod.boolean().optional()
 })
 
 export const CreatePisoResponse = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -180,11 +200,19 @@ export const CreatePisoResponse = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -201,7 +229,7 @@ export const GetPisoResponse = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -209,11 +237,19 @@ export const GetPisoResponse = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -226,10 +262,16 @@ export const UpdatePisoParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updatePisoBodyValorMin = 0;
+
+export const updatePisoBodyEstoqueM2Min = 0;
+
+
+
 export const UpdatePisoBody = zod.object({
   "nome": zod.string(),
-  "codigoRede": zod.string().optional(),
-  "codigoLoja": zod.string(),
+  "codigoRede": zod.string().optional().describe('Código ASSO. Ao menos ASSO ou CTC deve ser informado.'),
+  "codigoLoja": zod.string().optional().describe('Código CTC. Ao menos ASSO ou CTC deve ser informado.'),
   "largura": zod.number().optional(),
   "altura": zod.number().optional(),
   "rejunte": zod.number().optional(),
@@ -237,18 +279,21 @@ export const UpdatePisoBody = zod.object({
   "m2PorCaixa": zod.number(),
   "localDeUso": zod.string().optional(),
   "tipoPiso": zod.string().optional(),
-  "pei": zod.number().optional(),
-  "retificado": zod.boolean().optional(),
+  "classificacaoUso": zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']).optional(),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().optional(),
-  "linkFoto": zod.string().optional(),
-  "valor": zod.number().optional()
+  "linkFotoOrigem": zod.string().optional(),
+  "linkAreaCentral": zod.string().optional(),
+  "valor": zod.number().min(updatePisoBodyValorMin).optional(),
+  "estoqueM2": zod.number().min(updatePisoBodyEstoqueM2Min).optional(),
+  "ativo": zod.boolean().optional()
 })
 
 export const UpdatePisoResponse = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -256,11 +301,19 @@ export const UpdatePisoResponse = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -277,17 +330,17 @@ export const DeletePisoResponse = zod.void()
 
 
 /**
- * @summary Buscar piso pelo código (loja ou rede)
+ * @summary Listar pisos encontrados pelo código (CTC ou ASSO)
  */
-export const GetPisoByCodigoParams = zod.object({
+export const ListPisosByCodigoParams = zod.object({
   "codigo": zod.coerce.string().describe('Código Loja ou Código Rede')
 })
 
-export const GetPisoByCodigoResponse = zod.object({
+export const ListPisosByCodigoResponseItem = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -295,14 +348,23 @@ export const GetPisoByCodigoResponse = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
+export const ListPisosByCodigoResponse = zod.array(ListPisosByCodigoResponseItem)
 
 
 /**
@@ -311,7 +373,8 @@ export const GetPisoByCodigoResponse = zod.object({
 export const calcularPisoBodyMargemQuebraDefault = 10;
 
 export const CalcularPisoBody = zod.object({
-  "codigoPiso": zod.string().describe('Código Loja ou Código Rede do piso'),
+  "codigoPiso": zod.string().optional().describe('Código Loja ou Código Rede do piso'),
+  "pisoId": zod.number().int().optional().describe('Identificador escolhido quando o código retorna mais de um produto'),
   "metragemM2": zod.number().describe('Área total do cliente em metros quadrados'),
   "margemQuebra": zod.number().default(calcularPisoBodyMargemQuebraDefault).describe('Margem de quebra em percentual (ex 10 = 10%). Padrão 10.')
 })
@@ -321,7 +384,7 @@ export const CalcularPisoResponse = zod.object({
   "id": zod.number(),
   "nome": zod.string(),
   "codigoRede": zod.string().nullish(),
-  "codigoLoja": zod.string(),
+  "codigoLoja": zod.string().nullish(),
   "largura": zod.number().nullish().describe('Largura em cm'),
   "altura": zod.number().nullish().describe('Altura em cm'),
   "rejunte": zod.number().nullish().describe('Rejunte em mm'),
@@ -329,11 +392,19 @@ export const CalcularPisoResponse = zod.object({
   "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
   "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
   "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
-  "pei": zod.number().nullish().describe('Classe PEI (1-5)'),
-  "retificado": zod.boolean().nullish(),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
   "linkSite": zod.string().nullish(),
-  "linkFoto": zod.string().nullish(),
-  "valor": zod.number().nullish().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }),

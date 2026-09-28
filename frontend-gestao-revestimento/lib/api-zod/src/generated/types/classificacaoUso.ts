@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface StartAreaCentralLoginRequest {
-  /**
-     * Identificador da conta usada na Área Central durante esta tentativa.
-     * @minLength 1
-     * @maxLength 160
-     */
-  username: string;
-}
+export type ClassificacaoUso = typeof ClassificacaoUso[keyof typeof ClassificacaoUso];
+
+
+export const ClassificacaoUso = {
+  LA: 'LA',
+  LB: 'LB',
+  LC: 'LC',
+  LD: 'LD',
+  LE: 'LE',
+  LF: 'LF',
+} as const;

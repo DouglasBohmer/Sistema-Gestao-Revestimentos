@@ -19,4 +19,8 @@ localDeUso?: string;
  * Filtrar por tipo de piso
  */
 tipoPiso?: string;
+/**
+ * Filtrar produtos ativos ou inativos
+ */
+ativo?: boolean;
 };

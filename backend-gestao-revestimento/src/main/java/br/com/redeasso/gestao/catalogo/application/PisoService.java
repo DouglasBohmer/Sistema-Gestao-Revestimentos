@@ -29,6 +29,11 @@ public class PisoService {
 
     @Transactional(readOnly = true)
     public List<Piso> listar(String search, String localDeUso, String tipoPiso) {
+        return listar(search, localDeUso, tipoPiso, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Piso> listar(String search, String localDeUso, String tipoPiso, Boolean ativo) {
         String buscaNormalizada = textoOpcional(search);
         String localNormalizado = textoOpcional(localDeUso);
         String tipoNormalizado = textoOpcional(tipoPiso);
@@ -49,6 +54,9 @@ public class PisoService {
             if (tipoNormalizado != null) {
                 filtros.add(criteriaBuilder.equal(root.get("tipoPiso"), tipoNormalizado));
             }
+            if (ativo != null) {
+                filtros.add(criteriaBuilder.equal(root.get("ativo"), ativo));
+            }
 
             return criteriaBuilder.and(filtros.toArray(Predicate[]::new));
         }, ORDENACAO_CADASTRO);
@@ -61,17 +69,30 @@ public class PisoService {
 
     @Transactional(readOnly = true)
     public Piso buscarPorCodigo(String codigo) {
+        List<Piso> encontrados = buscarTodosPorCodigo(codigo);
+        if (encontrados.size() > 1) {
+            throw new CodigoPisoAmbiguoException(encontrados);
+        }
+        return encontrados.getFirst();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Piso> buscarTodosPorCodigo(String codigo) {
         String codigoNormalizado = textoOpcional(codigo);
         if (codigoNormalizado == null) {
             throw new PisoNaoEncontradoException();
         }
-        return pisoRepository
-                .findFirstByCodigoLojaOrCodigoRedeOrderByIdAsc(codigoNormalizado, codigoNormalizado)
-                .orElseThrow(PisoNaoEncontradoException::new);
+        List<Piso> encontrados = pisoRepository
+                .findAllByCodigoLojaOrCodigoRedeOrderByIdAsc(codigoNormalizado, codigoNormalizado);
+        if (encontrados.isEmpty()) {
+            throw new PisoNaoEncontradoException();
+        }
+        return encontrados;
     }
 
     @Transactional
     public Piso cadastrar(DadosPiso dados) {
+        validarNomeUnico(dados.nome(), null);
         Piso piso = pisoRepository.save(Piso.cadastrar(dados));
         atividadeService.registrar(
                 "cadastro",
@@ -83,6 +104,7 @@ public class PisoService {
     @Transactional
     public Piso atualizar(long id, DadosPiso dados) {
         Piso piso = buscarPorId(id);
+        validarNomeUnico(dados.nome(), id);
         piso.atualizar(dados);
         Piso atualizado = pisoRepository.save(piso);
         atividadeService.registrar(
@@ -110,6 +132,13 @@ public class PisoService {
 
     private static String textoOpcional(String valor) {
         return valor == null || valor.isBlank() ? null : valor.trim();
+    }
+
+    private void validarNomeUnico(String nome, Long idIgnorado) {
+        String normalizado = textoOpcional(nome);
+        if (normalizado != null && pisoRepository.contarPorNomeNormalizado(normalizado, idIgnorado) > 0) {
+            throw new PisoNomeDuplicadoException();
+        }
     }
 
     private static String escaparLike(String valor) {

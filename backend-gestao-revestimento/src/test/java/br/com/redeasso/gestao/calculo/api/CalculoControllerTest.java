@@ -3,6 +3,9 @@ package br.com.redeasso.gestao.calculo.api;
 import br.com.redeasso.gestao.calculo.application.CalculoService;
 import br.com.redeasso.gestao.catalogo.api.PisoResponse;
 import br.com.redeasso.gestao.catalogo.application.PisoNaoEncontradoException;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
+import br.com.redeasso.gestao.catalogo.domain.ClassificacaoUso;
+import br.com.redeasso.gestao.catalogo.domain.OrigemDadoProduto;
 import br.com.redeasso.gestao.shared.api.ApiExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +39,7 @@ class CalculoControllerTest {
 
     @Test
     void mantemOContratoConsumidoPeloReact() throws Exception {
-        when(calculoService.calcular(any(), any(), any())).thenReturn(resposta());
+        when(calculoService.calcular(any(), any(), any(), any())).thenReturn(resposta());
 
         mockMvc.perform(post("/api/pisos/calcular")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -50,6 +53,7 @@ class CalculoControllerTest {
                 .andExpect(jsonPath("$.valorTotal").value(4530.96));
 
         verify(calculoService).calcular(
+                null,
                 "L-001",
                 new BigDecimal("45.5"),
                 new BigDecimal("10"));
@@ -69,7 +73,7 @@ class CalculoControllerTest {
 
     @Test
     void responde404QuandoOcodigoNaoExiste() throws Exception {
-        when(calculoService.calcular(any(), any(), any()))
+        when(calculoService.calcular(any(), any(), any(), any()))
                 .thenThrow(new PisoNaoEncontradoException());
 
         mockMvc.perform(post("/api/pisos/calcular")
@@ -95,11 +99,19 @@ class CalculoControllerTest {
                 new BigDecimal("1.44"),
                 "Interno",
                 "Porcelanato",
-                4,
-                true,
+                ClassificacaoUso.LD,
+                AcabamentoBorda.RETIFICADO,
+                null,
+                null,
                 null,
                 null,
                 new BigDecimal("89.90"),
+                BigDecimal.ZERO,
+                null,
+                null,
+                true,
+                OrigemDadoProduto.MANUAL,
+                OrigemDadoProduto.NAO_INFORMADO,
                 Instant.parse("2026-08-15T12:00:00Z"),
                 null);
         return new CalculoResponse(

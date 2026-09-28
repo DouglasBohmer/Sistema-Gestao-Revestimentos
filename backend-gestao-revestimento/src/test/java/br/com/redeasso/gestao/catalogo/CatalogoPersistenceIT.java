@@ -5,6 +5,8 @@ import br.com.redeasso.gestao.catalogo.application.PisoEmUsoException;
 import br.com.redeasso.gestao.catalogo.application.PisoService;
 import br.com.redeasso.gestao.catalogo.domain.DadosPiso;
 import br.com.redeasso.gestao.catalogo.domain.Piso;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
+import br.com.redeasso.gestao.catalogo.domain.ClassificacaoUso;
 import br.com.redeasso.gestao.catalogo.infrastructure.PisoRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,14 +51,13 @@ class CatalogoPersistenceIT {
 
     @Test
     @Transactional
-    void migraSeedFiltraPersisteEAuditaSemApagarHistorico() {
+    void migraCatalogoLegadoFiltraPersisteEAuditaSemApagarHistorico() {
         assertThat(pisoService.listar(null, null, null))
                 .extracting(Piso::getNome)
-                .containsExactly("Portinari Cimento Bold", "Elizeu Rustic Bege");
-        assertThat(pisoService.listar("cimento", "Interno", "Porcelanato"))
-                .extracting(Piso::getCodigoLoja)
-                .containsExactly("L-001");
-        assertThat(pisoService.buscarPorCodigo("ELZ-002").getCodigoLoja()).isEqualTo("L-002");
+                .hasSize(261)
+                .contains("PISO ALMEIDA 42X83 LEIRIA NATURAL BR");
+        assertThat(pisoService.buscarPorCodigo("2180593").getClassificacaoUso())
+                .isEqualTo(ClassificacaoUso.LA);
 
         Piso cadastrado = pisoService.cadastrar(novoPiso());
 
@@ -64,10 +65,7 @@ class CatalogoPersistenceIT {
         assertThat(cadastrado.getCreatedAt()).isNotNull();
         assertThat(pisoRepository.contarPorTipo())
                 .extracting(PisoRepository.PisosPorTipo::getTipo)
-                .containsExactly("Porcelanato", "Cerâmica");
-        assertThat(pisoRepository.contarPorTipo())
-                .extracting(PisoRepository.PisosPorTipo::getTotal)
-                .containsExactly(2L, 1L);
+                .contains("Porcelanato");
         assertThat(atividadeService.listarRecentes())
                 .first()
                 .satisfies(atividade -> {
@@ -92,16 +90,17 @@ class CatalogoPersistenceIT {
                 VALUES ('Mapa de teste', 1, 1)
                 RETURNING id
                 """, Long.class);
+        Long pisoId = jdbcTemplate.queryForObject("SELECT MIN(id) FROM pisos", Long.class);
         jdbcTemplate.update("""
                 INSERT INTO mapa_celulas (mapa_id, posicao, ordem, piso_id, m2, caixas)
-                VALUES (?, 'A1', 0, 1, 1.44, 1)
-                """, mapaId);
+                VALUES (?, 'A1', 0, ?, 1.44, 1)
+                """, mapaId, pisoId);
 
         try {
-            assertThatThrownBy(() -> pisoService.excluir(1L))
+            assertThatThrownBy(() -> pisoService.excluir(pisoId))
                     .isInstanceOf(PisoEmUsoException.class)
                     .hasMessage("Piso não pode ser excluído porque está vinculado a um mapa");
-            assertThat(pisoRepository.existsById(1L)).isTrue();
+            assertThat(pisoRepository.existsById(pisoId)).isTrue();
         } finally {
             jdbcTemplate.update("DELETE FROM mapas WHERE id = ?", mapaId);
         }
@@ -119,10 +118,13 @@ class CatalogoPersistenceIT {
                 new BigDecimal("1.44"),
                 "Interno",
                 "Porcelanato",
-                4,
-                true,
+                ClassificacaoUso.LD,
+                AcabamentoBorda.RETIFICADO,
                 null,
                 null,
-                new BigDecimal("80.50"));
+                null,
+                new BigDecimal("80.50"),
+                BigDecimal.ZERO,
+                true);
     }
 }

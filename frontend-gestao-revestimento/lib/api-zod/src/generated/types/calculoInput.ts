@@ -8,7 +8,9 @@
 
 export interface CalculoInput {
   /** Código Loja ou Código Rede do piso */
-  codigoPiso: string;
+  codigoPiso?: string;
+  /** Identificador escolhido quando o código retorna mais de um produto */
+  pisoId?: bigint;
   /** Área total do cliente em metros quadrados */
   metragemM2: number;
   /** Margem de quebra em percentual (ex 10 = 10%). Padrão 10. */

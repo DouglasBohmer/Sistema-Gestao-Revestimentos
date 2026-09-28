@@ -2,6 +2,7 @@ package br.com.redeasso.gestao.catalogo.api;
 
 import br.com.redeasso.gestao.catalogo.application.PisoEmUsoException;
 import br.com.redeasso.gestao.catalogo.application.PisoNaoEncontradoException;
+import br.com.redeasso.gestao.catalogo.application.PisoNomeDuplicadoException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,11 @@ public class CatalogoExceptionHandler {
     public ResponseEntity<ErrorResponse> pisoEmUso(PisoEmUsoException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(PisoNomeDuplicadoException.class)
+    public ResponseEntity<ErrorResponse> nomeDuplicado(PisoNomeDuplicadoException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(exception.getMessage()));
     }
 
     @ExceptionHandler({

@@ -70,6 +70,17 @@ class GestaoRevestimentoApplicationIT {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT valor FROM parametros_sistema WHERE chave = 'PRECO_DESCONTO_PERCENTUAL'",
                 BigDecimal.class)).isEqualByComparingTo("12");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pisos", Integer.class)).isEqualTo(261);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pisos WHERE ativo", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT SUM(jsonb_array_length(dados_legado -> 'fontes'))
+                FROM pisos
+                """, Integer.class)).isEqualTo(264);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM pisos
+                WHERE NULLIF(BTRIM(codigo_rede), '') IS NULL
+                  AND NULLIF(BTRIM(codigo_loja), '') IS NULL
+                """, Integer.class)).isZero();
     }
 
     @Test

@@ -5,6 +5,7 @@ import br.com.redeasso.gestao.calculo.api.CalculoResponse;
 import br.com.redeasso.gestao.catalogo.application.PisoService;
 import br.com.redeasso.gestao.catalogo.domain.DadosPiso;
 import br.com.redeasso.gestao.catalogo.domain.Piso;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -67,9 +68,12 @@ class CalculoServiceTest {
                 null,
                 null,
                 null,
+                AcabamentoBorda.BOLD,
                 null,
                 null,
                 null,
-                valor == null ? null : new BigDecimal(valor)));
+                valor == null ? null : new BigDecimal(valor),
+                BigDecimal.ZERO,
+                false));
     }
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { Layout } from "@/components/layout/Layout"
 import { useListPisos, useCreatePiso, useUpdatePiso, useDeletePiso, getListPisosQueryKey, type Piso } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -17,7 +17,7 @@ import { Save, Edit, Trash2, Search, Printer, X, Image as ImageIcon, Plus } from
 const pisoSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   codigoRede: z.string().optional(),
-  codigoLoja: z.string().min(1, "Código da loja é obrigatório"),
+  codigoLoja: z.string().optional(),
   largura: z.coerce.number().optional(),
   altura: z.coerce.number().optional(),
   rejunte: z.coerce.number().optional(),
@@ -25,11 +25,22 @@ const pisoSchema = z.object({
   m2PorCaixa: z.coerce.number().min(0.01, "M²/Caixa é obrigatório"),
   localDeUso: z.string().optional(),
   tipoPiso: z.string().optional(),
-  pei: z.coerce.number().optional(),
-  retificado: z.string().default("nao"),
+  classificacaoUso: z.enum(["LA", "LB", "LC", "LD", "LE", "LF"]).optional(),
+  acabamentoBordas: z.enum(["RETIFICADO", "BOLD"]),
   linkSite: z.string().optional(),
-  linkFoto: z.string().optional(),
-  valor: z.coerce.number().optional()
+  linkFotoOrigem: z.string().optional(),
+  linkAreaCentral: z.string().optional(),
+  valor: z.coerce.number().min(0).optional(),
+  estoqueM2: z.coerce.number().min(0).optional(),
+  ativo: z.boolean()
+}).superRefine((data, context) => {
+  if (!data.codigoRede?.trim() && !data.codigoLoja?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Informe ao menos o código ASSO ou CTC",
+      path: ["codigoRede"],
+    })
+  }
 })
 
 type PisoFormValues = z.infer<typeof pisoSchema>
@@ -65,15 +76,19 @@ export default function Cadastro() {
       m2PorCaixa: 0,
       localDeUso: "",
       tipoPiso: "",
-      pei: undefined,
-      retificado: "nao",
+      classificacaoUso: undefined,
+      acabamentoBordas: "BOLD",
       linkSite: "",
-      linkFoto: "",
-      valor: undefined
+      linkFotoOrigem: "",
+      linkAreaCentral: "",
+      valor: 0,
+      estoqueM2: 0,
+      ativo: false,
     }
   })
 
-  const linkFotoValue = form.watch("linkFoto")
+  const linkFotoOrigemValue = form.watch("linkFotoOrigem")
+  const linkFotoValue = isEditing ? linkFotoOrigemValue : selectedPiso?.linkFoto
 
   const handleSelectPiso = (piso: Piso) => {
     setSelectedPiso(piso)
@@ -82,7 +97,7 @@ export default function Cadastro() {
     form.reset({
       nome: piso.nome,
       codigoRede: piso.codigoRede || "",
-      codigoLoja: piso.codigoLoja,
+      codigoLoja: piso.codigoLoja || "",
       largura: piso.largura || undefined,
       altura: piso.altura || undefined,
       rejunte: piso.rejunte || undefined,
@@ -90,11 +105,14 @@ export default function Cadastro() {
       m2PorCaixa: piso.m2PorCaixa,
       localDeUso: piso.localDeUso || "",
       tipoPiso: piso.tipoPiso || "",
-      pei: piso.pei || undefined,
-      retificado: piso.retificado ? "sim" : "nao",
+      classificacaoUso: piso.classificacaoUso || undefined,
+      acabamentoBordas: piso.acabamentoBordas,
       linkSite: piso.linkSite || "",
-      linkFoto: piso.linkFoto || "",
-      valor: piso.valor || undefined
+      linkFotoOrigem: piso.linkFotoOrigem || "",
+      linkAreaCentral: piso.linkAreaCentral || "",
+      valor: piso.valor,
+      estoqueM2: piso.estoqueM2,
+      ativo: piso.ativo,
     })
   }
 
@@ -105,7 +123,8 @@ export default function Cadastro() {
     form.reset({
       nome: "", codigoRede: "", codigoLoja: "", largura: undefined, altura: undefined,
       rejunte: undefined, pecasPorCaixa: undefined, m2PorCaixa: 0, localDeUso: "",
-      tipoPiso: "", pei: undefined, retificado: "nao", linkSite: "", linkFoto: "", valor: undefined
+      tipoPiso: "", classificacaoUso: undefined, acabamentoBordas: "BOLD", linkSite: "",
+      linkFotoOrigem: "", linkAreaCentral: "", valor: 0, estoqueM2: 0, ativo: false
     })
   }
 
@@ -144,11 +163,12 @@ export default function Cadastro() {
     const payload = {
       ...data,
       codigoRede: data.codigoRede || undefined,
+      codigoLoja: data.codigoLoja || undefined,
       localDeUso: data.localDeUso || undefined,
       tipoPiso: data.tipoPiso || undefined,
       linkSite: data.linkSite || undefined,
-      linkFoto: data.linkFoto || undefined,
-      retificado: data.retificado === "sim"
+      linkFotoOrigem: data.linkFotoOrigem || undefined,
+      linkAreaCentral: data.linkAreaCentral || undefined,
     }
 
     if (editingId) {
@@ -207,8 +227,8 @@ export default function Cadastro() {
                       )} />
                       <FormField control={form.control} name="codigoLoja" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Código Loja *</FormLabel>
-                          <FormControl><Input placeholder="Ex: LJ-001" disabled={!isEditing} {...field} /></FormControl>
+                          <FormLabel>Código CTC</FormLabel>
+                          <FormControl><Input placeholder="Ex: 10567" disabled={!isEditing} {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -256,24 +276,20 @@ export default function Cadastro() {
                       <FormField control={form.control} name="localDeUso" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Local de Uso</FormLabel>
-                          <Select disabled={!isEditing} onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Interno">Interno</SelectItem>
-                              <SelectItem value="Externo">Externo</SelectItem>
-                              <SelectItem value="Ambos">Ambos</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl><Input placeholder="Descrição do local de uso" disabled={!isEditing} {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
                       <FormField control={form.control} name="tipoPiso" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Tipo de Piso</FormLabel>
+                          <FormControl><Input placeholder="Ex: Acetinado" disabled={!isEditing} {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="classificacaoUso" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Classificação de Uso</FormLabel>
                           <Select disabled={!isEditing} onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -281,48 +297,24 @@ export default function Cadastro() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Cerâmico">Cerâmico</SelectItem>
-                              <SelectItem value="Porcelanato">Porcelanato</SelectItem>
-                              <SelectItem value="Pedra Natural">Pedra Natural</SelectItem>
-                              <SelectItem value="Pastilha">Pastilha</SelectItem>
+                              {(["LA", "LB", "LC", "LD", "LE", "LF"] as const).map((classe) => (
+                                <SelectItem key={classe} value={classe}>{classe}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <FormField control={form.control} name="pei" render={({ field }) => (
+                      <FormField control={form.control} name="acabamentoBordas" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>PEI</FormLabel>
-                          <Select disabled={!isEditing} onValueChange={(val) => field.onChange(parseInt(val))} value={field.value ? String(field.value) : undefined}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
+                          <FormLabel>Acabamento das Bordas *</FormLabel>
+                          <Select disabled={!isEditing} onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value="1">PEI 1</SelectItem>
-                              <SelectItem value="2">PEI 2</SelectItem>
-                              <SelectItem value="3">PEI 3</SelectItem>
-                              <SelectItem value="4">PEI 4</SelectItem>
-                              <SelectItem value="5">PEI 5</SelectItem>
+                              <SelectItem value="RETIFICADO">Retificado</SelectItem>
+                              <SelectItem value="BOLD">Bold</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField control={form.control} name="retificado" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>É Retificado?</FormLabel>
-                          <div className="flex gap-4 items-center h-[40px]">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" name="retificado" value="sim" disabled={!isEditing} checked={field.value === "sim"} onChange={() => field.onChange("sim")} className="w-4 h-4 text-primary accent-primary" />
-                              <span className="text-sm font-medium">Sim</span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input type="radio" name="retificado" value="nao" disabled={!isEditing} checked={field.value === "nao"} onChange={() => field.onChange("nao")} className="w-4 h-4 text-primary accent-primary" />
-                              <span className="text-sm font-medium">Não</span>
-                            </label>
-                          </div>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -336,7 +328,7 @@ export default function Cadastro() {
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <FormField control={form.control} name="linkFoto" render={({ field }) => (
+                      <FormField control={form.control} name="linkFotoOrigem" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Link da Foto</FormLabel>
                           <FormControl><Input type="url" placeholder="https://exemplo.com/foto.jpg" disabled={!isEditing} {...field} /></FormControl>
@@ -347,6 +339,30 @@ export default function Cadastro() {
                         <FormItem>
                           <FormLabel>Valor R$</FormLabel>
                           <FormControl><Input type="number" step="0.01" placeholder="Ex: 89.90" disabled={!isEditing} {...field} value={field.value ?? ""} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="estoqueM2" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estoque (m²)</FormLabel>
+                          <FormControl><Input type="number" min="0" step="0.01" disabled={!isEditing} {...field} value={field.value ?? ""} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="linkAreaCentral" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Link da Área Central</FormLabel>
+                          <FormControl><Input type="url" disabled={!isEditing} {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={form.control} name="ativo" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Status</FormLabel>
+                          <label className="flex h-10 items-center gap-2">
+                            <input type="checkbox" disabled={!isEditing} checked={field.value} onChange={field.onChange} className="h-4 w-4 accent-primary" />
+                            <span className="text-sm">Produto ativo</span>
+                          </label>
                           <FormMessage />
                         </FormItem>
                       )} />
@@ -363,7 +379,7 @@ export default function Cadastro() {
                             {isEditing && (
                               <button
                                 type="button"
-                                onClick={() => form.setValue("linkFoto", "", { shouldDirty: true })}
+                                onClick={() => form.setValue("linkFotoOrigem", "", { shouldDirty: true })}
                                 className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-2 rounded-full hover:bg-destructive/90 transition-colors shadow-sm"
                               >
                                 <X size={16} />
@@ -435,13 +451,14 @@ export default function Cadastro() {
                   <TableHead>Tamanho</TableHead>
                   <TableHead>Tipo / Local</TableHead>
                   <TableHead>M²/Cx</TableHead>
+                  <TableHead>Estoque</TableHead>
                   <TableHead>Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10">
+                    <TableCell colSpan={6} className="text-center py-10">
                       <div className="flex flex-col items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         <span className="mt-2 text-sm text-muted-foreground">Carregando catálogo...</span>
@@ -458,15 +475,20 @@ export default function Cadastro() {
                       <TableCell>
                         <div className="font-medium text-foreground">{piso.nome}</div>
                         <div className="text-xs text-muted-foreground font-mono mt-1 flex gap-2">
-                          <span>L: {piso.codigoLoja}</span>
-                          {piso.codigoRede && <span>R: {piso.codigoRede}</span>}
+                          {piso.codigoLoja && <span>CTC: {piso.codigoLoja}</span>}
+                          {piso.codigoRede && <span>ASSO: {piso.codigoRede}</span>}
                         </div>
+                        <span className={`mt-1 inline-block rounded px-2 py-0.5 text-[10px] ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"}`}>
+                          {piso.ativo ? "Ativo" : "Inativo"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
                           {piso.largura && piso.altura ? `${piso.largura}x${piso.altura}cm` : '-'}
                         </div>
-                        {piso.retificado && <span className="text-[10px] text-muted-foreground inline-block mt-1">Retificado</span>}
+                        <span className="text-[10px] text-muted-foreground inline-block mt-1">
+                          {piso.acabamentoBordas === "RETIFICADO" ? "Retificado" : "Bold"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col items-start gap-1">
@@ -480,15 +502,18 @@ export default function Cadastro() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <div className="text-sm font-medium">{piso.estoqueM2.toFixed(2)} m²</div>
+                      </TableCell>
+                      <TableCell>
                         <div className="text-sm font-medium">
-                          {piso.valor ? `R$ ${piso.valor.toFixed(2)}` : '-'}
+                          R$ {piso.valor.toFixed(2)}
                         </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10">
+                    <TableCell colSpan={6} className="text-center py-10">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <p>Nenhum piso encontrado.</p>
                       </div>

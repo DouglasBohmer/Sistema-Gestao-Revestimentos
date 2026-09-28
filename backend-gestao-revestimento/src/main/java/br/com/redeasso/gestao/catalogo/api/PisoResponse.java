@@ -1,6 +1,9 @@
 package br.com.redeasso.gestao.catalogo.api;
 
 import br.com.redeasso.gestao.catalogo.domain.Piso;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
+import br.com.redeasso.gestao.catalogo.domain.ClassificacaoUso;
+import br.com.redeasso.gestao.catalogo.domain.OrigemDadoProduto;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,11 +20,19 @@ public record PisoResponse(
         BigDecimal m2PorCaixa,
         String localDeUso,
         String tipoPiso,
-        Integer pei,
-        Boolean retificado,
+        ClassificacaoUso classificacaoUso,
+        AcabamentoBorda acabamentoBordas,
         String linkSite,
         String linkFoto,
+        String linkFotoOrigem,
+        String linkAreaCentral,
         BigDecimal valor,
+        BigDecimal estoqueM2,
+        String statusAreaCentral,
+        Instant ultimaConsultaAreaCentralEm,
+        boolean ativo,
+        OrigemDadoProduto origemValor,
+        OrigemDadoProduto origemEstoque,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -38,11 +49,19 @@ public record PisoResponse(
                 piso.getM2PorCaixa(),
                 piso.getLocalDeUso(),
                 piso.getTipoPiso(),
-                piso.getPei(),
-                piso.getRetificado(),
+                piso.getClassificacaoUso(),
+                piso.getAcabamentoBordas(),
                 piso.getLinkSite(),
                 piso.getLinkFoto(),
+                piso.getLinkFotoOrigem(),
+                piso.getLinkAreaCentral(),
                 piso.getValor(),
+                piso.getEstoqueM2(),
+                piso.getStatusAreaCentral(),
+                piso.getUltimaConsultaAreaCentralEm(),
+                piso.isAtivo(),
+                piso.getOrigemValor(),
+                piso.getOrigemEstoque(),
                 piso.getCreatedAt(),
                 piso.getUpdatedAt());
     }

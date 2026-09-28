@@ -5,11 +5,15 @@
  * API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
  * OpenAPI spec version: 0.1.0
  */
+import type { AcabamentoBordas } from './acabamentoBordas';
+import type { ClassificacaoUso } from './classificacaoUso';
 
 export interface PisoInput {
   nome: string;
+  /** Código ASSO. Ao menos ASSO ou CTC deve ser informado. */
   codigoRede?: string;
-  codigoLoja: string;
+  /** Código CTC. Ao menos ASSO ou CTC deve ser informado. */
+  codigoLoja?: string;
   largura?: number;
   altura?: number;
   rejunte?: number;
@@ -17,9 +21,14 @@ export interface PisoInput {
   m2PorCaixa: number;
   localDeUso?: string;
   tipoPiso?: string;
-  pei?: number;
-  retificado?: boolean;
+  classificacaoUso?: ClassificacaoUso;
+  acabamentoBordas: AcabamentoBordas;
   linkSite?: string;
-  linkFoto?: string;
+  linkFotoOrigem?: string;
+  linkAreaCentral?: string;
+  /** @minimum 0 */
   valor?: number;
+  /** @minimum 0 */
+  estoqueM2?: number;
+  ativo?: boolean;
 }

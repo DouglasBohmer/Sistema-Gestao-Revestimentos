@@ -2,6 +2,7 @@ package br.com.redeasso.gestao.shared.api;
 
 import br.com.redeasso.gestao.auth.application.InvalidCredentialsException;
 import br.com.redeasso.gestao.catalogo.application.PisoNaoEncontradoException;
+import br.com.redeasso.gestao.catalogo.application.CodigoPisoAmbiguoException;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralBrowserUnavailableException;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralIntegrationUnavailableException;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralLoginAttemptNotFoundException;
@@ -28,6 +29,13 @@ public class ApiExceptionHandler {
                 "PISO_NOT_FOUND",
                 exception.getMessage(),
                 request);
+    }
+
+    @ExceptionHandler(CodigoPisoAmbiguoException.class)
+    public ResponseEntity<ApiError> codigoPisoAmbiguo(
+            CodigoPisoAmbiguoException exception,
+            HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "PISO_CODE_AMBIGUOUS", exception.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)

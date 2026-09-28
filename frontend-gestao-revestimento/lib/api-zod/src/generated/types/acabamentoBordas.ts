@@ -6,11 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface StartAreaCentralLoginRequest {
-  /**
-     * Identificador da conta usada na Área Central durante esta tentativa.
-     * @minLength 1
-     * @maxLength 160
-     */
-  username: string;
-}
+export type AcabamentoBordas = typeof AcabamentoBordas[keyof typeof AcabamentoBordas];
+
+
+export const AcabamentoBordas = {
+  RETIFICADO: 'RETIFICADO',
+  BOLD: 'BOLD',
+} as const;

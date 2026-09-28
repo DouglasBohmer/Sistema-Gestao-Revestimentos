@@ -5,6 +5,8 @@ import br.com.redeasso.gestao.catalogo.application.PisoNaoEncontradoException;
 import br.com.redeasso.gestao.catalogo.application.PisoService;
 import br.com.redeasso.gestao.catalogo.domain.DadosPiso;
 import br.com.redeasso.gestao.catalogo.domain.Piso;
+import br.com.redeasso.gestao.catalogo.domain.AcabamentoBorda;
+import br.com.redeasso.gestao.catalogo.domain.ClassificacaoUso;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -45,7 +47,7 @@ class PisoControllerTest {
 
     @Test
     void listaNoMesmoFormatoDoContratoReact() throws Exception {
-        when(pisoService.listar("cimento", "Interno", "Porcelanato"))
+        when(pisoService.listar("cimento", "Interno", "Porcelanato", null))
                 .thenReturn(List.of(pisoPersistido()));
 
         mockMvc.perform(get("/api/pisos")
@@ -130,11 +132,14 @@ class PisoControllerTest {
                 new BigDecimal("1.44"),
                 "Interno",
                 "Porcelanato",
-                4,
-                true,
+                ClassificacaoUso.LD,
+                AcabamentoBorda.RETIFICADO,
                 null,
                 null,
-                new BigDecimal("89.90")));
+                null,
+                new BigDecimal("89.90"),
+                BigDecimal.ZERO,
+                false));
         ReflectionTestUtils.setField(piso, "id", 7L);
         ReflectionTestUtils.setField(piso, "createdAt", Instant.parse("2026-08-15T12:00:00Z"));
         return piso;
@@ -153,9 +158,11 @@ class PisoControllerTest {
                   "m2PorCaixa": 1.44,
                   "localDeUso": "Interno",
                   "tipoPiso": "Porcelanato",
-                  "pei": 4,
-                  "retificado": true,
-                  "valor": 89.90
+                  "classificacaoUso": "LD",
+                  "acabamentoBordas": "RETIFICADO",
+                  "valor": 89.90,
+                  "estoqueM2": 0,
+                  "ativo": false
                 }
                 """;
     }

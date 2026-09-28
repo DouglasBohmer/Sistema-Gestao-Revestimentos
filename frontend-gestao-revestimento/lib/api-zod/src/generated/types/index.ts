@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './acabamentoBordas';
 export * from './apiError';
 export * from './areaCentralLoginAttempt';
 export * from './areaCentralLoginAttemptStatus';
 export * from './atividade';
 export * from './calculoInput';
 export * from './calculoResult';
+export * from './classificacaoUso';
 export * from './csrfTokenResponse';
 export * from './dashboardStats';
 export * from './errorResponse';
@@ -28,6 +30,7 @@ export * from './mapaCreateRequest';
 export * from './mapaLabels';
 export * from './mapaLabelsInput';
 export * from './mapaUpdateRequest';
+export * from './origemDadoProduto';
 export * from './piso';
 export * from './pisoInput';
 export * from './sessionResponse';

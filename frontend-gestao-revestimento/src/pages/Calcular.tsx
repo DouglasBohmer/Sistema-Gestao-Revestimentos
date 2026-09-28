@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Layout } from "@/components/layout/Layout"
-import { useCalcularPiso, type CalculoResult } from "@workspace/api-client-react"
+import { listPisosByCodigo, useCalcularPiso, type CalculoResult, type Piso } from "@workspace/api-client-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,11 +19,29 @@ export default function Calcular() {
   const [margem] = useState<string>("10")
 
   const [resultado, setResultado] = useState<CalculoResult | null>(null)
+  const [opcoesCodigo, setOpcoesCodigo] = useState<Piso[]>([])
+  const [buscandoCodigo, setBuscandoCodigo] = useState(false)
   const piso = resultado?.piso ?? null
 
   const calcularMutation = useCalcularPiso()
 
-  const handleCalcular = (e: React.FormEvent) => {
+  const calcularProduto = (pisoEscolhido: Piso, m2: number) => {
+    setOpcoesCodigo([])
+    calcularMutation.mutate(
+      { data: { pisoId: pisoEscolhido.id, metragemM2: m2, margemQuebra: parseFloat(margem) } },
+      {
+        onSuccess: (data) => {
+          setResultado(data)
+          setValorM2(data.piso.valor.toString())
+        },
+        onError: () => {
+          toast({ title: "Erro", description: "Não foi possível calcular o produto selecionado.", variant: "destructive" })
+        }
+      }
+    )
+  }
+
+  const handleCalcular = async (e: React.FormEvent) => {
     e.preventDefault()
 
     const codigo = codigoBusca.trim()
@@ -40,24 +58,27 @@ export default function Calcular() {
     }
 
     setResultado(null)
-    calcularMutation.mutate(
-      { data: { codigoPiso: codigo, metragemM2: m2, margemQuebra: parseFloat(margem) } },
-      {
-        onSuccess: (data) => {
-          setResultado(data)
-          setValorM2(data.piso.valor?.toString() ?? "")
-        },
-        onError: () => {
-          toast({ title: "Erro", description: "Piso não encontrado ou dados inválidos.", variant: "destructive" })
-        }
+    setOpcoesCodigo([])
+    setBuscandoCodigo(true)
+    try {
+      const encontrados = await listPisosByCodigo(codigo)
+      if (encontrados.length > 1) {
+        setOpcoesCodigo(encontrados)
+        toast({ title: "Código duplicado", description: "Escolha abaixo qual produto deseja usar." })
+        return
       }
-    )
+      calcularProduto(encontrados[0], m2)
+    } catch {
+      toast({ title: "Erro", description: "Piso não encontrado ou dados inválidos.", variant: "destructive" })
+    } finally {
+      setBuscandoCodigo(false)
+    }
   }
 
   const handleWhatsApp = () => {
     if (!resultado || !piso) return
     
-    const msg = `Olá! Gostaria de um orçamento:\n\nCódigo: ${piso.codigoLoja}\nÁrea: ${metragem}m²\nCaixas necessárias: ${resultado.quantidadeCaixas}\n${resultado.valorTotal ? `Valor: R$ ${resultado.valorTotal.toFixed(2)}` : ''}`
+    const msg = `Olá! Gostaria de um orçamento:\n\nCódigo: ${piso.codigoLoja ?? piso.codigoRede}\nÁrea: ${metragem}m²\nCaixas necessárias: ${resultado.quantidadeCaixas}\n${resultado.valorTotal ? `Valor: R$ ${resultado.valorTotal.toFixed(2)}` : ''}`
     
     const phone = telefone.replace(/\D/g, '')
     const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
@@ -105,10 +126,28 @@ export default function Calcular() {
                     value={resultado ? resultado.quantidadeCaixas : ""}
                   />
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={calcularMutation.isPending}>
+                <Button type="submit" className="w-full h-11" disabled={calcularMutation.isPending || buscandoCodigo}>
                   <Search size={18} className="mr-2" />
                   Pesquisar e Calcular
                 </Button>
+                {opcoesCodigo.length > 1 && (
+                  <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">Mais de um produto usa esse código:</p>
+                    {opcoesCodigo.map((opcao) => (
+                      <button
+                        key={opcao.id}
+                        type="button"
+                        className="w-full rounded border bg-white p-2 text-left text-sm hover:border-amber-500"
+                        onClick={() => calcularProduto(opcao, parseFloat(metragem))}
+                      >
+                        <span className="block font-medium">{opcao.nome}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ASSO: {opcao.codigoRede ?? "—"} · CTC: {opcao.codigoLoja ?? "—"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <Button type="button" variant="outline" className="w-full h-11">
                   <Plus size={18} className="mr-2" />
                   Adicionar a orçamento
@@ -149,8 +188,12 @@ export default function Calcular() {
                         <span className="font-medium">{piso.rejunte ? `${piso.rejunte} mm` : '-'}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">PEI:</span>
-                        <span className="font-medium">{piso.pei ? `PEI ${piso.pei}` : '-'}</span>
+                        <span className="text-gray-600">Classificação:</span>
+                        <span className="font-medium">{piso.classificacaoUso || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Bordas:</span>
+                        <span className="font-medium">{piso.acabamentoBordas === "RETIFICADO" ? "Retificado" : "Bold"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Tipo:</span>
@@ -167,9 +210,9 @@ export default function Calcular() {
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Status Estoque:</span>
-                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-100 text-zinc-700 rounded-full text-xs font-medium">
-                            <div className="w-2 h-2 bg-black rounded-full"></div>
-                            Disponível
+                          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-700"}`}>
+                            <div className={`h-2 w-2 rounded-full ${piso.ativo ? "bg-green-600" : "bg-zinc-500"}`}></div>
+                            {piso.ativo ? `${piso.estoqueM2.toFixed(2)} m²` : "Inativo"}
                           </span>
                         </div>
                       </div>

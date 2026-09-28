@@ -20,6 +20,7 @@ public class CalculoController {
     @PostMapping
     public CalculoResponse calcular(@Valid @RequestBody CalculoRequest request) {
         return calculoService.calcular(
+                request.pisoId(),
                 request.codigoPiso(),
                 request.metragemM2(),
                 request.margemQuebra());
