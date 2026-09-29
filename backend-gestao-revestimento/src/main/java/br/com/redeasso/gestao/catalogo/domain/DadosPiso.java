@@ -18,6 +18,7 @@ public record DadosPiso(
         String linkSite,
         String linkFoto,
         String linkFotoOrigem,
+        String linkPaginacao,
         String linkAreaCentral,
         BigDecimal valor,
         BigDecimal estoqueM2,

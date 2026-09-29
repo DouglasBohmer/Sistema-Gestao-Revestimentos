@@ -230,6 +230,14 @@ export default function Calcular() {
                       className="mx-auto mb-3 h-20 w-1/3 min-w-24 rounded-md bg-white object-contain"
                       fallbackClassName="mx-auto mb-3 h-20 w-1/3 min-w-24"
                     />
+                    {piso.linkPaginacao && (
+                      <PisoImage
+                        primaryUrl={piso.linkPaginacao}
+                        alt={`Paginação ou ambiente de ${piso.nome}`}
+                        className="mx-auto mb-3 h-20 w-1/3 min-w-24 rounded-md bg-white object-contain"
+                        fallbackClassName="mx-auto mb-3 h-20 w-1/3 min-w-24"
+                      />
+                    )}
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Largura:</span>

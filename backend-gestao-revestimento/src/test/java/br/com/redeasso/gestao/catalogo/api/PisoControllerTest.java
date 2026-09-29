@@ -62,6 +62,8 @@ class PisoControllerTest {
                 .andExpect(jsonPath("$[0].codigoRede").value("PTC-001"))
                 .andExpect(jsonPath("$[0].codigoLoja").value("L-001"))
                 .andExpect(jsonPath("$[0].m2PorCaixa").value(1.44))
+                .andExpect(jsonPath("$[0].linkPaginacao")
+                        .value("https://exemplo.com/paginacao-ambiente.webp"))
                 .andExpect(jsonPath("$[0].createdAt").value("2026-08-15T12:00:00Z"))
                 .andExpect(jsonPath("$[0].updatedAt").value((Object) null));
     }
@@ -89,7 +91,9 @@ class PisoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(7));
 
-        verify(pisoService).atualizar(eq(7L), argThat(dados -> "".equals(dados.linkFoto())));
+        verify(pisoService).atualizar(eq(7L), argThat(dados ->
+                "".equals(dados.linkFoto())
+                        && "https://exemplo.com/paginacao-ambiente.webp".equals(dados.linkPaginacao())));
     }
 
     @Test
@@ -152,6 +156,7 @@ class PisoControllerTest {
                 null,
                 null,
                 null,
+                "https://exemplo.com/paginacao-ambiente.webp",
                 null,
                 new BigDecimal("89.90"),
                 BigDecimal.ZERO,
@@ -177,6 +182,7 @@ class PisoControllerTest {
                   "classificacaoUso": "LD",
                   "acabamentoBordas": "RETIFICADO",
                   "linkFoto": "",
+                  "linkPaginacao": "https://exemplo.com/paginacao-ambiente.webp",
                   "valor": 89.90,
                   "estoqueM2": 0,
                   "ativo": false

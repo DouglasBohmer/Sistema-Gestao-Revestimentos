@@ -113,6 +113,8 @@ Regras obrigatórias:
 - Em 29/09/2026, 124 arquivos distintos válidos, usados por 131 produtos, foram selecionados para cópia progressiva ao R2. Os outros 128 produtos com link mantêm a URL externa sem alteração; dois produtos continuam sem foto. A URL histórica permanece em `link_foto_origem` em todos os casos.
 - Peças por caixa são calculadas automaticamente por `m2_por_caixa / ((largura_cm / 100) * (altura_cm / 100))`, com arredondamento comum (`HALF_UP`) para inteiro. O campo fica bloqueado na tela e o backend recalcula o valor quando largura e altura existem.
 - No cadastro, selecionar `LA` a `LE` preenche automaticamente a descrição correspondente de local de uso, que continua editável. `Retificado` sugere rejunte de 2 mm e `Bold`, 5 mm; juntas de 1, 1,5 ou 2 mm selecionam Retificado e a de 5 mm seleciona Bold.
+- Cada produto aceita duas imagens independentes no mesmo bucket R2: a foto principal do piso e a imagem de “Paginação/Ambiente”. Ambas aceitam URL, upload, pré-visualização e remoção no cadastro. O campo legado `ambiente` permanece mapeado para `link_area_central`, pois seu conteúdo são URLs da Área Central; `link_paginacao` é um campo novo. Listas e miniaturas continuam exibindo apenas a foto principal; Paginação/Ambiente aparece ao abrir o produto.
+- As telas já visitadas permanecem montadas enquanto a sessão autenticada estiver ativa, preservando cálculos, formulários e seleções ao navegar. Cada navegação invalida as consultas ativas para atualizar listas sem recarregar a página; logout descarta o estado e o cache.
 
 ### 3.5 Parâmetros de negócio
 
@@ -137,7 +139,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 - O Node/Express foi removido. O runtime de negócio é 100% Spring Boot. Em Docker local, o Spring ainda pode servir o bundle React; em produção, o React fica no Cloudflare Workers e o Spring Render expõe somente a API.
 - CRUD/busca de pisos, cálculo, dashboard/atividades e mapas estão implementados no Spring e persistidos no PostgreSQL por JPA/Flyway.
-- As migrations V1–V7 criam Spring Session, parâmetros-base, pisos/atividades, mapas/células, importam e consolidam os 261 produtos legados e direcionam somente as imagens validadas ao R2. Dados novos sobrevivem a restart do container.
+- As migrations V1–V8 criam Spring Session, parâmetros-base, pisos/atividades, mapas/células, importam e consolidam os 261 produtos legados, direcionam somente as imagens validadas ao R2 e adicionam a imagem de Paginação/Ambiente. Dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
 - O acesso temporário `admin/admin` agora cria uma sessão real no Spring, com cookie HttpOnly, CSRF e Spring Session JDBC. O booleano falso de `sessionStorage` foi removido.
 - A limpeza de sessões expiradas do Spring Session JDBC roda uma vez ao dia, às `06:00 UTC` (`03:00` em Brasília), por `SESSION_CLEANUP_CRON`. Não restaurar o padrão de uma execução por minuto, pois isso mantém o Neon acordado sem uso real.

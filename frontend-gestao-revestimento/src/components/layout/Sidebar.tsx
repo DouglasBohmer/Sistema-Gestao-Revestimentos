@@ -1,9 +1,19 @@
-import { Link, useLocation } from "wouter"
-import { cn } from "@/lib/utils"
-import { Home, FileText, Calculator, LogOut, Settings, Bell, Receipt, Map, Link2 } from "lucide-react"
-import { useAuth } from "@/contexts/AuthContext"
-import { useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import {
+  Home,
+  FileText,
+  Calculator,
+  LogOut,
+  Settings,
+  Bell,
+  Receipt,
+  Map,
+  Link2,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const navigation = [
   { name: "Início", href: "/", icon: Home },
@@ -11,18 +21,18 @@ const navigation = [
   { name: "Calcular", href: "/calcular", icon: Calculator },
   { name: "Orçamento", href: null, icon: Receipt },
   { name: "Mapa Estoque", href: "/mapa-estoque", icon: Map },
-] as const
+] as const;
 
 export function Sidebar() {
-  const [location] = useLocation()
-  const { logout, session } = useAuth()
-  const queryClient = useQueryClient()
-  const [notifCount] = useState(3)
+  const [location] = useLocation();
+  const { logout, session } = useAuth();
+  const queryClient = useQueryClient();
+  const [notifCount] = useState(3);
 
   const handleLogout = async () => {
-    await logout()
-    queryClient.clear()
-  }
+    await logout();
+    queryClient.clear();
+  };
 
   return (
     <div className="flex h-full w-64 flex-col bg-black">
@@ -37,7 +47,7 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
         {navigation.map((item) => {
-          const isActive = location === item.href
+          const isActive = location === item.href;
           if (!item.href) {
             return (
               <button
@@ -45,10 +55,13 @@ export function Sidebar() {
                 type="button"
                 className="w-full group flex items-center px-6 py-3 text-base font-medium transition-all text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
               >
-                <item.icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                <item.icon
+                  className="mr-3 h-5 w-5 flex-shrink-0"
+                  aria-hidden="true"
+                />
                 {item.name}
               </button>
-            )
+            );
           }
           return (
             <Link
@@ -58,13 +71,16 @@ export function Sidebar() {
                 "group flex items-center px-6 py-3 text-base font-medium transition-all",
                 isActive
                   ? "bg-white/20 border-l-4 border-white text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
+                  : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent",
               )}
             >
-              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
+              <item.icon
+                className="mr-3 h-5 w-5 flex-shrink-0"
+                aria-hidden="true"
+              />
               {item.name}
             </Link>
-          )
+          );
         })}
         {!session?.areaCentralConnected && (
           <Link
@@ -73,7 +89,7 @@ export function Sidebar() {
               "group flex items-center px-6 py-3 text-base font-medium transition-all",
               location === "/conexao-area-central"
                 ? "bg-white/20 border-l-4 border-white text-white"
-                : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
+                : "text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent",
             )}
           >
             <Link2 className="mr-3 h-5 w-5 flex-shrink-0" aria-hidden="true" />
@@ -116,5 +132,5 @@ export function Sidebar() {
         </button>
       </div>
     </div>
-  )
+  );
 }

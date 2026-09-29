@@ -54,8 +54,8 @@ try {
 
   assert.deepEqual(
     migrations.map(migrationVersion),
-    [1, 2, 3, 4, 5, 6, 7],
-    "A sequência de migrations deve ser contínua de V1 a V7",
+    [1, 2, 3, 4, 5, 6, 7, 8],
+    "A sequência de migrations deve ser contínua de V1 a V8",
   );
 
   for (const migration of migrations) {
@@ -309,7 +309,7 @@ try {
   );
 
   console.log(
-    "\nVerificação concluída: V1–V7 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
+    "\nVerificação concluída: V1–V8 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
   );
 } finally {
   await database.close();

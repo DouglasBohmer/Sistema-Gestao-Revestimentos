@@ -28,6 +28,8 @@ export interface PisoInput {
   /** URL efetiva da imagem exibida; pode ser removida sem apagar a URL histórica de origem */
   linkFoto?: string;
   linkFotoOrigem?: string;
+  /** URL da imagem de paginação ou do ambiente */
+  linkPaginacao?: string;
   linkAreaCentral?: string;
   /** @minimum 0 */
   valor?: number;

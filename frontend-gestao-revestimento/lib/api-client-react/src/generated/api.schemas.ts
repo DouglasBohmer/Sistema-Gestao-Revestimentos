@@ -164,6 +164,11 @@ export interface Piso {
   linkFoto?: string | null;
   /** @nullable */
   linkFotoOrigem?: string | null;
+  /**
+     * URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente
+     * @nullable
+     */
+  linkPaginacao?: string | null;
   /** @nullable */
   linkAreaCentral?: string | null;
   /** Preço de venda em reais por metro quadrado (R$/m²) */
@@ -202,6 +207,8 @@ export interface PisoInput {
   /** URL efetiva da imagem exibida; pode ser removida sem apagar a URL histórica de origem */
   linkFoto?: string;
   linkFotoOrigem?: string;
+  /** URL da imagem de paginação ou do ambiente */
+  linkPaginacao?: string;
   linkAreaCentral?: string;
   /** @minimum 0 */
   valor?: number;

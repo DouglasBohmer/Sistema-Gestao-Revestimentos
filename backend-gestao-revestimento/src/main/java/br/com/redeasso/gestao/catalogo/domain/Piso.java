@@ -72,6 +72,9 @@ public class Piso {
     @Column(name = "link_foto_origem", length = 2048)
     private String linkFotoOrigem;
 
+    @Column(name = "link_paginacao", length = 2048)
+    private String linkPaginacao;
+
     @Column(name = "link_area_central", length = 2048)
     private String linkAreaCentral;
 
@@ -196,6 +199,7 @@ public class Piso {
         } else if (fotoOrigemAlterada) {
             linkFoto = novaFotoOrigem;
         }
+        linkPaginacao = textoOpcional(dados.linkPaginacao());
         linkAreaCentral = textoOpcional(dados.linkAreaCentral());
     }
 
@@ -309,6 +313,10 @@ public class Piso {
 
     public String getLinkFotoOrigem() {
         return linkFotoOrigem;
+    }
+
+    public String getLinkPaginacao() {
+        return linkPaginacao;
     }
 
     public String getLinkAreaCentral() {

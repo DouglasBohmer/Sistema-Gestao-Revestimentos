@@ -829,6 +829,9 @@ components:
           description: URL efetiva da imagem, no R2 ou no endereço original como fallback
         linkFotoOrigem:
           type: ["string", "null"]
+        linkPaginacao:
+          type: ["string", "null"]
+          description: URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente
         linkAreaCentral:
           type: ["string", "null"]
         valor:
@@ -896,6 +899,9 @@ components:
           description: URL efetiva da imagem exibida; pode ser removida sem apagar a URL histórica de origem
         linkFotoOrigem:
           type: string
+        linkPaginacao:
+          type: string
+          description: URL da imagem de paginação ou do ambiente
         linkAreaCentral:
           type: string
         valor:

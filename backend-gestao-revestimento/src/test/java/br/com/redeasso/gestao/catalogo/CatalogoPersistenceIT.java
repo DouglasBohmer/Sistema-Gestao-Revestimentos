@@ -63,6 +63,8 @@ class CatalogoPersistenceIT {
 
         assertThat(cadastrado.getId()).isNotNull();
         assertThat(cadastrado.getCreatedAt()).isNotNull();
+        assertThat(cadastrado.getLinkPaginacao())
+                .isEqualTo("https://exemplo.com/paginacao-ambiente.webp");
         assertThat(pisoRepository.contarPorTipo())
                 .extracting(PisoRepository.PisosPorTipo::getTipo)
                 .contains("Porcelanato");
@@ -123,6 +125,7 @@ class CatalogoPersistenceIT {
                 null,
                 null,
                 null,
+                "https://exemplo.com/paginacao-ambiente.webp",
                 null,
                 new BigDecimal("80.50"),
                 BigDecimal.ZERO,

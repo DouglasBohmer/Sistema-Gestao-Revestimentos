@@ -138,6 +138,7 @@ const pisoSchema = z
     linkSite: z.string().optional(),
     linkFoto: z.string().optional(),
     linkFotoOrigem: z.string().optional(),
+    linkPaginacao: z.string().optional(),
     linkAreaCentral: z.string().optional(),
     valor: z.coerce.number().min(0).optional(),
     estoqueM2: z.coerce.number().min(0).optional(),
@@ -168,7 +169,14 @@ export default function Cadastro() {
   const [temporaryUploadedImage, setTemporaryUploadedImage] = useState<
     string | null
   >(null);
+  const [isUploadingPaginationImage, setIsUploadingPaginationImage] =
+    useState(false);
+  const [
+    temporaryUploadedPaginationImage,
+    setTemporaryUploadedPaginationImage,
+  ] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const paginationImageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: pisos, isLoading } = useListPisos({
     search: search || undefined,
@@ -196,6 +204,7 @@ export default function Cadastro() {
       linkSite: "",
       linkFoto: "",
       linkFotoOrigem: "",
+      linkPaginacao: "",
       linkAreaCentral: "",
       valor: 0,
       estoqueM2: 0,
@@ -205,6 +214,7 @@ export default function Cadastro() {
 
   const linkFotoValue = form.watch("linkFoto");
   const linkFotoOrigemValue = form.watch("linkFotoOrigem");
+  const linkPaginacaoValue = form.watch("linkPaginacao");
   const larguraValue = form.watch("largura");
   const alturaValue = form.watch("altura");
   const m2PorCaixaValue = form.watch("m2PorCaixa");
@@ -233,7 +243,13 @@ export default function Cadastro() {
     if (temporaryUploadedImage && !preserveUploadedImage) {
       void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
     }
+    if (temporaryUploadedPaginationImage && !preserveUploadedImage) {
+      void deleteProductImage(temporaryUploadedPaginationImage).catch(
+        () => undefined,
+      );
+    }
     setTemporaryUploadedImage(null);
+    setTemporaryUploadedPaginationImage(null);
     setSelectedPiso(piso);
     setEditingId(piso.id);
     setIsEditing(false); // Selected for viewing, not editing yet
@@ -253,6 +269,7 @@ export default function Cadastro() {
       linkSite: piso.linkSite || "",
       linkFoto: piso.linkFoto || "",
       linkFotoOrigem: piso.linkFotoOrigem || "",
+      linkPaginacao: piso.linkPaginacao || "",
       linkAreaCentral: piso.linkAreaCentral || "",
       valor: piso.valor,
       estoqueM2: piso.estoqueM2,
@@ -264,7 +281,13 @@ export default function Cadastro() {
     if (temporaryUploadedImage) {
       void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
     }
+    if (temporaryUploadedPaginationImage) {
+      void deleteProductImage(temporaryUploadedPaginationImage).catch(
+        () => undefined,
+      );
+    }
     setTemporaryUploadedImage(null);
+    setTemporaryUploadedPaginationImage(null);
     setEditingId(null);
     setSelectedPiso(null);
     setIsEditing(true);
@@ -284,6 +307,7 @@ export default function Cadastro() {
       linkSite: "",
       linkFoto: "",
       linkFotoOrigem: "",
+      linkPaginacao: "",
       linkAreaCentral: "",
       valor: 0,
       estoqueM2: 0,
@@ -315,19 +339,34 @@ export default function Cadastro() {
         { id: editingId },
         {
           onSuccess: () => {
-            const deletedImage = selectedPiso?.linkFoto;
-            if (deletedImage && isManagedProductImage(deletedImage)) {
-              void deleteProductImage(deletedImage).catch(() => undefined);
-            }
+            const deletedImages = [
+              selectedPiso?.linkFoto,
+              selectedPiso?.linkPaginacao,
+            ].filter(
+              (image): image is string =>
+                Boolean(image) && isManagedProductImage(image),
+            );
+            deletedImages.forEach((image) => {
+              void deleteProductImage(image).catch(() => undefined);
+            });
             if (
               temporaryUploadedImage &&
-              temporaryUploadedImage !== deletedImage
+              !deletedImages.includes(temporaryUploadedImage)
             ) {
               void deleteProductImage(temporaryUploadedImage).catch(
                 () => undefined,
               );
             }
+            if (
+              temporaryUploadedPaginationImage &&
+              !deletedImages.includes(temporaryUploadedPaginationImage)
+            ) {
+              void deleteProductImage(temporaryUploadedPaginationImage).catch(
+                () => undefined,
+              );
+            }
             setTemporaryUploadedImage(null);
+            setTemporaryUploadedPaginationImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             toast({
               title: "Piso excluído",
@@ -401,7 +440,10 @@ export default function Cadastro() {
     }
   };
 
-  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    event: ChangeEvent<HTMLInputElement>,
+    field: "linkFoto" | "linkPaginacao",
+  ) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -423,20 +465,34 @@ export default function Cadastro() {
       return;
     }
 
-    setIsUploadingImage(true);
+    const isPagination = field === "linkPaginacao";
+    const previousTemporaryImage = isPagination
+      ? temporaryUploadedPaginationImage
+      : temporaryUploadedImage;
+    if (isPagination) {
+      setIsUploadingPaginationImage(true);
+    } else {
+      setIsUploadingImage(true);
+    }
     try {
       const uploaded = await uploadProductImage(file);
-      if (temporaryUploadedImage && temporaryUploadedImage !== uploaded.url) {
-        void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
+      if (previousTemporaryImage && previousTemporaryImage !== uploaded.url) {
+        void deleteProductImage(previousTemporaryImage).catch(() => undefined);
       }
-      setTemporaryUploadedImage(uploaded.url);
-      form.setValue("linkFoto", uploaded.url, {
+      if (isPagination) {
+        setTemporaryUploadedPaginationImage(uploaded.url);
+      } else {
+        setTemporaryUploadedImage(uploaded.url);
+      }
+      form.setValue(field, uploaded.url, {
         shouldDirty: true,
         shouldValidate: true,
       });
       toast({
         title: "Imagem enviada",
-        description: "Clique em Salvar para associá-la ao piso.",
+        description: isPagination
+          ? "Clique em Salvar para associar a Paginação/Ambiente ao piso."
+          : "Clique em Salvar para associá-la ao piso.",
       });
     } catch (error) {
       toast({
@@ -445,8 +501,22 @@ export default function Cadastro() {
         variant: "destructive",
       });
     } finally {
-      setIsUploadingImage(false);
+      if (isPagination) {
+        setIsUploadingPaginationImage(false);
+      } else {
+        setIsUploadingImage(false);
+      }
     }
+  };
+
+  const handleFloorImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    void handleImageUpload(event, "linkFoto");
+  };
+
+  const handlePaginationImageUpload = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    void handleImageUpload(event, "linkPaginacao");
   };
 
   const handleRemoveImage = () => {
@@ -459,6 +529,22 @@ export default function Cadastro() {
       shouldValidate: true,
     });
     if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const handleRemovePaginationImage = () => {
+    if (temporaryUploadedPaginationImage) {
+      void deleteProductImage(temporaryUploadedPaginationImage).catch(
+        () => undefined,
+      );
+      setTemporaryUploadedPaginationImage(null);
+    }
+    form.setValue("linkPaginacao", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (paginationImageInputRef.current) {
+      paginationImageInputRef.current.value = "";
+    }
   };
 
   const onInvalid = () => {
@@ -480,6 +566,7 @@ export default function Cadastro() {
       linkSite: data.linkSite || undefined,
       linkFoto: data.linkFoto,
       linkFotoOrigem: data.linkFotoOrigem || undefined,
+      linkPaginacao: data.linkPaginacao,
       linkAreaCentral: data.linkAreaCentral || undefined,
     };
 
@@ -489,12 +576,22 @@ export default function Cadastro() {
         {
           onSuccess: (pisoAtualizado) => {
             const previousImage = selectedPiso?.linkFoto;
+            const previousPaginationImage = selectedPiso?.linkPaginacao;
             if (
               previousImage &&
               previousImage !== pisoAtualizado.linkFoto &&
               isManagedProductImage(previousImage)
             ) {
               void deleteProductImage(previousImage).catch(() => undefined);
+            }
+            if (
+              previousPaginationImage &&
+              previousPaginationImage !== pisoAtualizado.linkPaginacao &&
+              isManagedProductImage(previousPaginationImage)
+            ) {
+              void deleteProductImage(previousPaginationImage).catch(
+                () => undefined,
+              );
             }
             if (
               temporaryUploadedImage &&
@@ -504,7 +601,16 @@ export default function Cadastro() {
                 () => undefined,
               );
             }
+            if (
+              temporaryUploadedPaginationImage &&
+              temporaryUploadedPaginationImage !== pisoAtualizado.linkPaginacao
+            ) {
+              void deleteProductImage(temporaryUploadedPaginationImage).catch(
+                () => undefined,
+              );
+            }
             setTemporaryUploadedImage(null);
+            setTemporaryUploadedPaginationImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             setSelectedPiso(pisoAtualizado);
             setIsEditing(false);
@@ -535,7 +641,16 @@ export default function Cadastro() {
                 () => undefined,
               );
             }
+            if (
+              temporaryUploadedPaginationImage &&
+              temporaryUploadedPaginationImage !== pisoCriado.linkPaginacao
+            ) {
+              void deleteProductImage(temporaryUploadedPaginationImage).catch(
+                () => undefined,
+              );
+            }
             setTemporaryUploadedImage(null);
+            setTemporaryUploadedPaginationImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             handleSelectPiso(pisoCriado, true);
             toast({ title: "Sucesso", description: "Novo piso cadastrado." });
@@ -594,7 +709,7 @@ export default function Cadastro() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
                         <FormField
                           control={form.control}
                           name="codigoRede"
@@ -863,17 +978,38 @@ export default function Cadastro() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
                         <FormField
                           control={form.control}
                           name="linkSite"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Site Piso</FormLabel>
+                              <FormLabel>Site do Piso</FormLabel>
                               <FormControl>
                                 <Input
                                   type="url"
                                   placeholder="https://exemplo.com"
+                                  disabled={!isEditing}
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="linkPaginacao"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Link da Paginação/Ambiente</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="url"
+                                  placeholder="https://exemplo.com/ambiente.jpg"
                                   disabled={!isEditing}
                                   {...field}
                                 />
@@ -887,7 +1023,7 @@ export default function Cadastro() {
                           name="linkFoto"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Link da Foto (URL)</FormLabel>
+                              <FormLabel>Link da Foto do Piso</FormLabel>
                               <FormControl>
                                 <Input
                                   type="url"
@@ -900,6 +1036,9 @@ export default function Cadastro() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="valor"
@@ -940,6 +1079,9 @@ export default function Cadastro() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="linkAreaCentral"
@@ -1012,7 +1154,7 @@ export default function Cadastro() {
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/avif"
                           className="hidden"
-                          onChange={handleImageUpload}
+                          onChange={handleFloorImageUpload}
                         />
                         <div className="flex flex-wrap gap-2">
                           <Button
@@ -1038,6 +1180,76 @@ export default function Cadastro() {
                             size="sm"
                             disabled={!linkFotoValue || isUploadingImage}
                             onClick={handleRemoveImage}
+                          >
+                            <Trash2 size={15} className="mr-1.5" />
+                            Remover imagem
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique em
+                          Salvar.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-medium">
+                          Paginação/Ambiente
+                        </label>
+                        <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
+                          <PisoImage
+                            primaryUrl={linkPaginacaoValue}
+                            alt={`Paginação ou ambiente de ${selectedPiso?.nome ?? "piso"}`}
+                            className="max-h-[300px] w-full rounded-md object-contain"
+                            fallbackClassName="min-h-[276px] w-full"
+                          />
+                          {isEditing && linkPaginacaoValue && (
+                            <button
+                              type="button"
+                              aria-label="Remover Paginação/Ambiente"
+                              onClick={handleRemovePaginationImage}
+                              className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <input
+                          ref={paginationImageInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
+                          className="hidden"
+                          onChange={handlePaginationImageUpload}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isUploadingPaginationImage}
+                            onClick={() =>
+                              paginationImageInputRef.current?.click()
+                            }
+                          >
+                            {isUploadingPaginationImage ? (
+                              <Loader2
+                                size={15}
+                                className="mr-1.5 animate-spin"
+                              />
+                            ) : (
+                              <Upload size={15} className="mr-1.5" />
+                            )}
+                            {isUploadingPaginationImage
+                              ? "Enviando..."
+                              : "Enviar imagem"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={
+                              !linkPaginacaoValue || isUploadingPaginationImage
+                            }
+                            onClick={handleRemovePaginationImage}
                           >
                             <Trash2 size={15} className="mr-1.5" />
                             Remover imagem
@@ -1134,16 +1346,26 @@ export default function Cadastro() {
             <CardContent className="p-3">
               {selectedPiso ? (
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                  <PisoImage
-                    primaryUrl={selectedPiso.linkFoto}
-                    fallbackUrl={legacyProductImageFallback(
-                      selectedPiso.linkFoto,
-                      selectedPiso.linkFotoOrigem,
+                  <div className="flex shrink-0 flex-col gap-2">
+                    <PisoImage
+                      primaryUrl={selectedPiso.linkFoto}
+                      fallbackUrl={legacyProductImageFallback(
+                        selectedPiso.linkFoto,
+                        selectedPiso.linkFotoOrigem,
+                      )}
+                      alt={selectedPiso.nome}
+                      className="h-24 w-24 rounded-md border bg-white object-contain"
+                      fallbackClassName="h-24 w-24 border"
+                    />
+                    {selectedPiso.linkPaginacao && (
+                      <PisoImage
+                        primaryUrl={selectedPiso.linkPaginacao}
+                        alt={`Paginação ou ambiente de ${selectedPiso.nome}`}
+                        className="h-24 w-24 rounded-md border bg-white object-contain"
+                        fallbackClassName="h-24 w-24 border"
+                      />
                     )}
-                    alt={selectedPiso.nome}
-                    className="h-24 w-24 shrink-0 rounded-md border bg-white object-contain"
-                    fallbackClassName="h-24 w-24 shrink-0 border"
-                  />
+                  </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
