@@ -1,106 +1,150 @@
-import { useState } from "react"
-import { Layout } from "@/components/layout/Layout"
-import { listPisosByCodigo, useCalcularPiso, type CalculoResult, type Piso } from "@workspace/api-client-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import { Search, MessageCircle, Package, Layers, Box, Plus } from "lucide-react"
+import { useState } from "react";
+import { Layout } from "@/components/layout/Layout";
+import {
+  listPisosByCodigo,
+  useCalcularPiso,
+  type CalculoResult,
+  type Piso,
+} from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { PisoImage } from "@/components/catalogo/PisoImage";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Search,
+  MessageCircle,
+  Package,
+  Layers,
+  Box,
+  Plus,
+} from "lucide-react";
 
 export default function Calcular() {
-  const { toast } = useToast()
-  
-  const [codigoBusca, setCodigoBusca] = useState("")
-  
-  const [metragem, setMetragem] = useState<string>("")
-  const [telefone, setTelefone] = useState<string>("")
-  const [valorM2, setValorM2] = useState<string>("")
-  const [margem] = useState<string>("10")
+  const { toast } = useToast();
 
-  const [resultado, setResultado] = useState<CalculoResult | null>(null)
-  const [opcoesCodigo, setOpcoesCodigo] = useState<Piso[]>([])
-  const [buscandoCodigo, setBuscandoCodigo] = useState(false)
-  const piso = resultado?.piso ?? null
+  const [codigoBusca, setCodigoBusca] = useState("");
 
-  const calcularMutation = useCalcularPiso()
+  const [metragem, setMetragem] = useState<string>("");
+  const [telefone, setTelefone] = useState<string>("");
+  const [valorM2, setValorM2] = useState<string>("");
+  const [margem] = useState<string>("10");
+
+  const [resultado, setResultado] = useState<CalculoResult | null>(null);
+  const [opcoesCodigo, setOpcoesCodigo] = useState<Piso[]>([]);
+  const [buscandoCodigo, setBuscandoCodigo] = useState(false);
+  const piso = resultado?.piso ?? null;
+
+  const calcularMutation = useCalcularPiso();
 
   const calcularProduto = (pisoEscolhido: Piso, m2: number) => {
-    setOpcoesCodigo([])
+    setOpcoesCodigo([]);
     calcularMutation.mutate(
-      { data: { pisoId: pisoEscolhido.id, metragemM2: m2, margemQuebra: parseFloat(margem) } },
+      {
+        data: {
+          pisoId: pisoEscolhido.id,
+          metragemM2: m2,
+          margemQuebra: parseFloat(margem),
+        },
+      },
       {
         onSuccess: (data) => {
-          setResultado(data)
-          setValorM2(data.piso.valor.toString())
+          setResultado(data);
+          setValorM2(data.piso.valor.toString());
         },
         onError: () => {
-          toast({ title: "Erro", description: "Não foi possível calcular o produto selecionado.", variant: "destructive" })
-        }
-      }
-    )
-  }
+          toast({
+            title: "Erro",
+            description: "Não foi possível calcular o produto selecionado.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
 
   const handleCalcular = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const codigo = codigoBusca.trim()
+    const codigo = codigoBusca.trim();
     if (!codigo) {
-      toast({ title: "Erro", description: "Informe o código do piso.", variant: "destructive" })
-      return
-    }
-    
-    const m2 = parseFloat(metragem)
-    
-    if (isNaN(m2) || m2 <= 0) {
-      toast({ title: "Erro", description: "Informe uma metragem válida.", variant: "destructive" })
-      return
+      toast({
+        title: "Erro",
+        description: "Informe o código do piso.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setResultado(null)
-    setOpcoesCodigo([])
-    setBuscandoCodigo(true)
-    try {
-      const encontrados = await listPisosByCodigo(codigo)
-      if (encontrados.length > 1) {
-        setOpcoesCodigo(encontrados)
-        toast({ title: "Código duplicado", description: "Escolha abaixo qual produto deseja usar." })
-        return
-      }
-      calcularProduto(encontrados[0], m2)
-    } catch {
-      toast({ title: "Erro", description: "Piso não encontrado ou dados inválidos.", variant: "destructive" })
-    } finally {
-      setBuscandoCodigo(false)
+    const m2 = parseFloat(metragem);
+
+    if (isNaN(m2) || m2 <= 0) {
+      toast({
+        title: "Erro",
+        description: "Informe uma metragem válida.",
+        variant: "destructive",
+      });
+      return;
     }
-  }
+
+    setResultado(null);
+    setOpcoesCodigo([]);
+    setBuscandoCodigo(true);
+    try {
+      const encontrados = await listPisosByCodigo(codigo);
+      if (encontrados.length > 1) {
+        setOpcoesCodigo(encontrados);
+        toast({
+          title: "Código duplicado",
+          description: "Escolha abaixo qual produto deseja usar.",
+        });
+        return;
+      }
+      calcularProduto(encontrados[0], m2);
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Piso não encontrado ou dados inválidos.",
+        variant: "destructive",
+      });
+    } finally {
+      setBuscandoCodigo(false);
+    }
+  };
 
   const handleWhatsApp = () => {
-    if (!resultado || !piso) return
-    
-    const msg = `Olá! Gostaria de um orçamento:\n\nCódigo: ${piso.codigoLoja ?? piso.codigoRede}\nÁrea: ${metragem}m²\nCaixas necessárias: ${resultado.quantidadeCaixas}\n${resultado.valorTotal ? `Valor: R$ ${resultado.valorTotal.toFixed(2)}` : ''}`
-    
-    const phone = telefone.replace(/\D/g, '')
-    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
-    window.open(url, '_blank')
-  }
+    if (!resultado || !piso) return;
+
+    const msg = `Olá! Gostaria de um orçamento:\n\nCódigo: ${piso.codigoLoja ?? piso.codigoRede}\nÁrea: ${metragem}m²\nCaixas necessárias: ${resultado.quantidadeCaixas}\n${resultado.valorTotal ? `Valor: R$ ${resultado.valorTotal.toFixed(2)}` : ""}`;
+
+    const phone = telefone.replace(/\D/g, "");
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <Layout>
       <div className="flex-1 space-y-6 p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Calcular Piso</h1>
-          <p className="text-gray-600">Calcule a quantidade necessária de pisos, argamassa e rejunte</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            Calcular Piso
+          </h1>
+          <p className="text-gray-600">
+            Calcule a quantidade necessária de pisos, argamassa e rejunte
+          </p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
           <Card className="border-none shadow-lg h-full">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Dados do Cálculo</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Dados do Cálculo
+              </h3>
               <form onSubmit={handleCalcular} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Código do Piso</Label>
-                  <Input 
+                  <Input
                     placeholder="Ex: ASS-001"
                     value={codigoBusca}
                     onChange={(e) => setCodigoBusca(e.target.value)}
@@ -109,7 +153,7 @@ export default function Calcular() {
                 </div>
                 <div className="space-y-2">
                   <Label>M² do Cliente</Label>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.01"
                     placeholder="Ex: 45.5"
@@ -120,29 +164,38 @@ export default function Calcular() {
                 </div>
                 <div className="space-y-2">
                   <Label>Quantidade de Caixas</Label>
-                  <Input 
+                  <Input
                     placeholder="Calculado automaticamente"
                     disabled
                     value={resultado ? resultado.quantidadeCaixas : ""}
                   />
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={calcularMutation.isPending || buscandoCodigo}>
+                <Button
+                  type="submit"
+                  className="w-full h-11"
+                  disabled={calcularMutation.isPending || buscandoCodigo}
+                >
                   <Search size={18} className="mr-2" />
                   Pesquisar e Calcular
                 </Button>
                 {opcoesCodigo.length > 1 && (
                   <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                    <p className="text-sm font-medium text-amber-900">Mais de um produto usa esse código:</p>
+                    <p className="text-sm font-medium text-amber-900">
+                      Mais de um produto usa esse código:
+                    </p>
                     {opcoesCodigo.map((opcao) => (
                       <button
                         key={opcao.id}
                         type="button"
                         className="w-full rounded border bg-white p-2 text-left text-sm hover:border-amber-500"
-                        onClick={() => calcularProduto(opcao, parseFloat(metragem))}
+                        onClick={() =>
+                          calcularProduto(opcao, parseFloat(metragem))
+                        }
                       >
                         <span className="block font-medium">{opcao.nome}</span>
                         <span className="text-xs text-muted-foreground">
-                          ASSO: {opcao.codigoRede ?? "—"} · CTC: {opcao.codigoLoja ?? "—"}
+                          ASSO: {opcao.codigoRede ?? "—"} · CTC:{" "}
+                          {opcao.codigoLoja ?? "—"}
                         </span>
                       </button>
                     ))}
@@ -158,61 +211,82 @@ export default function Calcular() {
 
           <Card className="border-none shadow-lg h-full">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Dados Técnicos</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Dados Técnicos
+              </h3>
               <div className="bg-gray-50 p-4 rounded-lg h-[calc(100%-2rem)]">
                 {piso ? (
                   <>
-                    {piso.linkFoto ? (
-                      <img
-                        src={piso.linkFoto}
-                        alt="Piso"
-                        className="w-full h-48 object-cover rounded-lg mb-4 bg-white"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-200 rounded-lg mb-4 flex items-center justify-center text-gray-400">
-                        <Box size={48} />
-                      </div>
-                    )}
+                    <PisoImage
+                      primaryUrl={piso.linkFoto}
+                      fallbackUrl={piso.linkFotoOrigem}
+                      alt={piso.nome}
+                      className="mx-auto mb-3 h-20 w-1/3 min-w-24 rounded-md bg-white object-contain"
+                      fallbackClassName="mx-auto mb-3 h-20 w-1/3 min-w-24"
+                    />
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Largura:</span>
-                        <span className="font-medium">{piso.largura ? `${piso.largura} cm` : '-'}</span>
+                        <span className="font-medium">
+                          {piso.largura ? `${piso.largura} cm` : "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Altura:</span>
-                        <span className="font-medium">{piso.altura ? `${piso.altura} cm` : '-'}</span>
+                        <span className="font-medium">
+                          {piso.altura ? `${piso.altura} cm` : "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Rejunte:</span>
-                        <span className="font-medium">{piso.rejunte ? `${piso.rejunte} mm` : '-'}</span>
+                        <span className="font-medium">
+                          {piso.rejunte ? `${piso.rejunte} mm` : "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Classificação:</span>
-                        <span className="font-medium">{piso.classificacaoUso || '-'}</span>
+                        <span className="font-medium">
+                          {piso.classificacaoUso || "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Bordas:</span>
-                        <span className="font-medium">{piso.acabamentoBordas === "RETIFICADO" ? "Retificado" : "Bold"}</span>
+                        <span className="font-medium">
+                          {piso.acabamentoBordas === "RETIFICADO"
+                            ? "Retificado"
+                            : "Bold"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Tipo:</span>
-                        <span className="font-medium">{piso.tipoPiso || '-'}</span>
+                        <span className="font-medium">
+                          {piso.tipoPiso || "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Local de Uso:</span>
-                        <span className="font-medium">{piso.localDeUso || '-'}</span>
+                        <span className="font-medium">
+                          {piso.localDeUso || "-"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">M² por caixa:</span>
-                        <span className="font-medium">{piso.m2PorCaixa} m²</span>
+                        <span className="font-medium">
+                          {piso.m2PorCaixa} m²
+                        </span>
                       </div>
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-600">Status Estoque:</span>
-                          <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-700"}`}>
-                            <div className={`h-2 w-2 rounded-full ${piso.ativo ? "bg-green-600" : "bg-zinc-500"}`}></div>
-                            {piso.ativo ? `${piso.estoqueM2.toFixed(2)} m²` : "Inativo"}
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-700"}`}
+                          >
+                            <div
+                              className={`h-2 w-2 rounded-full ${piso.ativo ? "bg-green-600" : "bg-zinc-500"}`}
+                            ></div>
+                            {piso.ativo
+                              ? `${piso.estoqueM2.toFixed(2)} m²`
+                              : "Inativo"}
                           </span>
                         </div>
                       </div>
@@ -229,7 +303,9 @@ export default function Calcular() {
 
           <Card className="border-none shadow-lg h-full">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Enviar Orçamento</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Enviar Orçamento
+              </h3>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Telefone do Cliente</Label>
@@ -250,13 +326,20 @@ export default function Calcular() {
                     onChange={(e) => setValorM2(e.target.value)}
                   />
                 </div>
-                <Button onClick={handleWhatsApp} variant="secondary" className="w-full h-11" disabled={!resultado}>
+                <Button
+                  onClick={handleWhatsApp}
+                  variant="secondary"
+                  className="w-full h-11"
+                  disabled={!resultado}
+                >
                   <MessageCircle size={18} className="mr-2" />
                   Enviar via WhatsApp
                 </Button>
 
                 <div className="mt-6 p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
-                  <h4 className="font-medium text-gray-800 mb-3 text-sm">Informações Adicionais</h4>
+                  <h4 className="font-medium text-gray-800 mb-3 text-sm">
+                    Informações Adicionais
+                  </h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <p>• Considere {margem}% de quebra</p>
                     <p>• Verifique o nivelamento do piso</p>
@@ -280,8 +363,13 @@ export default function Calcular() {
                     </div>
                   </div>
                   <p className="text-white/80 mb-2">Caixas Necessárias</p>
-                  <p className="text-4xl font-bold mb-1">{resultado.quantidadeCaixas}</p>
-                  <p className="text-sm text-white/70">+ {margem}% de quebra = {resultado.metragemComMargem.toFixed(2)}m²</p>
+                  <p className="text-4xl font-bold mb-1">
+                    {resultado.quantidadeCaixas}
+                  </p>
+                  <p className="text-sm text-white/70">
+                    + {margem}% de quebra ={" "}
+                    {resultado.metragemComMargem.toFixed(2)}m²
+                  </p>
                 </CardContent>
               </Card>
 
@@ -293,7 +381,9 @@ export default function Calcular() {
                     </div>
                   </div>
                   <p className="text-white/80 mb-2">Argamassa (AC-II)</p>
-                  <p className="text-4xl font-bold mb-1">{Math.ceil((parseFloat(metragem) * 4.5) / 20)}</p>
+                  <p className="text-4xl font-bold mb-1">
+                    {Math.ceil((parseFloat(metragem) * 4.5) / 20)}
+                  </p>
                   <p className="text-sm text-white/70">Sacos de 20kg</p>
                 </CardContent>
               </Card>
@@ -306,7 +396,9 @@ export default function Calcular() {
                     </div>
                   </div>
                   <p className="text-white/80 mb-2">Rejunte</p>
-                  <p className="text-4xl font-bold mb-1">{Math.ceil((parseFloat(metragem) * 0.15) / 1)}</p>
+                  <p className="text-4xl font-bold mb-1">
+                    {Math.ceil((parseFloat(metragem) * 0.15) / 1)}
+                  </p>
                   <p className="text-sm text-white/70">Sacos de 1kg</p>
                 </CardContent>
               </Card>
@@ -314,30 +406,50 @@ export default function Calcular() {
 
             <Card className="mt-6 border-none shadow-lg animate-in fade-in slide-in-from-bottom-6">
               <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Resumo do Orçamento</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                  Resumo do Orçamento
+                </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between py-2 border-b border-gray-200">
                     <span className="text-gray-600">Área total:</span>
                     <span className="font-medium">{metragem} m²</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Pisos ({resultado.quantidadeCaixas} caixas):</span>
+                    <span className="text-gray-600">
+                      Pisos ({resultado.quantidadeCaixas} caixas):
+                    </span>
                     <span className="font-medium">
-                      {valorM2 ? `R$ ${(resultado.quantidadeCaixas * (piso?.m2PorCaixa || 1) * parseFloat(valorM2)).toFixed(2)}` : 'R$ 0,00'}
+                      {valorM2
+                        ? `R$ ${(resultado.quantidadeCaixas * (piso?.m2PorCaixa || 1) * parseFloat(valorM2)).toFixed(2)}`
+                        : "R$ 0,00"}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Argamassa ({Math.ceil((parseFloat(metragem) * 4.5) / 20)} sacos):</span>
-                    <span className="font-medium text-gray-400 text-sm italic">Cálculo de valor não disponível</span>
+                    <span className="text-gray-600">
+                      Argamassa ({Math.ceil((parseFloat(metragem) * 4.5) / 20)}{" "}
+                      sacos):
+                    </span>
+                    <span className="font-medium text-gray-400 text-sm italic">
+                      Cálculo de valor não disponível
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Rejunte ({Math.ceil((parseFloat(metragem) * 0.15) / 1)} sacos):</span>
-                    <span className="font-medium text-gray-400 text-sm italic">Cálculo de valor não disponível</span>
+                    <span className="text-gray-600">
+                      Rejunte ({Math.ceil((parseFloat(metragem) * 0.15) / 1)}{" "}
+                      sacos):
+                    </span>
+                    <span className="font-medium text-gray-400 text-sm italic">
+                      Cálculo de valor não disponível
+                    </span>
                   </div>
                   <div className="flex justify-between py-3 bg-zinc-100 px-4 rounded-lg mt-4">
-                    <span className="font-semibold text-lg text-gray-800">Total Estimado (apenas piso):</span>
+                    <span className="font-semibold text-lg text-gray-800">
+                      Total Estimado (apenas piso):
+                    </span>
                     <span className="font-bold text-2xl text-black">
-                      {valorM2 ? `R$ ${(resultado.quantidadeCaixas * (piso?.m2PorCaixa || 1) * parseFloat(valorM2)).toFixed(2)}` : 'R$ 0,00'}
+                      {valorM2
+                        ? `R$ ${(resultado.quantidadeCaixas * (piso?.m2PorCaixa || 1) * parseFloat(valorM2)).toFixed(2)}`
+                        : "R$ 0,00"}
                     </span>
                   </div>
                 </div>
@@ -347,5 +459,5 @@ export default function Calcular() {
         )}
       </div>
     </Layout>
-  )
+  );
 }
