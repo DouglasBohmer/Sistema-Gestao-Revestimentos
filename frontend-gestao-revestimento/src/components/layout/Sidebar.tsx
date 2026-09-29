@@ -12,7 +12,6 @@ import {
   Link2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const navigation = [
@@ -27,7 +26,6 @@ export function Sidebar() {
   const [location] = useLocation();
   const { logout, session } = useAuth();
   const queryClient = useQueryClient();
-  const [notifCount] = useState(3);
 
   const handleLogout = async () => {
     await logout();
@@ -53,7 +51,10 @@ export function Sidebar() {
               <button
                 key={item.name}
                 type="button"
-                className="w-full group flex items-center px-6 py-3 text-base font-medium transition-all text-white/70 hover:bg-white/10 hover:text-white border-l-4 border-transparent"
+                disabled
+                aria-disabled="true"
+                title="Disponível em breve"
+                className="w-full flex cursor-not-allowed items-center border-l-4 border-transparent px-6 py-3 text-base font-medium text-white/35"
               >
                 <item.icon
                   className="mr-3 h-5 w-5 flex-shrink-0"
@@ -101,23 +102,22 @@ export function Sidebar() {
       {/* Rodapé: Notificações + Configurações + Sair */}
       <div className="border-t border-white/10 mt-auto">
         <button
-          onClick={() => {}}
-          className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Disponível em breve"
+          className="flex w-full cursor-not-allowed items-center gap-3 px-6 py-3.5 text-base font-medium text-white/35"
         >
-          <div className="relative">
-            <Bell className="h-5 w-5 flex-shrink-0" />
-            {notifCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-white text-black text-[10px] font-bold leading-none">
-                {notifCount}
-              </span>
-            )}
-          </div>
+          <Bell className="h-5 w-5 flex-shrink-0" />
           <span>Notificações</span>
         </button>
 
         <button
-          onClick={() => {}}
-          className="w-full px-6 py-3.5 flex items-center gap-3 text-white/70 hover:bg-white/10 hover:text-white transition-all text-base font-medium"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title="Disponível em breve"
+          className="flex w-full cursor-not-allowed items-center gap-3 px-6 py-3.5 text-base font-medium text-white/35"
         >
           <Settings className="h-5 w-5 flex-shrink-0" />
           <span>Configurações</span>

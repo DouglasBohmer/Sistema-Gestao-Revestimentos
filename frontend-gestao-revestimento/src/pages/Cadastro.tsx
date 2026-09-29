@@ -58,6 +58,7 @@ import {
   Loader2,
   Eraser,
   ExternalLink,
+  Eye,
 } from "lucide-react";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -165,6 +166,7 @@ export default function Cadastro() {
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isViewing, setIsViewing] = useState(false);
   const [selectedPiso, setSelectedPiso] = useState<Piso | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [temporaryUploadedImage, setTemporaryUploadedImage] = useState<
@@ -264,7 +266,8 @@ export default function Cadastro() {
     setTemporaryUploadedPaginationImage(null);
     setSelectedPiso(piso);
     setEditingId(piso.id);
-    setIsEditing(false); // Selected for viewing, not editing yet
+    setIsEditing(false);
+    setIsViewing(false);
     form.reset({
       nome: piso.nome,
       codigoRede: piso.codigoRede || "",
@@ -303,6 +306,7 @@ export default function Cadastro() {
     setEditingId(null);
     setSelectedPiso(null);
     setIsEditing(true);
+    setIsViewing(false);
     form.reset({
       nome: "",
       codigoRede: "",
@@ -332,10 +336,24 @@ export default function Cadastro() {
     scrollToPageTop();
     if (editingId) {
       setIsEditing(true);
+      setIsViewing(false);
     } else {
       toast({
         title: "Aviso",
         description: "Selecione um piso na tabela para alterar.",
+      });
+    }
+  };
+
+  const handleView = () => {
+    scrollToPageTop();
+    if (editingId) {
+      setIsEditing(false);
+      setIsViewing(true);
+    } else {
+      toast({
+        title: "Aviso",
+        description: "Selecione um piso na tabela para visualizar.",
       });
     }
   };
@@ -387,6 +405,7 @@ export default function Cadastro() {
             setEditingId(null);
             setSelectedPiso(null);
             setIsEditing(false);
+            setIsViewing(false);
           },
           onError: (error) => {
             toast({
@@ -646,6 +665,7 @@ export default function Cadastro() {
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             setSelectedPiso(pisoAtualizado);
             setIsEditing(false);
+            setIsViewing(false);
             toast({
               title: "Sucesso",
               description: "Piso atualizado com sucesso.",
@@ -711,9 +731,16 @@ export default function Cadastro() {
           </p>
         </div>
 
-        {isEditing ? (
+        {isEditing || isViewing ? (
           <Card className="border-none shadow-lg">
             <CardContent className="p-8">
+              {isViewing && (
+                <div className="mb-6 flex items-center gap-2 rounded-md border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <Eye size={17} />
+                  Modo de visualização: os dados deste piso não podem ser
+                  alterados.
+                </div>
+              )}
               <Form {...form}>
                 <form
                   noValidate
@@ -1186,6 +1213,7 @@ export default function Cadastro() {
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/avif"
                           className="hidden"
+                          disabled={!isEditing}
                           onChange={handleFloorImageUpload}
                         />
                         <div className="flex flex-wrap gap-2">
@@ -1193,7 +1221,7 @@ export default function Cadastro() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={isUploadingImage}
+                            disabled={!isEditing || isUploadingImage}
                             onClick={() => imageInputRef.current?.click()}
                           >
                             {isUploadingImage ? (
@@ -1210,7 +1238,9 @@ export default function Cadastro() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={!linkFotoValue || isUploadingImage}
+                            disabled={
+                              !isEditing || !linkFotoValue || isUploadingImage
+                            }
                             onClick={handleRemoveImage}
                           >
                             <Trash2 size={15} className="mr-1.5" />
@@ -1250,6 +1280,7 @@ export default function Cadastro() {
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/avif"
                           className="hidden"
+                          disabled={!isEditing}
                           onChange={handlePaginationImageUpload}
                         />
                         <div className="flex flex-wrap gap-2">
@@ -1257,7 +1288,7 @@ export default function Cadastro() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={isUploadingPaginationImage}
+                            disabled={!isEditing || isUploadingPaginationImage}
                             onClick={() =>
                               paginationImageInputRef.current?.click()
                             }
@@ -1279,7 +1310,9 @@ export default function Cadastro() {
                             variant="outline"
                             size="sm"
                             disabled={
-                              !linkPaginacaoValue || isUploadingPaginationImage
+                              !isEditing ||
+                              !linkPaginacaoValue ||
+                              isUploadingPaginationImage
                             }
                             onClick={handleRemovePaginationImage}
                           >
@@ -1400,14 +1433,6 @@ export default function Cadastro() {
                       className="h-24 w-24 rounded-md border bg-white object-contain"
                       fallbackClassName="h-24 w-24 border"
                     />
-                    {selectedPiso.linkPaginacao && (
-                      <PisoImage
-                        primaryUrl={selectedPiso.linkPaginacao}
-                        alt={`Paginação ou ambiente de ${selectedPiso.nome}`}
-                        className="h-24 w-24 rounded-md border bg-white object-contain"
-                        fallbackClassName="h-24 w-24 border"
-                      />
-                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -1478,6 +1503,15 @@ export default function Cadastro() {
                   </div>
 
                   <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-56 lg:justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleView}
+                    >
+                      <Eye size={15} className="mr-1.5" />
+                      Ver
+                    </Button>
                     <Button
                       type="button"
                       size="sm"

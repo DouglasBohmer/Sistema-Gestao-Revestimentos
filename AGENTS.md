@@ -22,6 +22,7 @@ Regras de interpretação:
 - O Express foi removido em 15/08/2026. Não reintroduza servidor Node, estado em memória ou rotas paralelas; todo backend de negócio pertence ao Spring/PostgreSQL.
 - Dúvidas marcadas como abertas não podem ser resolvidas por suposição quando alterarem regra de negócio, segurança, persistência ou topologia de produção.
 - Ao receber uma nova decisão do usuário, atualize este arquivo no mesmo trabalho, movendo a questão correspondente para “Decisões confirmadas”.
+- Ao concluir alterações solicitadas, faça commit com mensagem em português do Brasil e envie-o ao remoto, salvo instrução contrária do usuário.
 
 Fontes analisadas em 14/08/2026:
 
@@ -115,6 +116,7 @@ Regras obrigatórias:
 - No cadastro, selecionar `LA` a `LE` preenche automaticamente a descrição correspondente de local de uso, que continua editável. `Retificado` sugere rejunte de 2 mm e `Bold`, 5 mm; juntas de 1, 1,5 ou 2 mm selecionam Retificado e a de 5 mm seleciona Bold.
 - Cada produto aceita duas imagens independentes no mesmo bucket R2: a foto principal do piso e a imagem de “Paginação/Ambiente”. Ambas aceitam URL, upload, pré-visualização e remoção no cadastro. O campo legado `ambiente` permanece mapeado para `link_area_central`, pois seu conteúdo são URLs da Área Central; `link_paginacao` é um campo novo. Listas e miniaturas continuam exibindo apenas a foto principal; Paginação/Ambiente aparece ao abrir o produto.
 - Abaixo de “Paginação/Ambiente”, o cadastro oferece um atalho para abrir o site do piso em uma nova guia. As ações Alterar, Excluir e Novo do resumo do produto levam a tela de cadastro de volta ao topo.
+- O resumo de um piso oferece a ação “Ver”, que abre todos os seus dados em modo somente leitura; somente a foto principal aparece na miniatura do resumo. Orçamento, Notificações e Configurações permanecem desativados na navegação até que esses recursos sejam implementados.
 - As telas já visitadas permanecem montadas enquanto a sessão autenticada estiver ativa, preservando cálculos, formulários e seleções ao navegar. Cada navegação invalida as consultas ativas para atualizar listas sem recarregar a página; logout descarta o estado e o cache.
 
 ### 3.5 Parâmetros de negócio
