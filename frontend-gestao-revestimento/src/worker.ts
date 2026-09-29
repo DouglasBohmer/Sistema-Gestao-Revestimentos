@@ -1,3 +1,5 @@
+import { LEGACY_PRODUCT_IMAGES } from "./generated/legacy-product-images";
+
 interface AssetsBinding {
   fetch(request: Request): Promise<Response>;
 }
@@ -11,13 +13,14 @@ interface ProductImageObject {
 interface ProductImageBucket {
   put(
     key: string,
-    value: ReadableStream<Uint8Array>,
+    value: ReadableStream<Uint8Array> | ArrayBuffer,
     options: {
-      httpMetadata: { contentType: string };
+      httpMetadata: { contentType: string; cacheControl?: string };
       customMetadata: Record<string, string>;
     },
   ): Promise<void>;
   get(key: string): Promise<ProductImageObject | null>;
+  head(key: string): Promise<unknown | null>;
   delete(key: string): Promise<void>;
 }
 
@@ -30,6 +33,9 @@ interface Environment {
 const PRODUCT_IMAGE_API_PATH = "/api/product-images";
 const PRODUCT_IMAGE_PUBLIC_PREFIX = "/product-images/";
 const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+const LEGACY_MIGRATION_BATCH_SIZE = 10;
+const LEGACY_MIGRATION_COMPLETE_KEY =
+  "_migrations/legacy-product-images-v7/complete";
 const ALLOWED_PRODUCT_IMAGE_TYPES = new Map([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
@@ -136,6 +142,157 @@ function imageKeyFromUrl(value: unknown, requestUrl: URL): string | null {
   }
 }
 
+function isLegacyImageKey(key: string): boolean {
+  return /^legacy\/[a-f0-9]{64}\.(?:jpg|png|webp|avif)$/.test(key);
+}
+
+function isServableImageKey(key: string): boolean {
+  return (
+    /^[a-f0-9-]+\.(?:jpg|png|webp|avif)$/.test(key) || isLegacyImageKey(key)
+  );
+}
+
+function hasExpectedImageSignature(
+  bytes: Uint8Array,
+  contentType: string,
+): boolean {
+  if (contentType === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (contentType === "image/png") {
+    return (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47
+    );
+  }
+  if (contentType === "image/webp") {
+    return (
+      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP"
+    );
+  }
+  if (contentType === "image/avif") {
+    const brand = new TextDecoder().decode(bytes.slice(8, 12));
+    return (
+      new TextDecoder().decode(bytes.slice(4, 8)) === "ftyp" &&
+      (brand === "avif" || brand === "avis")
+    );
+  }
+  return false;
+}
+
+async function copyLegacyImageToR2(
+  key: string,
+  environment: Environment,
+): Promise<boolean> {
+  const definitions = LEGACY_PRODUCT_IMAGES as Record<
+    string,
+    { sourceUrl: string; contentType: string }
+  >;
+  const definition = definitions[key];
+  if (!definition || !environment.PRODUCT_IMAGES) return false;
+
+  try {
+    const response = await fetch(definition.sourceUrl, {
+      headers: {
+        accept: "image/avif,image/webp,image/png,image/jpeg,*/*;q=0.8",
+        "user-agent": "RedeASSO-image-migration/1.0",
+      },
+      redirect: "follow",
+    });
+    if (!response.ok) return false;
+
+    const declaredLength = Number(response.headers.get("content-length"));
+    if (
+      Number.isFinite(declaredLength) &&
+      declaredLength > MAX_PRODUCT_IMAGE_BYTES
+    ) {
+      return false;
+    }
+
+    const body = await response.arrayBuffer();
+    if (body.byteLength === 0 || body.byteLength > MAX_PRODUCT_IMAGE_BYTES) {
+      return false;
+    }
+    if (
+      !hasExpectedImageSignature(new Uint8Array(body), definition.contentType)
+    ) {
+      return false;
+    }
+
+    await environment.PRODUCT_IMAGES.put(key, body, {
+      httpMetadata: {
+        contentType: definition.contentType,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+      customMetadata: { sourceUrl: definition.sourceUrl.slice(0, 1024) },
+    });
+    return true;
+  } catch (error) {
+    console.error("Falha ao copiar uma imagem legada para o R2.", key, error);
+    return false;
+  }
+}
+
+async function migrateLegacyImageBatch(
+  environment: Environment,
+): Promise<void> {
+  const bucket = environment.PRODUCT_IMAGES;
+  if (!bucket) return;
+
+  try {
+    if (await bucket.head(LEGACY_MIGRATION_COMPLETE_KEY)) return;
+
+    const entries = Object.keys(LEGACY_PRODUCT_IMAGES);
+    const batches = Math.ceil(entries.length / LEGACY_MIGRATION_BATCH_SIZE);
+    if (batches === 0) return;
+
+    const batchIndex = Math.floor(Date.now() / 600_000) % batches;
+    const keys = entries.slice(
+      batchIndex * LEGACY_MIGRATION_BATCH_SIZE,
+      (batchIndex + 1) * LEGACY_MIGRATION_BATCH_SIZE,
+    );
+    const batchMarker = `_migrations/legacy-product-images-v7/batch-${batchIndex}`;
+
+    if (!(await bucket.head(batchMarker))) {
+      await Promise.all(
+        keys.map(async (key) => {
+          if (await bucket.head(key)) return;
+          await copyLegacyImageToR2(key, environment);
+        }),
+      );
+
+      const batchComplete = (
+        await Promise.all(keys.map((key) => bucket.head(key)))
+      ).every(Boolean);
+      if (batchComplete) {
+        await bucket.put(batchMarker, new ArrayBuffer(0), {
+          httpMetadata: { contentType: "text/plain" },
+          customMetadata: {},
+        });
+      }
+    }
+
+    const allBatchesComplete = (
+      await Promise.all(
+        Array.from({ length: batches }, (_, index) =>
+          bucket.head(`_migrations/legacy-product-images-v7/batch-${index}`),
+        ),
+      )
+    ).every(Boolean);
+    if (allBatchesComplete) {
+      await bucket.put(LEGACY_MIGRATION_COMPLETE_KEY, new ArrayBuffer(0), {
+        httpMetadata: { contentType: "text/plain" },
+        customMetadata: {},
+      });
+    }
+  } catch (error) {
+    console.error("Falha no lote de migração das imagens legadas.", error);
+  }
+}
+
 async function handleProductImageMutation(
   request: Request,
   requestUrl: URL,
@@ -206,11 +363,15 @@ async function serveProductImage(
   if (!environment.PRODUCT_IMAGES) return new Response(null, { status: 404 });
 
   const key = requestUrl.pathname.slice(PRODUCT_IMAGE_PUBLIC_PREFIX.length);
-  if (!/^[a-f0-9-]+\.(?:jpg|png|webp|avif)$/.test(key)) {
+  if (!isServableImageKey(key)) {
     return new Response(null, { status: 404 });
   }
 
-  const image = await environment.PRODUCT_IMAGES.get(key);
+  let image = await environment.PRODUCT_IMAGES.get(key);
+  if (!image && isLegacyImageKey(key)) {
+    const copied = await copyLegacyImageToR2(key, environment);
+    if (copied) image = await environment.PRODUCT_IMAGES.get(key);
+  }
   if (!image) return new Response(null, { status: 404 });
 
   const headers = new Headers({
@@ -256,6 +417,8 @@ export default {
     _controller: unknown,
     environment: Environment,
   ): Promise<void> {
+    await migrateLegacyImageBatch(environment);
+
     if (!environment.API_ORIGIN) {
       console.error("Ping não executado: API_ORIGIN não está configurada.");
       return;

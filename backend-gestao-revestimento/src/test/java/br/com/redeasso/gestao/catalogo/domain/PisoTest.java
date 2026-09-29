@@ -40,7 +40,18 @@ class PisoTest {
         assertThat(piso.getUltimaConsultaAreaCentralEm()).isEqualTo(segundaConsulta);
     }
 
+    @Test
+    void calculaPecasPorCaixaComArredondamentoComum() {
+        Piso piso = Piso.cadastrar(dados("ASSO-1", null, "1.62"));
+
+        assertThat(piso.getPecasPorCaixa()).isEqualByComparingTo("5");
+    }
+
     private static DadosPiso dados(String codigoRede, String codigoLoja) {
+        return dados(codigoRede, codigoLoja, "1.44");
+    }
+
+    private static DadosPiso dados(String codigoRede, String codigoLoja, String m2PorCaixa) {
         return new DadosPiso(
                 "Piso de teste",
                 codigoRede,
@@ -49,7 +60,7 @@ class PisoTest {
                 new BigDecimal("60"),
                 new BigDecimal("2"),
                 new BigDecimal("4"),
-                new BigDecimal("1.44"),
+                new BigDecimal(m2PorCaixa),
                 null,
                 null,
                 ClassificacaoUso.LD,

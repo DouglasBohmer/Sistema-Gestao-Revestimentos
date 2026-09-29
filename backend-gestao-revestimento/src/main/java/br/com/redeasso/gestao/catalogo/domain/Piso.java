@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -177,11 +178,11 @@ public class Piso {
         largura = dados.largura();
         altura = dados.altura();
         rejunte = dados.rejunte();
-        pecasPorCaixa = dados.pecasPorCaixa();
         m2PorCaixa = Objects.requireNonNull(dados.m2PorCaixa(), "m2PorCaixa é obrigatório");
         if (m2PorCaixa.signum() <= 0) {
             throw new IllegalArgumentException("m2PorCaixa deve ser positivo");
         }
+        pecasPorCaixa = calcularPecasPorCaixa(largura, altura, m2PorCaixa, dados.pecasPorCaixa());
         localDeUso = textoOpcional(dados.localDeUso());
         tipoPiso = textoOpcional(dados.tipoPiso());
         classificacaoUso = dados.classificacaoUso();
@@ -204,6 +205,19 @@ public class Piso {
             throw new IllegalArgumentException(campo + " não pode ser negativo");
         }
         return normalizado;
+    }
+
+    private static BigDecimal calcularPecasPorCaixa(
+            BigDecimal largura,
+            BigDecimal altura,
+            BigDecimal m2PorCaixa,
+            BigDecimal valorInformado) {
+        if (largura == null || altura == null || largura.signum() <= 0 || altura.signum() <= 0) {
+            return valorInformado;
+        }
+
+        BigDecimal areaPecaM2 = largura.multiply(altura).movePointLeft(4);
+        return m2PorCaixa.divide(areaPecaM2, 0, RoundingMode.HALF_UP);
     }
 
     private static String textoObrigatorio(String valor, String campo) {

@@ -24,7 +24,12 @@ async function scalar(database, sql) {
   return result.rows[0].value;
 }
 
-async function expectConstraintViolation(database, sql, expectedCode, description) {
+async function expectConstraintViolation(
+  database,
+  sql,
+  expectedCode,
+  description,
+) {
   try {
     await database.exec(sql);
     assert.fail(`A restrição não rejeitou: ${description}`);
@@ -49,8 +54,8 @@ try {
 
   assert.deepEqual(
     migrations.map(migrationVersion),
-    [1, 2, 3, 4, 5, 6],
-    "A sequência de migrations deve ser contínua de V1 a V6",
+    [1, 2, 3, 4, 5, 6, 7],
+    "A sequência de migrations deve ser contínua de V1 a V7",
   );
 
   for (const migration of migrations) {
@@ -60,7 +65,9 @@ try {
   }
 
   assert.equal(
-    Number(await scalar(database, "SELECT COUNT(*)::integer AS value FROM pisos")),
+    Number(
+      await scalar(database, "SELECT COUNT(*)::integer AS value FROM pisos"),
+    ),
     261,
     "A carga consolidada deve conter 261 produtos",
   );
@@ -148,11 +155,11 @@ try {
         database,
         `SELECT COUNT(*)::integer AS value
            FROM pisos
-          WHERE link_foto IS DISTINCT FROM link_foto_origem`,
+          WHERE link_foto LIKE '/product-images/legacy/%'`,
       ),
     ),
-    0,
-    "O link original da foto deve ser preservado",
+    131,
+    "Somente os 131 produtos com imagens válidas devem apontar para o R2",
   );
   assert.equal(
     Number(
@@ -163,6 +170,31 @@ try {
     ),
     259,
     "A origem possui 259 links de foto e dois produtos sem foto",
+  );
+  assert.equal(
+    Number(
+      await scalar(
+        database,
+        `SELECT COUNT(*)::integer AS value
+           FROM pisos
+          WHERE link_foto_origem IS NOT NULL`,
+      ),
+    ),
+    259,
+    "A URL original deve permanecer preservada inclusive após o roteamento ao R2",
+  );
+  assert.equal(
+    Number(
+      await scalar(
+        database,
+        `SELECT COUNT(*)::integer AS value
+           FROM pisos
+          WHERE link_foto IS NOT NULL
+            AND link_foto NOT LIKE '/product-images/legacy/%'`,
+      ),
+    ),
+    128,
+    "Os 128 produtos sem imagem válida no momento da análise devem manter o link atual",
   );
   assert.equal(
     Number(
@@ -277,7 +309,7 @@ try {
   );
 
   console.log(
-    "\nVerificação concluída: V1–V6 aplicadas, 261 produtos e 259 links de foto validados.",
+    "\nVerificação concluída: V1–V7 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
   );
 } finally {
   await database.close();

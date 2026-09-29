@@ -110,6 +110,9 @@ Regras obrigatórias:
 - Produtos importados começam inativos, com preço R$ 0,00 e estoque 0 m². Produtos sem ASSO têm ativação manual; a origem de preço e estoque deve distinguir ao menos `MANUAL` e `AREA_CENTRAL`.
 - Consulta externa bem-sucedida ativa o produto e atualiza preço, estoque em m², status e instante da consulta. Somente “Produto não encontrado” o desativa; estoque zero, “Fora de linha”, timeout e falhas temporárias não desativam. Ao desativar, preserve os últimos preço/estoque conhecidos.
 - Links de foto legados devem ser preservados como origem. A cópia própria irá para Cloudflare R2; enquanto ela não existir ou falhar, o link original continua sendo o fallback visível.
+- Em 29/09/2026, 124 arquivos distintos válidos, usados por 131 produtos, foram selecionados para cópia progressiva ao R2. Os outros 128 produtos com link mantêm a URL externa sem alteração; dois produtos continuam sem foto. A URL histórica permanece em `link_foto_origem` em todos os casos.
+- Peças por caixa são calculadas automaticamente por `m2_por_caixa / ((largura_cm / 100) * (altura_cm / 100))`, com arredondamento comum (`HALF_UP`) para inteiro. O campo fica bloqueado na tela e o backend recalcula o valor quando largura e altura existem.
+- No cadastro, selecionar `LA` a `LE` preenche automaticamente a descrição correspondente de local de uso, que continua editável. `Retificado` sugere rejunte de 2 mm e `Bold`, 5 mm; juntas de 1, 1,5 ou 2 mm selecionam Retificado e a de 5 mm seleciona Bold.
 
 ### 3.5 Parâmetros de negócio
 
@@ -134,7 +137,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 - O Node/Express foi removido. O runtime de negócio é 100% Spring Boot. Em Docker local, o Spring ainda pode servir o bundle React; em produção, o React fica no Cloudflare Workers e o Spring Render expõe somente a API.
 - CRUD/busca de pisos, cálculo, dashboard/atividades e mapas estão implementados no Spring e persistidos no PostgreSQL por JPA/Flyway.
-- As migrations V1–V4 criam Spring Session, parâmetros-base, pisos/atividades e mapas/células. Dois pisos demonstrativos são carga inicial de V3; dados novos sobrevivem a restart do container.
+- As migrations V1–V7 criam Spring Session, parâmetros-base, pisos/atividades, mapas/células, importam e consolidam os 261 produtos legados e direcionam somente as imagens validadas ao R2. Dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
 - O acesso temporário `admin/admin` agora cria uma sessão real no Spring, com cookie HttpOnly, CSRF e Spring Session JDBC. O booleano falso de `sessionStorage` foi removido.
 - A limpeza de sessões expiradas do Spring Session JDBC roda uma vez ao dia, às `06:00 UTC` (`03:00` em Brasília), por `SESSION_CLEANUP_CRON`. Não restaurar o padrão de uma execução por minuto, pois isso mantém o Neon acordado sem uso real.
@@ -240,7 +243,7 @@ Peças por caixa no cadastro:
 pecas_por_caixa = m2_por_caixa / area_peca_m2
 ```
 
-O legado formata o resultado como inteiro por arredondamento comum, sem decisão explícita entre piso/teto.
+O novo sistema confirmou o comportamento do legado: formata o resultado como inteiro com arredondamento comum (`HALF_UP`).
 
 Rejunte, com profundidade fixa 9 e coeficiente fixo 1,8:
 
@@ -423,7 +426,7 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 - **Q21.** O campo externo “múltiplo” é sempre o m² por caixa e pode atualizar automaticamente o cadastro local?
 - **Q23.** Qual é o padrão e os limites da margem de quebra? Ela se aplica antes do arredondamento de caixas e pode ser alterada por quem?
 - **Q25.** Os kg exibidos devem ser consumo teórico ou quantidade efetivamente vendida após arredondar embalagens?
-- **Q26.** Peças por caixa devem ser digitadas, derivadas ou apenas validadas? Se derivadas, usar arredondamento comum, piso ou teto?
+- **Decidido (Q26).** Peças por caixa são derivadas automaticamente de largura, altura e m² por caixa, bloqueadas para edição e arredondadas para o inteiro mais próximo com `HALF_UP`.
 - **Q27.** Como tratar estoque exatamente igual a 1 e quais status externos são canônicos? As cores são apenas apresentação, não regra de domínio.
 - **Q28.** O estoque consultado representa rede, filial, depósito ou combinação? Como escolher a unidade e tratar estoque insuficiente/indisponibilidade externa?
 
@@ -441,7 +444,7 @@ Evite uma troca total sem compatibilidade. Preserve contratos úteis do frontend
 ### Prioridade 2 — escopo e qualidade
 
 - **Q38.** O limite acadêmico de três telas foi abandonado com mapa/orçamento ou deve ser reinterpretado como três fluxos principais?
-- **Q39.** Upload e armazenamento de imagens entram agora? Onde os arquivos serão persistidos e copiados no fallback?
+- **Decidido (Q39).** Uploads e cópias válidas das fotos legadas usam o bucket Cloudflare R2 `redeasso-product-images`. A migração legada ocorre progressivamente pelo Worker, com cópia no primeiro acesso e em lotes agendados; links inválidos permanecem externos e a URL original é preservada como fallback. O fallback local não armazena arquivos de produção.
 - **Q40.** Quantos usuários simultâneos, qual latência máxima e qual disponibilidade devem ser testados?
 - **Q41.** Quando a Área Central estiver fora, mostrar último snapshot, bloquear orçamento ou permitir continuar com aviso?
 

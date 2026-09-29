@@ -11,6 +11,15 @@ type PisoImageProps = {
   fallbackClassName?: string;
 };
 
+export function legacyProductImageFallback(
+  primaryUrl?: string | null,
+  originalUrl?: string | null,
+): string | undefined {
+  return primaryUrl?.startsWith("/product-images/legacy/")
+    ? originalUrl || undefined
+    : undefined;
+}
+
 function imageCandidates(
   primaryUrl?: string | null,
   fallbackUrl?: string | null,

@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Layout } from "@/components/layout/Layout";
 import {
   useListPisos,
@@ -41,7 +41,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
-import { PisoImage } from "@/components/catalogo/PisoImage";
+import {
+  PisoImage,
+  legacyProductImageFallback,
+} from "@/components/catalogo/PisoImage";
 import { useToast } from "@/hooks/use-toast";
 import {
   Save,
@@ -53,6 +56,7 @@ import {
   Plus,
   Upload,
   Loader2,
+  Eraser,
 } from "lucide-react";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -62,6 +66,15 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/webp",
   "image/avif",
 ]);
+const USAGE_DESCRIPTION: Partial<
+  Record<"LA" | "LB" | "LC" | "LD" | "LE" | "LF", string>
+> = {
+  LA: "Paredes residenciais e comerciais internas e externas até 3 metros de altura",
+  LB: "Ambientes residenciais sem acesso para a rua, como banheiros, salas, quartos e cozinhas",
+  LC: "Ambientes comerciais e residências internos, sem acesso a áreas externas e de equipamentos",
+  LD: "Indicado para uso como piso em todos os ambientes residenciais",
+  LE: "Todos os ambientes residenciais e comerciais externos",
+};
 
 type ProductImageUploadResponse = { url: string };
 
@@ -173,13 +186,13 @@ export default function Cadastro() {
       codigoLoja: "",
       largura: undefined,
       altura: undefined,
-      rejunte: undefined,
+      rejunte: 2,
       pecasPorCaixa: undefined,
       m2PorCaixa: 0,
-      localDeUso: "",
+      localDeUso: USAGE_DESCRIPTION.LA,
       tipoPiso: "",
-      classificacaoUso: undefined,
-      acabamentoBordas: "BOLD",
+      classificacaoUso: "LA",
+      acabamentoBordas: "RETIFICADO",
       linkSite: "",
       linkFoto: "",
       linkFotoOrigem: "",
@@ -191,6 +204,30 @@ export default function Cadastro() {
   });
 
   const linkFotoValue = form.watch("linkFoto");
+  const linkFotoOrigemValue = form.watch("linkFotoOrigem");
+  const larguraValue = form.watch("largura");
+  const alturaValue = form.watch("altura");
+  const m2PorCaixaValue = form.watch("m2PorCaixa");
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const largura = Number(larguraValue);
+    const altura = Number(alturaValue);
+    const m2PorCaixa = Number(m2PorCaixaValue);
+    if (largura > 0 && altura > 0 && m2PorCaixa > 0) {
+      const areaPeca = (largura / 100) * (altura / 100);
+      form.setValue("pecasPorCaixa", Math.round(m2PorCaixa / areaPeca), {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    } else if (form.getValues("pecasPorCaixa") !== undefined) {
+      form.setValue("pecasPorCaixa", undefined, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [alturaValue, form, isEditing, larguraValue, m2PorCaixaValue]);
 
   const handleSelectPiso = (piso: Piso, preserveUploadedImage = false) => {
     if (temporaryUploadedImage && !preserveUploadedImage) {
@@ -237,13 +274,13 @@ export default function Cadastro() {
       codigoLoja: "",
       largura: undefined,
       altura: undefined,
-      rejunte: undefined,
+      rejunte: 2,
       pecasPorCaixa: undefined,
       m2PorCaixa: 0,
-      localDeUso: "",
+      localDeUso: USAGE_DESCRIPTION.LA,
       tipoPiso: "",
-      classificacaoUso: undefined,
-      acabamentoBordas: "BOLD",
+      classificacaoUso: "LA",
+      acabamentoBordas: "RETIFICADO",
       linkSite: "",
       linkFoto: "",
       linkFotoOrigem: "",
@@ -251,6 +288,9 @@ export default function Cadastro() {
       valor: 0,
       estoqueM2: 0,
       ativo: false,
+    });
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
   };
 
@@ -314,6 +354,51 @@ export default function Cadastro() {
 
   const handleLimpar = () => {
     handleNew();
+  };
+
+  const handleClassificationChange = (
+    value: NonNullable<PisoFormValues["classificacaoUso"]>,
+  ) => {
+    form.setValue("classificacaoUso", value, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("localDeUso", USAGE_DESCRIPTION[value] ?? "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const handleBorderFinishChange = (
+    value: PisoFormValues["acabamentoBordas"],
+  ) => {
+    form.setValue("acabamentoBordas", value, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue("rejunte", value === "RETIFICADO" ? 2 : 5, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const handleGroutChange = (value: string) => {
+    const grout = Number(value);
+    form.setValue("rejunte", grout, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (grout <= 2) {
+      form.setValue("acabamentoBordas", "RETIFICADO", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    } else if (grout === 5) {
+      form.setValue("acabamentoBordas", "BOLD", {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
   };
 
   const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -489,7 +574,7 @@ export default function Cadastro() {
                 >
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
                         <FormField
                           control={form.control}
                           name="nome"
@@ -507,6 +592,9 @@ export default function Cadastro() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="codigoRede"
@@ -529,7 +617,7 @@ export default function Cadastro() {
                           name="codigoLoja"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Código CTC</FormLabel>
+                              <FormLabel>Código Loja</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Ex: 10567"
@@ -541,6 +629,9 @@ export default function Cadastro() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="largura"
@@ -581,20 +672,54 @@ export default function Cadastro() {
                             </FormItem>
                           )}
                         />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="rejunte"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Rejunte (mm)</FormLabel>
+                              <Select
+                                disabled={!isEditing}
+                                onValueChange={handleGroutChange}
+                                value={
+                                  field.value == null
+                                    ? undefined
+                                    : String(field.value)
+                                }
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {["1", "1.5", "2", "3", "4", "5"].map(
+                                    (grout) => (
+                                      <SelectItem key={grout} value={grout}>
+                                        {grout.replace(".", ",")} mm
+                                      </SelectItem>
+                                    ),
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="tipoPiso"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo de Piso</FormLabel>
                               <FormControl>
                                 <Input
-                                  type="number"
-                                  step="0.5"
-                                  placeholder="Ex: 3"
+                                  placeholder="Ex: Acetinado"
                                   disabled={!isEditing}
                                   {...field}
-                                  value={field.value ?? ""}
                                 />
                               </FormControl>
                               <FormMessage />
@@ -613,12 +738,17 @@ export default function Cadastro() {
                               <FormControl>
                                 <Input
                                   type="number"
-                                  placeholder="Ex: 4"
-                                  disabled={!isEditing}
+                                  readOnly
+                                  aria-readonly="true"
+                                  placeholder="Calculado automaticamente"
+                                  className="cursor-not-allowed bg-muted"
                                   {...field}
                                   value={field.value ?? ""}
                                 />
                               </FormControl>
+                              <p className="text-xs text-muted-foreground">
+                                Calculado pela largura, altura e m² por caixa.
+                              </p>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -645,7 +775,7 @@ export default function Cadastro() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
                         <FormField
                           control={form.control}
                           name="localDeUso"
@@ -656,25 +786,7 @@ export default function Cadastro() {
                                 <Textarea
                                   placeholder="Descrição detalhada do local de uso"
                                   disabled={!isEditing}
-                                  className="min-h-24 resize-y"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="tipoPiso"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo de Piso</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Ex: Acetinado"
-                                  disabled={!isEditing}
-                                  className="min-h-24 resize-y"
+                                  className="min-h-28 resize-y"
                                   {...field}
                                 />
                               </FormControl>
@@ -693,7 +805,7 @@ export default function Cadastro() {
                               <FormLabel>Classificação de Uso</FormLabel>
                               <Select
                                 disabled={!isEditing}
-                                onValueChange={field.onChange}
+                                onValueChange={handleClassificationChange}
                                 value={field.value}
                               >
                                 <FormControl>
@@ -730,7 +842,7 @@ export default function Cadastro() {
                               <FormLabel>Acabamento das Bordas *</FormLabel>
                               <Select
                                 disabled={!isEditing}
-                                onValueChange={field.onChange}
+                                onValueChange={handleBorderFinishChange}
                                 value={field.value}
                               >
                                 <FormControl>
@@ -876,6 +988,10 @@ export default function Cadastro() {
                         <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
                           <PisoImage
                             primaryUrl={linkFotoValue}
+                            fallbackUrl={legacyProductImageFallback(
+                              linkFotoValue,
+                              linkFotoOrigemValue,
+                            )}
                             alt={selectedPiso?.nome ?? "Imagem do piso"}
                             className="max-h-[300px] w-full rounded-md object-contain"
                             fallbackClassName="min-h-[276px] w-full"
@@ -966,6 +1082,14 @@ export default function Cadastro() {
                         <Trash2 size={18} className="mr-2" />
                         Excluir
                       </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleLimpar}
+                      >
+                        <Eraser size={18} className="mr-2" />
+                        Limpar
+                      </Button>
                       <div className="flex-1"></div>
                       <Button
                         type="button"
@@ -1012,6 +1136,10 @@ export default function Cadastro() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                   <PisoImage
                     primaryUrl={selectedPiso.linkFoto}
+                    fallbackUrl={legacyProductImageFallback(
+                      selectedPiso.linkFoto,
+                      selectedPiso.linkFotoOrigem,
+                    )}
                     alt={selectedPiso.nome}
                     className="h-24 w-24 shrink-0 rounded-md border bg-white object-contain"
                     fallbackClassName="h-24 w-24 shrink-0 border"
@@ -1176,6 +1304,10 @@ export default function Cadastro() {
                         <div className="flex items-center gap-3">
                           <PisoImage
                             primaryUrl={piso.linkFoto}
+                            fallbackUrl={legacyProductImageFallback(
+                              piso.linkFoto,
+                              piso.linkFotoOrigem,
+                            )}
                             alt={piso.nome}
                             className="h-11 w-11 shrink-0 rounded border bg-white object-contain"
                             fallbackClassName="h-11 w-11 shrink-0 rounded border text-[8px]"

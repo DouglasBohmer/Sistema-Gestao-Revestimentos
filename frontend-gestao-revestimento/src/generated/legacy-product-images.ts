@@ -1,0 +1,744 @@
+// Gerado por scripts/generate_legacy_image_migration.py.
+// Não editar manualmente.
+export const LEGACY_PRODUCT_IMAGES = {
+  "legacy/033dbdcfdcf1ec12cafc0a73ad6766742adfe199a2d690fd347fb8ed3b518f3b.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/e9735a70938d9b70b8c7f5ce5c41dde1.webp",
+      contentType: "image/webp",
+    },
+  "legacy/03d3b842191fbad5b7e51dd85884caf4a0e88c6ec34b4cf45edad15088fdf5d3.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-bianco-pl-gaudi-porcelanato-1589296445-1205202020121405.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/06898d840fec16e96d5a2c99fb65f9f2722fcf26fcbef9b2677b7673859eef87.png":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/3694/Paginacao-Yara-Nature.png",
+      contentType: "image/png",
+    },
+  "legacy/07cbdfc211c954e6efa5859f87a33ab64617014b56c0a789f64273e128c38fd7.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/ce90a2fed52a90e9d3d3c9dbf3f3ed4d.webp",
+      contentType: "image/webp",
+    },
+  "legacy/07ec1a99bec74d79bbdfafae5a5ce40fe9993ec16b5083029d58eec4716b00fc.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1198/Mitos-Terrazo-62x122-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/0926640ce12f82c180cb416b2418b1b25cf5e119d9c383897498683d98220cf2.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/4cff94e6e18869c90356657048e6bd82.webp",
+      contentType: "image/webp",
+    },
+  "legacy/092e8b724fdd276bdd6c9d682c71714648749b265e449192ecb125054ca82923.jpg":
+    {
+      sourceUrl:
+        "https://ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hda13-ceramica-almeida-1588190214-2904202020165654.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/095dfc3093aa661392fe3d6a3ea95bfb1c8a9359430c5a3c9694bc46307ee7a3.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/2bb0b64a8ec2ee42e8241e37958c8528.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/0b225fd430a89becd9c213a666c688a42798c9d2aa0cb68a79d2a80053756915.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/foto-kotel-mineral-gr-0-1582060324-1802202020181204.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/0b432170f58cdd8e8560412609200f55f3e71440998e819af0d42f830aaff25d.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1083/PULPIS-GRAFITE-82X82-61X61-F2.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/0c9dee86acb78d79c990c74b713863b3de1d986740b370895642ead4ffb27378.jpg":
+    {
+      sourceUrl: "https://www.angelgres.com.br/ger/f/produtos/22-87-G.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/0e8aaef3d39347cb8985a82990b2b8bfffe617dc25d13cc01d84d66ce47561cb.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/quebec_dark_grey_ac_fc1-jpg___gaudi-porcelanato-1575313600-0212192019160640.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/1a4370399ae44f4096240df20f4381c655d47a48d360e45ff8fb9c07857bf8c4.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/3475/AUSTIN-DECOR-GRAY-FC1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/1ac3b495505ab2bbc768294b8389fbb813c684bbbf53a5bda304725c0369f58c.jpg":
+    {
+      sourceUrl:
+        "https://www.cedasa.com.br/assets/uploads/produtos/rt39000-fca887.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/1cabb331dda07d7bf1de748e68935ad64af1c0b495db9f617946c0f07c0c110a.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-dom-canela-gr-gaudi-porcelanato-1614108419-2302212021162659.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/1cdf9928a30c8a98282e275ccaedb481bf5aae6a80c34bf382835b3e215b4225.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-taberna-titanio-gr-gaudi-porcelanato-1614112356-2302212021173236.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/225a5733171830f22fe15050f57644795aefab2581d48dc36ee73d4fc1a1614d.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/broardway_darck_grey_fc1-jpg___gaudi-porcelanato-1624894576-2806212021123616.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/255994ebb7e6ca4182dfa076efe4d9eef54cc77823eb028b4e36d2c88e1a7768.jpg":
+    {
+      sourceUrl:
+        "https://helenaporcelanato.com.br/Files/Produtos/3709/SPLENDOR-NERO-F3-S.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2698a2c82ed6fda97bba55a8feea261c15effc0dac5b8bcc800c06ed4d278741.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-braganca-gris-gr-ceramica-almeida-1706541579-2901242024121939.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/28a2ca2ad6cd4d4a9f83736825ab972b7f92b38e95b86fbab8f50851e7dff743.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/argo-grigio_fc1-jpg___gaudi-porcelanato-1648517570-2803222022223250.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/296b466ce9aa9ae5d1641c0365068579ef174f601b1b7252440462264665d874.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/3a7ecacea049935b36ad9f0471cc0478.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2ab8ec8e6a623a650217c190d47c7df50365ca730e572b39d3579fb817289b35.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/foto-produto-ceramica-almeida-1650336609-1804222022235009.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2adeab8e14459b7c2f1eec8b8edd69c6f4bf7073bc7f302178cf64061d391b25.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/elegance_almond_ac_fc1-jpg___gaudi-porcelanato-1581626145-1302202020173545.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2bf6ec9efc726433ccf47a8abbcc579b63dbd9afd00ef623d6b3fe37997f4c0d.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1085/PULPIS-ACERO-82X82-61X61-F2.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2edc610b7b1cf9536c91a3bce833fa63a38c7f303b57ed3f2c1959e4fa592aec.png":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/3665/Paginacao-Dark-Castor.png",
+      contentType: "image/png",
+    },
+  "legacy/2ef22bd1f5104459a97f2574439529855899ba823f50341a940c6ebf344721ec.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/a4649adfa0be7a0bc21eabb455600f17.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2f5bd7b1c6b6e9b28bfb2d51c3d331e04585355e818b968dc57ecfe25ecaca60.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/foto-ecotech-carvalho-ac-0-1580913629-0502202020114029.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/2fe2d4a05d2434ddb49ef526d108d2ee9cd124bdc1edaf0964ad253f5787358d.webp":
+    {
+      sourceUrl:
+        "https://a-static.mlcdn.com.br/800x560/revestimento-phde36190-35x60-caixa-169-in-out-porcelanatos/sodimacdicico/868834/65106823f5ed051d1d1a8af7bab4e639.jpg",
+      contentType: "image/webp",
+    },
+  "legacy/31fe265d3a6edfb98be102e7008c69d314a5ddaae0a0e188c625510c5a2fc9e5.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32a01-ceramica-almeida-1588187154-2904202020160554.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/3311b8899624d6d793b6047dd847d6d5b167e4e44b59c48f1b9ef4af54f80f9a.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hda20-ceramica-almeida-1588192229-2904202020173029.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/34e08df3d9e2da8ba680417811674aafcf2caf5738cfffe174e59bb8eb14b2b9.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/b0f60cfc0a46f269541f54856cbd2033.webp",
+      contentType: "image/webp",
+    },
+  "legacy/39a01e8c0bb110522745ec02e1dcd7cd88cc23c605fe1baf5357588ea8d4f276.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/c06b61aaa4896c09c275b34223b24a66.webp",
+      contentType: "image/webp",
+    },
+  "legacy/3bdbcdb539c9b1837c9b98550c7f4cf3f6aa5f3d550e49a0ec75341447b15e8b.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1426857618__2003152015082018.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/3c24f0906a8cb2dd61d408dd40232c92b7b472cf1adfd4a48c6e30801f391cca.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-bianco-ac-gaudi-porcelanato-1589296411-1205202020121331.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/3d815556452113ca4876647e74837088c5c6acfdabbbe682b5511cee44318962.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-verona-pl-gaudi-porcelanato-1681470371-1404232023080611.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/3e41d57759fde84d0dd1fbd85638005c4fcfc55205ef65d82b4e6fee3f76e02e.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/quebec_grey_ac_fc1-jpg___gaudi-porcelanato-1575313039-0212192019155719.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/4095a9cc8f144aea6bbf1e5c15e304cd6012f0f71cf73e71d1d46fd8ed0449d5.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/d6b041a43393a701f541e83196083905.webp",
+      contentType: "image/webp",
+    },
+  "legacy/43a5f8c17da4f4dcb9e5c5112d84c4c1c9b228c9c4ed2ca1e046b982fa54be4b.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1557971933__1605192019015853.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/443853b9e385be1678e4fcdbe22b8cb7e2fd27a78d7676e87e39a758e013ca34.webp":
+    {
+      sourceUrl:
+        "https://monte.vteximg.com.br/arquivos/ids/155791-292-292/Piso-57X57-170029-Vivence.jpg?v=637436609974400000",
+      contentType: "image/webp",
+    },
+  "legacy/4f9d438919fe4b107380caae3d8c73de5acfbfa5acd3c66ba3651cf1b9b61117.jpg":
+    {
+      sourceUrl:
+        "https://www.dammeporcelanato.com.br/Files/Produtos/3794/IRIS-61X120-POLIDO-F1-NOVO.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/5007fff1d730f69cd37442139d42f7cb55f6bf0c292103ecf77550107d0e9e65.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/b7ae3b8da10580864e73239c97cb0e59.webp",
+      contentType: "image/webp",
+    },
+  "legacy/561f6616504b5e51974c658b4ecee91d0620f20d914850eadbd9cb0c0031af5a.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1426/PORCELANATO-61X121-BRANCO-PAREDE-PR12000.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/585b92883ef4d1eeee192f1878537fce9e79d8ff922b83774cb3d917cca7115f.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/broardway_darck_grey_fc1-jpg___gaudi-porcelanato-1581349898-1002202020125138.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/588d55aeb64e42c160aed37a4053e5dc45e4a8238f848c9e6bdb5ac3e3a3990c.jpg":
+    {
+      sourceUrl:
+        "https://artecincobrasil.com/sistema_padrao_ceramica/arquivos_dos_sites/vivaceramica/fotos_produtos/produtos/imagemG/58002.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/5a6c28a0824ed49a072a7f16d62ef4af584b2693d42fab2c60609d73ef2974a6.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/foto-produto-ceramica-almeida-1730291703-3010242024093503.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/5efb66c1a5c2086145726a569174fc49061a5a21162b6c71bd2a3141c088534a.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-mocca-grey-ac-gaudi-porcelanato-1581360645-1002202020155045.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/5f57af08528de22d4502e26fa4193990efd5ab3a4c0c1bfba6a85b35ab485896.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1364/SOHO-GRIGIO-83x83-62X62-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/650cfcf1d2123c5c4054797f533a012c9f8819a0d3b051fbf8ef532caf5bfed7.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/73393396fa48fcd6aaa2c1a0a2cddcc3.webp",
+      contentType: "image/webp",
+    },
+  "legacy/691d62e74ee1934c0f676069c93b0624fcbe855940db705afcfffffc0f064305.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1554922650__1004192019185730.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/69dad11eb19f612e43bccb4dd2078468689c59c77b62af49e644cecaca2e7a41.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32a13-ceramica-almeida-1588877700-0705202020155500.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/6b504280190fee0b256b877f02898db7b664fd9a0f50a08c819edc29e2428d4c.jpg":
+    {
+      sourceUrl:
+        "https://www.cedasa.com.br/assets/uploads/produtos/rt39028-35ead1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/6cf6b5490ffc57e3e850255240e80bfb5dc74e30f4ca26669dde6f9065909a63.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-calacata-oro-ac-gaudi-porcelanato-1589299593-1205202020130633.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/6d24efe80643b1c58e4a2858c5fb23071d976353dab49d738be8c6edc66b0336.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/bec72e5be0c2a4f6205517a9feb5ee29.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/6f865b121566d9ab7801786a415d6ed563e6f620ccc85d1c848b121e1ef75c7c.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hdl10-ceramica-almeida-1588602788-0405202020113308.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7173f7e2e50120b77ab365305e3886daaaaa81e0801dc004de210255c8a28d98.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-calacata-light-pl-gaudi-porcelanato-1681470292-1404232023080452.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/73d9bd609cf57201b6d2117c725cab70b107e6c2096e3a0bc65a22a79d89d2f3.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1368/SOHO-GRAFITE-83x83-62X62-F3.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7498960fb051a7d43da6daed158c43d4a28f49670e2a4bc914294c97ad430ed1.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/11eaf2686aa3b36b90f18c8a013e7bba.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/757742e794a1682d01ce58626f65a98c8717b50c6f2088a8b7ccb07d692db9ec.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/7674fce8fb634de34586d3f18ca70682.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/75e82ec7171dcae17a94339ed7ba1ea4b11c04bfe0aada305184a2880c2ca590.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/oxidart_fc1-jpg___gaudi-porcelanato-1586960596-1504202020112316.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7a5178e1eabd3b49a517cd36d3794e8b4b3a36380757f5b536b626e47ed95838.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-carrara-dream-ac-gaudi-porcelanato-1589299237-1205202020130037.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7b4fcfd0e23467f34983c6e8d64e1beef3ae9d8272516eb24c6d9e3420c777d8.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/majestic_white_ac_fc1-jpg___gaudi-porcelanato-1628190049-0508212021160049.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7ce42ed175884026394d82d0d060c2ba6eae2ed6b4b6ed847b2e5572fd770bb6.jpg":
+    {
+      sourceUrl:
+        "https://www.dammeporcelanato.com.br/Files/Produtos/3827/FIOR-DI-PESCO-POLIDO-61x120-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7e207a7fd90e3f9c5c38b7a9d0a17ff14f6884390f6dfa28d50c2b27982f6daa.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/8b64cd1068111a59f334abfced362e8b.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/7f77238849afcee08cb81795f5e5b2855f24cf1e6e079c5654130b9aa248df08.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/f848f2a0028e62e9c4ff58e3ac0aadd9.webp",
+      contentType: "image/webp",
+    },
+  "legacy/816626fad930200a74cd4f9162296ef4cce55f66a4ec0172fe6055b94a218c0c.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/3838608ccc75b8dc668d497e8d0ee81b.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/81da343df5fc5e4aeb59c37f14134ab23ce6204009d34df40db37793c466f24e.jpg":
+    {
+      sourceUrl:
+        "https://artecincobrasil.com/sistema_padrao_ceramica/arquivos_dos_sites/vivaceramica/fotos_produtos/produtos/imagemG/firenze.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/8215c39bdfe1c6246c34bf7629c31b181db69c23e5ecca2482893f80948fcd21.webp":
+    {
+      sourceUrl:
+        "https://www.doraporcelanato.com.br/public/images/product/89ee44828f4ba672cb425ce6fff648d4.webp",
+      contentType: "image/webp",
+    },
+  "legacy/841ad7d87602e247fae592dc09db7fcf349a3f26b6e56afc7428842d14f1af59.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/d095842097ce3c47c2afca7b57211d3b.webp",
+      contentType: "image/webp",
+    },
+  "legacy/84f70325d135d2ac39af744633245050604d05cf359ad537b140e73f265c3958.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/fa0bcc7cfb70935124e5807a687ef373.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/85591f59d6d8136effb3ec183648370c6b77d5926d16ec027119f60eb35e680c.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-acores-natural-gr-ceramica-almeida-1738697364-0402252025162924.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/8ac69b865e1b9bca359e4c53c4fde8ae030e063874ac3419f742eb10d739db28.jpg":
+    {
+      sourceUrl:
+        "https://ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32a01-ceramica-almeida-1588187154-2904202020160554.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/8baeeaadd72561043110423a056919221e4de8c8913b11352787c6a828f9b7e0.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-toquio-ice-ac-gaudi-porcelanato-1681299571-1204232023083931.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/8e18d2d485186c09fcce11f35e0669a599e55537abf647f3681bb4bf7052ded3.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1554929459__1004192019205059.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/90202b6a9559a82bbb30baca91d6af98b454a407a79eef48d361b86aa5ead57f.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/b7848ae6f2b1f7e12e8f345a1ab17a71.webp",
+      contentType: "image/webp",
+    },
+  "legacy/90a76b99c3894e59b24e524d4a0aa3bad267fd6841bd627e9cf7e33f0b20415f.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/a2823e58976e98970633135e19c83d1d.webp",
+      contentType: "image/webp",
+    },
+  "legacy/91d2a814420ca3d8dafec19abd2c93d2f6b8c87eaeafd75509a053e0c1b5cce0.png":
+    {
+      sourceUrl:
+        "https://grupoincopisos.com.br/wp-content/uploads/2024/06/artico-56x113-d0b978.png",
+      contentType: "image/png",
+    },
+  "legacy/9305a55044b3a59e51373bd78b514a142a53911347d0270bbe7a878d53f1bd6d.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/d2c1bcdbf33b76cc84d0b0a03361105c.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/9362a122b44bdd5e1bb48a3b13b3c4179a9b6a3f672c8c3fb8f64a0255a7056d.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1005/CALACATA-DUNA-62X122-F6.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/93a35a25b2b16b3fcaf5c0421e02790b7ace589d7143c61f12f14dac79e0bc24.jpg":
+    {
+      sourceUrl:
+        "https://artecincobrasil.com/sistema_padrao_ceramica/arquivos_dos_sites/vivaceramica/fotos_produtos/produtos/imagemG/58019.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/979ee4557e03282ba04e5338c778b73ef35611d46ca80c48e9bf91deca19475d.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1363/SOHO-GRIGIO-83x83-62X62-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/97b317700dedefddbba25f3a56de57c5ae7f397c146a4c500b9970789737297e.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/bc9eccf375ccc0398e563c929b7029f1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/9879736073e1ec8650e74a04f4e968c4f0b6bcb6d03ff3aa93aa70b214d688bd.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1557968807__1605192019010647.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/9bccab48ebf6362b42c00c01758719da401d60f311704f85a1d974c517833b52.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/cfa4b879d3475fc082fb798dedc2db1d.webp",
+      contentType: "image/webp",
+    },
+  "legacy/9f2b56e41295f4eed77500a29a1b7c40d8cee163a1f0dad63bfb8b2d7cacf400.jpg":
+    {
+      sourceUrl:
+        "https://artecincobrasil.com/sistema_padrao_ceramica/arquivos_dos_sites/vivaceramica/fotos_produtos/produtos/imagemG/58026.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a02c4a2cdbb9ede7296077a1ab816d78ad942365750970b881d675c1587f6242.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hda14-ceramica-almeida-1588190934-2904202020170854.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a4441c1528784918f2e9568eb8966d538189572cc590fe21d683703e5fd409a9.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/be064d0fd20f7b97a2b9e28ff43130d8.webp",
+      contentType: "image/webp",
+    },
+  "legacy/a638f39600824061c2e80d083ad15a15391f2f17ca72dc532b59aad04add90ee.jpg":
+    {
+      sourceUrl:
+        "https://www.roschel.com.br/site/carrega?_tp=img5&_img=013572001.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a6fa3999f8439060f03f1d062dbce16bc46a8c92b60a05f12eeeed9cd933c82d.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/97b0cc48621fa3ec745d900f5f79cc04.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a83a58c16975050b22aa1d9f5b4efd1fa31479ad17f550a2f36a430b286a7674.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__0__1557156595__0605192019152955.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a8a13f9606ab230bc01cb52d13ff43c43c0d1575e0b720d9e8e5ff3898e439c4.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/majestic_white_ac_fc1-jpg___gaudi-porcelanato-1623289973-0906212021225253.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a92139d4e036deb182d9839ef7fc5f3d3fbedd454f27135be75591c67a95ae67.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/stanley_fc1-jpg___gaudi-porcelanato-1648355233-2703222022012713.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/a9b885ef1f6fe888ad2c54f289ed474d43a9be720f4b7f9d65fd7789778f991c.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/8b910fdbbd79aa29f957def66b5c59bd.webp",
+      contentType: "image/webp",
+    },
+  "legacy/aa779d48b596412a523b7c3c368867a300dec7d0b105a7939ae1fed39c64be83.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/2b4e2c14d0a5b7eff0742796f302f984.webp",
+      contentType: "image/webp",
+    },
+  "legacy/abd76048b5ddc48dc01e54c865a9cf888d5bdd30a77567fdf3221fe2707e4446.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/53d3bc185bf8cc0a3fa27936507fdd1f.webp",
+      contentType: "image/webp",
+    },
+  "legacy/abf299f339dd89875ca6a61f876259857d81e6b61e8f5e88d803bfe24c934426.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/3bb3b46849e8ba0eb8da6b4f15a8aa04.webp",
+      contentType: "image/webp",
+    },
+  "legacy/ada85dbf30a9f0ec2478891f79ea5030ebf918e72c74d5015677bc4dfa99688f.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1188/SOHO-GRIGIO-83x83-62X62-F3.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b1829518c1282b765c2cf9b402d5df61ec5412de57467e447583a49856125702.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-calacata-oro-pl-gaudi-porcelanato-1589299614-1205202020130654.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b45a52eafd89d0db2a960e2eb1daadf688517a8aeb1cf13fd51b252f87736aa3.jpg":
+    {
+      sourceUrl:
+        "https://www.viviancentermat.com.br/upload/product/FaABfNXCFazZtuCV4ZDgXqgOZeGFuBkPuSegIIMM.jpeg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b519aee02ec048c2a3b89f8320a9befbad611a727ceef51a6951cafb5b1d8221.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32a09-ceramica-almeida-1588190867-2904202020170747.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b5f28e33c2d1d31f1648b5e97b8ff7fea9e7883d5558cc72521bc5328ede3e11.jpg":
+    {
+      sourceUrl:
+        "https://www.dammeporcelanato.com.br/Files/Produtos/3686/Pedra-Estrela-Grafite-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b6a2e29703106762f238ff0c75cde7db3679a54b15b3e936287947e9d8265928.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hda15-ceramica-almeida-1588191020-2904202020171020.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/b860a4df79cf405185f58759649b885f8120ca491feb8ecacdf37784f983d65e.jpg":
+    {
+      sourceUrl: "https://www.angelgres.com.br/ger/f/produtos/215-1764-G.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/bd8226f8d964a933f39e10c3e87bd014a7befd4410b73609f5fc30168cc0d189.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1003/CALACATA-62X122-F1.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/bf9ec579bdaca00ce3186297566ec965c77764c4eb2ee7e80e62fcd3a6834604.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/334ff904e133a62eeebbc75d912f1018.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/c0ea28da1ff2a8f0f80d7ef9525c453c6944474d17bb8a5067a6275548f55789.jpg":
+    {
+      sourceUrl:
+        "https://ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32a10-ceramica-almeida-1588191148-2904202020171228.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/c46ac596e77a750fa0d07d60e5fdf6d336811398e56bdbcd8543e4a0155c7ec4.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/imagem-32hda21-ceramica-almeida-1588192271-2904202020173111.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/c58b882851fdd2266df1d485aea533c349bd89eaca375563d1a87e72415c75f8.jpg":
+    {
+      sourceUrl: "https://www.angelgres.com.br/ger/f/produtos/47-193-G.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/cb1c9fc264a6a6cb98b1eb6b2b245563ecf33e9943b0d983fc4bde66bd8dc2e3.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/imagem-broadway-dark-grey-nt-gaudi-porcelanato-1741261321-0603252025084201.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/cf830e0511d2ef1215242b9b8575eb775c251eb35210c92c86374af0284c922b.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/4064fc5200fadea94fe8857bd8f97f70.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/d09c0846508d74e36a70139f964a00bb0929bacd24d70cbcf4262c14f1257484.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/0b2983494a933ce750d9de12046e6d5e.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/d52694206e393364d8be7d4338bfda964a80d1cc2ca1d142f51d2696f7087c70.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/foto-produto-ceramica-almeida-1678324666-0803232023221746.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/dc1aef0a8db132f5ec668c29257be2fe7ccf288a923ff787c0d5018e9d841cee.jpg":
+    {
+      sourceUrl:
+        "https://ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1566829237__2608192019142037.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/e08e25d203159cc87fd8a607562976c59b3d281c700c18a8b995c6206f3a1b2f.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/ambientes/foto-ambiente-gaudi-porcelanato-1741258828-0603252025080028.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/e641f6e0db6d7506e1868d32b9a04edbd5694e7ad93e339abc0a35586a481eea.jpg":
+    {
+      sourceUrl:
+        "https://www.ceramicaalmeida.com.br/painel/dashboard/uploads/produtos/ceramica__almeida__1554923138__1004192019190538.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/e83c4e1b8fa9290c83fbde42841164ff33719363e70785ae889f1d969fbd845f.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/vertigo_ice_ac_fc1-jpg___gaudi-porcelanato-1678058170-0503232023201610.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/efcb02199713aa572d5806d06d072bcae09f686bd6e9437a48021b0722c63676.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/verona_fc1-jpg___gaudi-porcelanato-1681470537-1404232023080857.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/f39fc3cf04161e821404a2933d24d5b112ec8cdc0f9b66294ce607c9b09149a9.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/quebec_ice_ac_fc1-jpg___gaudi-porcelanato-1575312344-0212192019154544.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/fabd44babd63d34fc4dfbe55f8aed7952b637d08bacd4c57eaa9bd80572593dc.jpg":
+    {
+      sourceUrl: "https://www.angelgres.com.br/ger/f/produtos/97-343-G.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/fb761b22fed89c5939c9dc1884c6de23bc3d617219d2b2a4414d8599d4a57965.jpg":
+    {
+      sourceUrl:
+        "https://dammeporcelanato.com.br/Files/Produtos/1004/CALACATA-83X83-F5.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/fc13656571a70613487f415f072028df33b64e8662c7bca9a2e431851ece1922.webp":
+    {
+      sourceUrl:
+        "https://www.carmelofior.com.br/public/images/product/985b8ab8a9d42af92cbc2293ec83b04d.webp",
+      contentType: "image/webp",
+    },
+  "legacy/fc46840f1d9a6bf47894016df6d70be0814f196dcee1ce2d8d6458d0f186d62b.jpg":
+    {
+      sourceUrl:
+        "https://www.gaudiporcelanato.com.br/painel/dashboard/uploads/produtos/vertigo_ice_ac_fc1-jpg___gaudi-porcelanato-1678058228-0503232023201708.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/fcd50b460f76368a8a00d3dd6fbe47e5d7fef9848d3939d342778a6d04cfd22c.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/27298e62d4c2a020cecf644b283c5d6b.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/fda8cccf30f4cbedc1550d965a37bb90b44c764e5252c620acbdd82baf3102c3.jpg":
+    {
+      sourceUrl:
+        "https://artecincobrasil.com/sistema_padrao_ceramica/arquivos_dos_sites/vivaceramica/fotos_produtos/produtos/imagemG/58015.jpg",
+      contentType: "image/jpeg",
+    },
+  "legacy/ffa5db6772b01e884d86ecc1490feb9bfa2cc62e4fea95634870939f721f0ac4.jpg":
+    {
+      sourceUrl:
+        "https://grupoembramaco.com.br/public/images/product/2dc8e0cc182cee5c8ed9aea060223d5a.jpg",
+      contentType: "image/jpeg",
+    },
+} satisfies Record<string, { sourceUrl: string; contentType: string }>;

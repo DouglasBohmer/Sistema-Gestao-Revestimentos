@@ -805,6 +805,7 @@ components:
           description: Rejunte em mm
         pecasPorCaixa:
           type: ["number", "null"]
+          description: Calculado por m² por caixa dividido pela área da peça, com arredondamento comum
         m2PorCaixa:
           type: number
           description: Metros quadrados por caixa
@@ -877,6 +878,7 @@ components:
           type: number
         pecasPorCaixa:
           type: number
+          description: Campo de compatibilidade; o backend recalcula quando largura e altura estão preenchidas
         m2PorCaixa:
           type: number
         localDeUso:
@@ -1062,7 +1064,8 @@ components:
     Mapa:
       type: object
       additionalProperties: false
-      required: [id, nome, linhas, colunas, labels, celulas, createdAt, updatedAt]
+      required:
+        [id, nome, linhas, colunas, labels, celulas, createdAt, updatedAt]
       properties:
         id:
           type: integer

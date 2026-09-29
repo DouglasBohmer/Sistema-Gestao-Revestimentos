@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { PisoImage } from "@/components/catalogo/PisoImage";
+import {
+  PisoImage,
+  legacyProductImageFallback,
+} from "@/components/catalogo/PisoImage";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search,
@@ -219,6 +222,10 @@ export default function Calcular() {
                   <>
                     <PisoImage
                       primaryUrl={piso.linkFoto}
+                      fallbackUrl={legacyProductImageFallback(
+                        piso.linkFoto,
+                        piso.linkFotoOrigem,
+                      )}
                       alt={piso.nome}
                       className="mx-auto mb-3 h-20 w-1/3 min-w-24 rounded-md bg-white object-contain"
                       fallbackClassName="mx-auto mb-3 h-20 w-1/3 min-w-24"

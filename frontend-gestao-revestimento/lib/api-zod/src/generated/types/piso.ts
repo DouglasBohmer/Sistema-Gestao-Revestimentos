@@ -31,7 +31,10 @@ export interface Piso {
      * @nullable
      */
   rejunte?: number | null;
-  /** @nullable */
+  /**
+     * Calculado por m² por caixa dividido pela área da peça, com arredondamento comum
+     * @nullable
+     */
   pecasPorCaixa?: number | null;
   /** Metros quadrados por caixa */
   m2PorCaixa: number;

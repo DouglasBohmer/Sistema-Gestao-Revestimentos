@@ -17,6 +17,7 @@ export interface PisoInput {
   largura?: number;
   altura?: number;
   rejunte?: number;
+  /** Campo de compatibilidade; o backend recalcula quando largura e altura estão preenchidas */
   pecasPorCaixa?: number;
   m2PorCaixa: number;
   localDeUso?: string;
