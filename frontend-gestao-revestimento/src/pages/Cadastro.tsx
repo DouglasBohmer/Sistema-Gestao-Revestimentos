@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { Layout } from "@/components/layout/Layout";
 import {
   useListPisos,
@@ -6,6 +6,8 @@ import {
   useUpdatePiso,
   useDeletePiso,
   getListPisosQueryKey,
+  ApiError,
+  customFetch,
   type Piso,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,7 +43,70 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { PisoImage } from "@/components/catalogo/PisoImage";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Edit, Trash2, Search, Printer, X, Plus } from "lucide-react";
+import {
+  Save,
+  Edit,
+  Trash2,
+  Search,
+  Printer,
+  X,
+  Plus,
+  Upload,
+  Loader2,
+} from "lucide-react";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+]);
+
+type ProductImageUploadResponse = { url: string };
+
+function errorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+  if (!error.data || typeof error.data !== "object") return error.message;
+
+  const data = error.data as Record<string, unknown>;
+  for (const field of ["detail", "error", "message", "title"]) {
+    if (typeof data[field] === "string" && data[field].trim()) {
+      return data[field];
+    }
+  }
+  return error.message;
+}
+
+function isManagedProductImage(url: string | null | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url, window.location.origin).pathname.startsWith(
+      "/product-images/",
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function uploadProductImage(
+  file: File,
+): Promise<ProductImageUploadResponse> {
+  const body = new FormData();
+  body.append("file", file);
+  return customFetch<ProductImageUploadResponse>("/api/product-images", {
+    method: "POST",
+    body,
+    responseType: "json",
+  });
+}
+
+async function deleteProductImage(url: string): Promise<void> {
+  await customFetch<void>("/api/product-images", {
+    method: "DELETE",
+    body: JSON.stringify({ url }),
+  });
+}
 
 const pisoSchema = z
   .object({
@@ -58,6 +123,7 @@ const pisoSchema = z
     classificacaoUso: z.enum(["LA", "LB", "LC", "LD", "LE", "LF"]).optional(),
     acabamentoBordas: z.enum(["RETIFICADO", "BOLD"]),
     linkSite: z.string().optional(),
+    linkFoto: z.string().optional(),
     linkFotoOrigem: z.string().optional(),
     linkAreaCentral: z.string().optional(),
     valor: z.coerce.number().min(0).optional(),
@@ -85,6 +151,11 @@ export default function Cadastro() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPiso, setSelectedPiso] = useState<Piso | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [temporaryUploadedImage, setTemporaryUploadedImage] = useState<
+    string | null
+  >(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: pisos, isLoading } = useListPisos({
     search: search || undefined,
@@ -110,6 +181,7 @@ export default function Cadastro() {
       classificacaoUso: undefined,
       acabamentoBordas: "BOLD",
       linkSite: "",
+      linkFoto: "",
       linkFotoOrigem: "",
       linkAreaCentral: "",
       valor: 0,
@@ -118,13 +190,13 @@ export default function Cadastro() {
     },
   });
 
-  const linkFotoOrigemValue = form.watch("linkFotoOrigem");
-  const linkFotoValue = isEditing
-    ? linkFotoOrigemValue
-    : selectedPiso?.linkFoto;
-  const linkFotoFallback = isEditing ? undefined : selectedPiso?.linkFotoOrigem;
+  const linkFotoValue = form.watch("linkFoto");
 
-  const handleSelectPiso = (piso: Piso) => {
+  const handleSelectPiso = (piso: Piso, preserveUploadedImage = false) => {
+    if (temporaryUploadedImage && !preserveUploadedImage) {
+      void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
+    }
+    setTemporaryUploadedImage(null);
     setSelectedPiso(piso);
     setEditingId(piso.id);
     setIsEditing(false); // Selected for viewing, not editing yet
@@ -142,6 +214,7 @@ export default function Cadastro() {
       classificacaoUso: piso.classificacaoUso || undefined,
       acabamentoBordas: piso.acabamentoBordas,
       linkSite: piso.linkSite || "",
+      linkFoto: piso.linkFoto || "",
       linkFotoOrigem: piso.linkFotoOrigem || "",
       linkAreaCentral: piso.linkAreaCentral || "",
       valor: piso.valor,
@@ -151,6 +224,10 @@ export default function Cadastro() {
   };
 
   const handleNew = () => {
+    if (temporaryUploadedImage) {
+      void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
+    }
+    setTemporaryUploadedImage(null);
     setEditingId(null);
     setSelectedPiso(null);
     setIsEditing(true);
@@ -168,6 +245,7 @@ export default function Cadastro() {
       classificacaoUso: undefined,
       acabamentoBordas: "BOLD",
       linkSite: "",
+      linkFoto: "",
       linkFotoOrigem: "",
       linkAreaCentral: "",
       valor: 0,
@@ -197,6 +275,19 @@ export default function Cadastro() {
         { id: editingId },
         {
           onSuccess: () => {
+            const deletedImage = selectedPiso?.linkFoto;
+            if (deletedImage && isManagedProductImage(deletedImage)) {
+              void deleteProductImage(deletedImage).catch(() => undefined);
+            }
+            if (
+              temporaryUploadedImage &&
+              temporaryUploadedImage !== deletedImage
+            ) {
+              void deleteProductImage(temporaryUploadedImage).catch(
+                () => undefined,
+              );
+            }
+            setTemporaryUploadedImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             toast({
               title: "Piso excluído",
@@ -206,10 +297,13 @@ export default function Cadastro() {
             setSelectedPiso(null);
             setIsEditing(false);
           },
-          onError: () => {
+          onError: (error) => {
             toast({
               title: "Erro",
-              description: "Não foi possível excluir o piso.",
+              description: errorMessage(
+                error,
+                "Não foi possível excluir o piso.",
+              ),
               variant: "destructive",
             });
           },
@@ -222,6 +316,75 @@ export default function Cadastro() {
     handleNew();
   };
 
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+      toast({
+        title: "Formato inválido",
+        description: "Use uma imagem JPG, PNG, WebP ou AVIF.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size === 0 || file.size > MAX_IMAGE_BYTES) {
+      toast({
+        title: "Imagem muito grande",
+        description: "A imagem deve ter no máximo 5 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const uploaded = await uploadProductImage(file);
+      if (temporaryUploadedImage && temporaryUploadedImage !== uploaded.url) {
+        void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
+      }
+      setTemporaryUploadedImage(uploaded.url);
+      form.setValue("linkFoto", uploaded.url, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      toast({
+        title: "Imagem enviada",
+        description: "Clique em Salvar para associá-la ao piso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao enviar imagem",
+        description: errorMessage(error, "Não foi possível enviar a imagem."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    if (temporaryUploadedImage) {
+      void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
+      setTemporaryUploadedImage(null);
+    }
+    form.setValue("linkFoto", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  };
+
+  const onInvalid = () => {
+    toast({
+      title: "Revise os dados do piso",
+      description:
+        "Há campos obrigatórios ou valores inválidos destacados no formulário.",
+      variant: "destructive",
+    });
+  };
+
   const onSubmit = (data: PisoFormValues) => {
     const payload = {
       ...data,
@@ -230,6 +393,7 @@ export default function Cadastro() {
       localDeUso: data.localDeUso || undefined,
       tipoPiso: data.tipoPiso || undefined,
       linkSite: data.linkSite || undefined,
+      linkFoto: data.linkFoto,
       linkFotoOrigem: data.linkFotoOrigem || undefined,
       linkAreaCentral: data.linkAreaCentral || undefined,
     };
@@ -239,6 +403,23 @@ export default function Cadastro() {
         { id: editingId, data: payload },
         {
           onSuccess: (pisoAtualizado) => {
+            const previousImage = selectedPiso?.linkFoto;
+            if (
+              previousImage &&
+              previousImage !== pisoAtualizado.linkFoto &&
+              isManagedProductImage(previousImage)
+            ) {
+              void deleteProductImage(previousImage).catch(() => undefined);
+            }
+            if (
+              temporaryUploadedImage &&
+              temporaryUploadedImage !== pisoAtualizado.linkFoto
+            ) {
+              void deleteProductImage(temporaryUploadedImage).catch(
+                () => undefined,
+              );
+            }
+            setTemporaryUploadedImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
             setSelectedPiso(pisoAtualizado);
             setIsEditing(false);
@@ -247,10 +428,10 @@ export default function Cadastro() {
               description: "Piso atualizado com sucesso.",
             });
           },
-          onError: () => {
+          onError: (error) => {
             toast({
               title: "Erro",
-              description: "Não foi possível atualizar.",
+              description: errorMessage(error, "Não foi possível atualizar."),
               variant: "destructive",
             });
           },
@@ -261,14 +442,23 @@ export default function Cadastro() {
         { data: payload },
         {
           onSuccess: (pisoCriado) => {
+            if (
+              temporaryUploadedImage &&
+              temporaryUploadedImage !== pisoCriado.linkFoto
+            ) {
+              void deleteProductImage(temporaryUploadedImage).catch(
+                () => undefined,
+              );
+            }
+            setTemporaryUploadedImage(null);
             queryClient.invalidateQueries({ queryKey: getListPisosQueryKey() });
-            handleSelectPiso(pisoCriado);
+            handleSelectPiso(pisoCriado, true);
             toast({ title: "Sucesso", description: "Novo piso cadastrado." });
           },
-          onError: () => {
+          onError: (error) => {
             toast({
               title: "Erro",
-              description: "Não foi possível cadastrar.",
+              description: errorMessage(error, "Não foi possível cadastrar."),
               variant: "destructive",
             });
           },
@@ -293,7 +483,10 @@ export default function Cadastro() {
           <Card className="border-none shadow-lg">
             <CardContent className="p-8">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
+                <form
+                  noValidate
+                  onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+                >
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -452,12 +645,12 @@ export default function Cadastro() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="localDeUso"
                           render={({ field }) => (
-                            <FormItem className="md:col-span-2">
+                            <FormItem>
                               <FormLabel>Local de Uso</FormLabel>
                               <FormControl>
                                 <Textarea
@@ -478,9 +671,10 @@ export default function Cadastro() {
                             <FormItem>
                               <FormLabel>Tipo de Piso</FormLabel>
                               <FormControl>
-                                <Input
+                                <Textarea
                                   placeholder="Ex: Acetinado"
                                   disabled={!isEditing}
+                                  className="min-h-24 resize-y"
                                   {...field}
                                 />
                               </FormControl>
@@ -578,10 +772,10 @@ export default function Cadastro() {
                         />
                         <FormField
                           control={form.control}
-                          name="linkFotoOrigem"
+                          name="linkFoto"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Link da Foto</FormLabel>
+                              <FormLabel>Link da Foto (URL)</FormLabel>
                               <FormControl>
                                 <Input
                                   type="url"
@@ -679,29 +873,64 @@ export default function Cadastro() {
                         <label className="text-sm font-medium">
                           Imagem do Piso
                         </label>
-                        <div className="relative flex min-h-28 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-2">
+                        <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
                           <PisoImage
                             primaryUrl={linkFotoValue}
-                            fallbackUrl={linkFotoFallback}
                             alt={selectedPiso?.nome ?? "Imagem do piso"}
-                            className="h-24 w-full rounded-md object-contain"
-                            fallbackClassName="h-24 w-full"
+                            className="max-h-[300px] w-full rounded-md object-contain"
+                            fallbackClassName="min-h-[276px] w-full"
                           />
                           {isEditing && linkFotoValue && (
                             <button
                               type="button"
-                              aria-label="Remover link da foto"
-                              onClick={() =>
-                                form.setValue("linkFotoOrigem", "", {
-                                  shouldDirty: true,
-                                })
-                              }
+                              aria-label="Remover imagem do piso"
+                              onClick={handleRemoveImage}
                               className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
                             >
                               <X size={14} />
                             </button>
                           )}
                         </div>
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/avif"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={isUploadingImage}
+                            onClick={() => imageInputRef.current?.click()}
+                          >
+                            {isUploadingImage ? (
+                              <Loader2
+                                size={15}
+                                className="mr-1.5 animate-spin"
+                              />
+                            ) : (
+                              <Upload size={15} className="mr-1.5" />
+                            )}
+                            {isUploadingImage ? "Enviando..." : "Enviar imagem"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!linkFotoValue || isUploadingImage}
+                            onClick={handleRemoveImage}
+                          >
+                            <Trash2 size={15} className="mr-1.5" />
+                            Remover imagem
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique em
+                          Salvar.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -783,7 +1012,6 @@ export default function Cadastro() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                   <PisoImage
                     primaryUrl={selectedPiso.linkFoto}
-                    fallbackUrl={selectedPiso.linkFotoOrigem}
                     alt={selectedPiso.nome}
                     className="h-24 w-24 shrink-0 rounded-md border bg-white object-contain"
                     fallbackClassName="h-24 w-24 shrink-0 border"
@@ -945,14 +1173,24 @@ export default function Cadastro() {
                       className={`cursor-pointer transition-colors ${editingId === piso.id ? "bg-primary/5" : "hover:bg-muted/50"}`}
                     >
                       <TableCell>
-                        <div className="font-medium text-foreground">
-                          {piso.nome}
+                        <div className="flex items-center gap-3">
+                          <PisoImage
+                            primaryUrl={piso.linkFoto}
+                            alt={piso.nome}
+                            className="h-11 w-11 shrink-0 rounded border bg-white object-contain"
+                            fallbackClassName="h-11 w-11 shrink-0 rounded border text-[8px]"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-medium text-foreground">
+                              {piso.nome}
+                            </div>
+                            <span
+                              className={`mt-1 inline-block rounded px-2 py-0.5 text-[10px] ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"}`}
+                            >
+                              {piso.ativo ? "Ativo" : "Inativo"}
+                            </span>
+                          </div>
                         </div>
-                        <span
-                          className={`mt-1 inline-block rounded px-2 py-0.5 text-[10px] ${piso.ativo ? "bg-green-100 text-green-700" : "bg-zinc-100 text-zinc-600"}`}
-                        >
-                          {piso.ativo ? "Ativo" : "Inativo"}
-                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">

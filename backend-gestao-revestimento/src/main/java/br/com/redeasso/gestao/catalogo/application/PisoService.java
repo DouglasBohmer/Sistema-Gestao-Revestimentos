@@ -136,7 +136,13 @@ public class PisoService {
 
     private void validarNomeUnico(String nome, Long idIgnorado) {
         String normalizado = textoOpcional(nome);
-        if (normalizado != null && pisoRepository.contarPorNomeNormalizado(normalizado, idIgnorado) > 0) {
+        if (normalizado == null) {
+            return;
+        }
+        long existentes = idIgnorado == null
+                ? pisoRepository.contarPorNomeNormalizado(normalizado)
+                : pisoRepository.contarPorNomeNormalizadoIgnorandoId(normalizado, idIgnorado);
+        if (existentes > 0) {
             throw new PisoNomeDuplicadoException();
         }
     }

@@ -219,7 +219,6 @@ export default function Calcular() {
                   <>
                     <PisoImage
                       primaryUrl={piso.linkFoto}
-                      fallbackUrl={piso.linkFotoOrigem}
                       alt={piso.nome}
                       className="mx-auto mb-3 h-20 w-1/3 min-w-24 rounded-md bg-white object-contain"
                       fallbackClassName="mx-auto mb-3 h-20 w-1/3 min-w-24"

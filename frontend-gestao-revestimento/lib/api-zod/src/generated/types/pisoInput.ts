@@ -24,6 +24,8 @@ export interface PisoInput {
   classificacaoUso?: ClassificacaoUso;
   acabamentoBordas: AcabamentoBordas;
   linkSite?: string;
+  /** URL efetiva da imagem exibida; pode ser removida sem apagar a URL histórica de origem */
+  linkFoto?: string;
   linkFotoOrigem?: string;
   linkAreaCentral?: string;
   /** @minimum 0 */

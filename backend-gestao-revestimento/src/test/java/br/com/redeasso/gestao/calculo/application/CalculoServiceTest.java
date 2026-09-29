@@ -72,6 +72,7 @@ class CalculoServiceTest {
                 null,
                 null,
                 null,
+                null,
                 valor == null ? null : new BigDecimal(valor),
                 BigDecimal.ZERO,
                 false));

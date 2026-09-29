@@ -88,12 +88,29 @@ class PisoServiceTest {
 
     @Test
     void impedeNomeRepetidoIgnorandoCaixaEEspacos() {
-        when(pisoRepository.contarPorNomeNormalizado("piso existente", null)).thenReturn(1L);
+        when(pisoRepository.contarPorNomeNormalizado("piso existente")).thenReturn(1L);
 
         assertThatThrownBy(() -> pisoService.cadastrar(dados(" piso existente ", "LOJA-20")))
                 .isInstanceOf(PisoNomeDuplicadoException.class)
                 .hasMessage("Já existe um produto com esse nome");
         verifyNoInteractions(atividadeService);
+    }
+
+    @Test
+    void atualizaPisoMantendoOProprioNomeForaDaVerificacaoDeDuplicidade() {
+        Piso existente = Piso.cadastrar(dados("Piso existente", "LOJA-10"));
+        when(pisoRepository.findById(7L)).thenReturn(Optional.of(existente));
+        when(pisoRepository.save(existente)).thenReturn(existente);
+
+        Piso atualizado = pisoService.atualizar(7L, dados("Piso alterado", "LOJA-20"));
+
+        assertThat(atualizado.getNome()).isEqualTo("Piso alterado");
+        assertThat(atualizado.getCodigoLoja()).isEqualTo("LOJA-20");
+        verify(pisoRepository).contarPorNomeNormalizadoIgnorandoId("Piso alterado", 7L);
+        verify(atividadeService).registrar(
+                "cadastro",
+                "Piso Piso alterado atualizado",
+                "Piso alterado");
     }
 
     @Test
@@ -138,6 +155,7 @@ class PisoServiceTest {
                 "Porcelanato",
                 ClassificacaoUso.LD,
                 AcabamentoBorda.RETIFICADO,
+                null,
                 null,
                 null,
                 null,

@@ -16,6 +16,7 @@ public record DadosPiso(
         ClassificacaoUso classificacaoUso,
         AcabamentoBorda acabamentoBordas,
         String linkSite,
+        String linkFoto,
         String linkFotoOrigem,
         String linkAreaCentral,
         BigDecimal valor,

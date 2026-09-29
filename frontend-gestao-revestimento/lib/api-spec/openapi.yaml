@@ -889,6 +889,9 @@ components:
           $ref: "#/components/schemas/AcabamentoBordas"
         linkSite:
           type: string
+        linkFoto:
+          type: string
+          description: URL efetiva da imagem exibida; pode ser removida sem apagar a URL histórica de origem
         linkFotoOrigem:
           type: string
         linkAreaCentral:

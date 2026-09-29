@@ -4,6 +4,7 @@ import br.com.redeasso.gestao.catalogo.domain.Piso;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -15,9 +16,18 @@ public interface PisoRepository extends JpaRepository<Piso, Long>, JpaSpecificat
             select count(p)
               from Piso p
              where lower(trim(p.nome)) = lower(trim(:nome))
-               and (:idIgnorado is null or p.id <> :idIgnorado)
             """)
-    long contarPorNomeNormalizado(String nome, Long idIgnorado);
+    long contarPorNomeNormalizado(@Param("nome") String nome);
+
+    @Query("""
+            select count(p)
+              from Piso p
+             where lower(trim(p.nome)) = lower(trim(:nome))
+               and p.id <> :idIgnorado
+            """)
+    long contarPorNomeNormalizadoIgnorandoId(
+            @Param("nome") String nome,
+            @Param("idIgnorado") Long idIgnorado);
 
     @Query("""
             select coalesce(p.tipoPiso, 'Outros') as tipo, count(p) as total

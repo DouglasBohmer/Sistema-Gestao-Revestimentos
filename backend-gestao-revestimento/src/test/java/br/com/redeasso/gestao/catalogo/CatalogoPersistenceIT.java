@@ -123,6 +123,7 @@ class CatalogoPersistenceIT {
                 null,
                 null,
                 null,
+                null,
                 new BigDecimal("80.50"),
                 BigDecimal.ZERO,
                 true);

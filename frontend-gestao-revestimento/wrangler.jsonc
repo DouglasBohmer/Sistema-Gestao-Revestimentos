@@ -4,15 +4,21 @@
   "main": "./src/worker.ts",
   "compatibility_date": "2026-08-20",
   "vars": {
-    "API_ORIGIN": "https://redeasso-api.onrender.com"
+    "API_ORIGIN": "https://redeasso-api.onrender.com",
   },
   "triggers": {
-    "crons": ["*/10 * * * *"]
+    "crons": ["*/10 * * * *"],
   },
+  "r2_buckets": [
+    {
+      "binding": "PRODUCT_IMAGES",
+      "bucket_name": "redeasso-product-images",
+    },
+  ],
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api", "/api/*"],
-    "not_found_handling": "single-page-application"
-  }
+    "run_worker_first": ["/api", "/api/*", "/product-images/*"],
+    "not_found_handling": "single-page-application",
+  },
 }

@@ -19,7 +19,7 @@ na nuvem.
 | `REDEASSO_LOCAL_ADMIN_USERNAME` | usuário local temporário forte |
 | `REDEASSO_LOCAL_ADMIN_PASSWORD` | senha local temporária forte |
 
-O primeiro deploy do Spring executa as migrations Flyway V1 a V4. Antes desse
+O primeiro deploy do Spring executa as migrations Flyway V1 a V6. Antes desse
 deploy, escolha explicitamente entre iniciar com os dados demonstrativos ou
 migrar a base local. A importação de dados existentes **não** deve ser feita
 em cima de um banco Neon já iniciado sem backup e sem conferência prévia.
@@ -146,8 +146,22 @@ Também crie a variável **de build** `SKIP_DEPENDENCY_INSTALL=true`, evitando
 que o instalador automático do Cloudflare execute uma segunda instalação com
 uma versão diferente do pnpm.
 
-O Worker serve a SPA e encaminha `/api/*` ao Render. Isso faz com que sessão,
-CSRF e cookies permaneçam no mesmo domínio Cloudflare, sem CORS permissivo.
+Antes do primeiro deploy desta versão, crie uma vez o bucket R2 usado pelas
+fotos dos pisos:
+
+```powershell
+pnpm --filter @workspace/redeasso exec wrangler r2 bucket create redeasso-product-images
+```
+
+O vínculo `PRODUCT_IMAGES` com esse bucket já está versionado em
+`wrangler.jsonc`. O Worker aceita JPG, PNG, WebP e AVIF de até 5 MB, exige uma
+sessão válida para enviar ou remover arquivos e serve as imagens publicamente
+em `/product-images/*`. A URL original importada continua preservada no banco
+para histórico, mesmo quando a imagem exibida é substituída ou removida.
+
+O Worker serve a SPA, as imagens do R2 e encaminha as demais rotas `/api/*` ao
+Render. Isso faz com que sessão, CSRF e cookies permaneçam no mesmo domínio
+Cloudflare, sem CORS permissivo.
 O mesmo Worker executa um Cron Trigger `*/10 * * * *`, que faz uma chamada
 `GET /api/healthz` ao Render. Esse ping não acessa dados de negócio, banco
 nem sessões de usuários; ele também não executa a verificação de `DataSource`

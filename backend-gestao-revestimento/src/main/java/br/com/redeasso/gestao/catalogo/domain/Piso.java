@@ -188,8 +188,11 @@ public class Piso {
         acabamentoBordas = Objects.requireNonNull(dados.acabamentoBordas(), "acabamentoBordas é obrigatório");
         linkSite = textoOpcional(dados.linkSite());
         String novaFotoOrigem = textoOpcional(dados.linkFotoOrigem());
-        if (!Objects.equals(linkFotoOrigem, novaFotoOrigem)) {
-            linkFotoOrigem = novaFotoOrigem;
+        boolean fotoOrigemAlterada = !Objects.equals(linkFotoOrigem, novaFotoOrigem);
+        linkFotoOrigem = novaFotoOrigem;
+        if (dados.linkFoto() != null) {
+            linkFoto = textoOpcional(dados.linkFoto());
+        } else if (fotoOrigemAlterada) {
             linkFoto = novaFotoOrigem;
         }
         linkAreaCentral = textoOpcional(dados.linkAreaCentral());

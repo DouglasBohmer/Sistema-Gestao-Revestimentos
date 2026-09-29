@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -27,6 +28,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -75,6 +77,19 @@ class PisoControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.nome").value("Portinari Cimento Bold"));
+    }
+
+    @Test
+    void atualizaPisoIncluindoRemocaoDaImagem() throws Exception {
+        when(pisoService.atualizar(eq(7L), any(DadosPiso.class))).thenReturn(pisoPersistido());
+
+        mockMvc.perform(put("/api/pisos/7")
+                        .contentType(APPLICATION_JSON)
+                        .content(requisicaoValida()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7));
+
+        verify(pisoService).atualizar(eq(7L), argThat(dados -> "".equals(dados.linkFoto())));
     }
 
     @Test
@@ -137,6 +152,7 @@ class PisoControllerTest {
                 null,
                 null,
                 null,
+                null,
                 new BigDecimal("89.90"),
                 BigDecimal.ZERO,
                 false));
@@ -160,6 +176,7 @@ class PisoControllerTest {
                   "tipoPiso": "Porcelanato",
                   "classificacaoUso": "LD",
                   "acabamentoBordas": "RETIFICADO",
+                  "linkFoto": "",
                   "valor": 89.90,
                   "estoqueM2": 0,
                   "ativo": false
