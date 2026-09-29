@@ -57,6 +57,7 @@ import {
   Upload,
   Loader2,
   Eraser,
+  ExternalLink,
 } from "lucide-react";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -177,6 +178,16 @@ export default function Cadastro() {
   ] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const paginationImageInputRef = useRef<HTMLInputElement>(null);
+  const pageTopRef = useRef<HTMLDivElement>(null);
+
+  const scrollToPageTop = () => {
+    requestAnimationFrame(() => {
+      pageTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   const { data: pisos, isLoading } = useListPisos({
     search: search || undefined,
@@ -215,6 +226,7 @@ export default function Cadastro() {
   const linkFotoValue = form.watch("linkFoto");
   const linkFotoOrigemValue = form.watch("linkFotoOrigem");
   const linkPaginacaoValue = form.watch("linkPaginacao");
+  const linkSiteValue = form.watch("linkSite");
   const larguraValue = form.watch("largura");
   const alturaValue = form.watch("altura");
   const m2PorCaixaValue = form.watch("m2PorCaixa");
@@ -313,12 +325,11 @@ export default function Cadastro() {
       estoqueM2: 0,
       ativo: false,
     });
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
+    scrollToPageTop();
   };
 
   const handleEdit = () => {
+    scrollToPageTop();
     if (editingId) {
       setIsEditing(true);
     } else {
@@ -330,6 +341,7 @@ export default function Cadastro() {
   };
 
   const handleDelete = () => {
+    scrollToPageTop();
     if (!editingId) {
       toast({ title: "Aviso", description: "Selecione um piso para excluir." });
       return;
@@ -393,6 +405,26 @@ export default function Cadastro() {
 
   const handleLimpar = () => {
     handleNew();
+  };
+
+  const handleOpenProductSite = () => {
+    const value = linkSiteValue?.trim();
+    if (!value) return;
+
+    try {
+      const siteUrl = new URL(value);
+      if (siteUrl.protocol !== "http:" && siteUrl.protocol !== "https:") {
+        throw new Error("Protocolo não permitido");
+      }
+      window.open(siteUrl.href, "_blank", "noopener,noreferrer");
+    } catch {
+      toast({
+        title: "Link inválido",
+        description:
+          "Informe um endereço completo iniciado por http:// ou https://.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleClassificationChange = (
@@ -669,7 +701,7 @@ export default function Cadastro() {
 
   return (
     <Layout>
-      <div className="flex-1 space-y-6 p-8">
+      <div ref={pageTopRef} className="flex-1 space-y-6 p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Cadastro de Piso
@@ -1259,6 +1291,17 @@ export default function Cadastro() {
                           JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique em
                           Salvar.
                         </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={!linkSiteValue?.trim()}
+                          onClick={handleOpenProductSite}
+                          className="self-start"
+                        >
+                          <ExternalLink size={15} className="mr-1.5" />
+                          Abrir site do piso
+                        </Button>
                       </div>
                     </div>
                   </div>

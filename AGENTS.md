@@ -114,6 +114,7 @@ Regras obrigatórias:
 - Peças por caixa são calculadas automaticamente por `m2_por_caixa / ((largura_cm / 100) * (altura_cm / 100))`, com arredondamento comum (`HALF_UP`) para inteiro. O campo fica bloqueado na tela e o backend recalcula o valor quando largura e altura existem.
 - No cadastro, selecionar `LA` a `LE` preenche automaticamente a descrição correspondente de local de uso, que continua editável. `Retificado` sugere rejunte de 2 mm e `Bold`, 5 mm; juntas de 1, 1,5 ou 2 mm selecionam Retificado e a de 5 mm seleciona Bold.
 - Cada produto aceita duas imagens independentes no mesmo bucket R2: a foto principal do piso e a imagem de “Paginação/Ambiente”. Ambas aceitam URL, upload, pré-visualização e remoção no cadastro. O campo legado `ambiente` permanece mapeado para `link_area_central`, pois seu conteúdo são URLs da Área Central; `link_paginacao` é um campo novo. Listas e miniaturas continuam exibindo apenas a foto principal; Paginação/Ambiente aparece ao abrir o produto.
+- Abaixo de “Paginação/Ambiente”, o cadastro oferece um atalho para abrir o site do piso em uma nova guia. As ações Alterar, Excluir e Novo do resumo do produto levam a tela de cadastro de volta ao topo.
 - As telas já visitadas permanecem montadas enquanto a sessão autenticada estiver ativa, preservando cálculos, formulários e seleções ao navegar. Cada navegação invalida as consultas ativas para atualizar listas sem recarregar a página; logout descarta o estado e o cache.
 
 ### 3.5 Parâmetros de negócio
