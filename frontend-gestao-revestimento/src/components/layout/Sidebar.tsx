@@ -39,128 +39,130 @@ export function Sidebar() {
   };
 
   return (
-    <aside
-      aria-label="Menu principal"
-      className="group/sidebar flex h-full w-16 shrink-0 flex-col overflow-hidden bg-black transition-[width] duration-300 ease-out motion-reduce:transition-none hover:w-64 focus-within:w-64"
-    >
-      {/* Logo */}
-      <div className="flex h-24 shrink-0 items-center border-b border-white/10">
-        <div className="flex w-16 shrink-0 items-center justify-center">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-sm font-black tracking-tight text-black">
-            RA
-          </span>
-        </div>
-        <div className="min-w-0 whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
-          <h1 className="text-xl font-bold tracking-tight text-white">
-            RedeASSO
-          </h1>
-          <p className="mt-0.5 text-xs text-white/60">Sistema de Gestão</p>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav
-        aria-label="Navegação principal"
-        className="flex-1 overflow-y-auto py-4"
+    <div className="relative z-50 h-full w-16 shrink-0">
+      <aside
+        aria-label="Menu principal"
+        className="group/sidebar absolute inset-y-0 left-0 flex w-16 flex-col overflow-hidden bg-black transition-[width,box-shadow] duration-300 ease-out motion-reduce:transition-none hover:w-64 hover:shadow-2xl focus-within:w-64 focus-within:shadow-2xl"
       >
-        {navigation.map((item) => {
-          const isActive = location === item.href;
-          if (!item.href) {
+        {/* Logo */}
+        <div className="flex h-24 shrink-0 items-center border-b border-white/10">
+          <div className="flex w-16 shrink-0 items-center justify-center">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-sm font-black tracking-tight text-black">
+              RA
+            </span>
+          </div>
+          <div className="min-w-0 whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
+            <h1 className="text-xl font-bold tracking-tight text-white">
+              RedeASSO
+            </h1>
+            <p className="mt-0.5 text-xs text-white/60">Sistema de Gestão</p>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav
+          aria-label="Navegação principal"
+          className="flex-1 overflow-y-auto py-4"
+        >
+          {navigation.map((item) => {
+            const isActive = location === item.href;
+            if (!item.href) {
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  title="Disponível em breve"
+                  className={cn(
+                    menuItemClass,
+                    "cursor-not-allowed border-transparent text-white/35",
+                  )}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className={menuLabelClass}>{item.name}</span>
+                </button>
+              );
+            }
             return (
-              <button
+              <Link
                 key={item.name}
-                type="button"
-                disabled
-                aria-disabled="true"
-                title="Disponível em breve"
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   menuItemClass,
-                  "cursor-not-allowed border-transparent text-white/35",
+                  isActive
+                    ? "border-white bg-white/20 text-white"
+                    : "border-transparent text-white/70 hover:bg-white/10 hover:text-white",
                 )}
               >
                 <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <span className={menuLabelClass}>{item.name}</span>
-              </button>
+              </Link>
             );
-          }
-          return (
+          })}
+          {!session?.areaCentralConnected && (
             <Link
-              key={item.name}
-              href={item.href}
-              aria-current={isActive ? "page" : undefined}
+              href="/conexao-area-central"
+              aria-current={
+                location === "/conexao-area-central" ? "page" : undefined
+              }
               className={cn(
                 menuItemClass,
-                isActive
+                location === "/conexao-area-central"
                   ? "border-white bg-white/20 text-white"
                   : "border-transparent text-white/70 hover:bg-white/10 hover:text-white",
               )}
             >
-              <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span className={menuLabelClass}>{item.name}</span>
+              <Link2 className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className={menuLabelClass}>Conectar Área Central</span>
             </Link>
-          );
-        })}
-        {!session?.areaCentralConnected && (
-          <Link
-            href="/conexao-area-central"
-            aria-current={
-              location === "/conexao-area-central" ? "page" : undefined
-            }
+          )}
+        </nav>
+
+        {/* Rodapé: Notificações + Configurações + Sair */}
+        <div className="mt-auto border-t border-white/10">
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Disponível em breve"
             className={cn(
               menuItemClass,
-              location === "/conexao-area-central"
-                ? "border-white bg-white/20 text-white"
-                : "border-transparent text-white/70 hover:bg-white/10 hover:text-white",
+              "cursor-not-allowed border-transparent py-3.5 text-white/35",
             )}
           >
-            <Link2 className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className={menuLabelClass}>Conectar Área Central</span>
-          </Link>
-        )}
-      </nav>
+            <Bell className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className={menuLabelClass}>Notificações</span>
+          </button>
 
-      {/* Rodapé: Notificações + Configurações + Sair */}
-      <div className="mt-auto border-t border-white/10">
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Disponível em breve"
-          className={cn(
-            menuItemClass,
-            "cursor-not-allowed border-transparent py-3.5 text-white/35",
-          )}
-        >
-          <Bell className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className={menuLabelClass}>Notificações</span>
-        </button>
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            title="Disponível em breve"
+            className={cn(
+              menuItemClass,
+              "cursor-not-allowed border-transparent py-3.5 text-white/35",
+            )}
+          >
+            <Settings className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className={menuLabelClass}>Configurações</span>
+          </button>
 
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title="Disponível em breve"
-          className={cn(
-            menuItemClass,
-            "cursor-not-allowed border-transparent py-3.5 text-white/35",
-          )}
-        >
-          <Settings className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className={menuLabelClass}>Configurações</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => void handleLogout()}
-          className={cn(
-            menuItemClass,
-            "border-transparent py-3.5 text-white/70 hover:bg-white/10 hover:text-white",
-          )}
-        >
-          <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <span className={menuLabelClass}>Sair</span>
-        </button>
-      </div>
-    </aside>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            className={cn(
+              menuItemClass,
+              "border-transparent py-3.5 text-white/70 hover:bg-white/10 hover:text-white",
+            )}
+          >
+            <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className={menuLabelClass}>Sair</span>
+          </button>
+        </div>
+      </aside>
+    </div>
   );
 }

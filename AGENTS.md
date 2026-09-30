@@ -118,8 +118,9 @@ Regras obrigatórias:
 - Abaixo de “Paginação/Ambiente”, o cadastro oferece um atalho para abrir o site do piso em uma nova guia. As ações Alterar, Excluir e Novo do resumo do produto levam a tela de cadastro de volta ao topo.
 - O resumo de um piso oferece a ação “Ver”, que abre todos os seus dados em modo somente leitura; somente a foto principal aparece na miniatura do resumo. Orçamento, Notificações e Configurações permanecem desativados na navegação até que esses recursos sejam implementados.
 - As telas já visitadas permanecem montadas enquanto a sessão autenticada estiver ativa, preservando cálculos, formulários e seleções ao navegar. Cada navegação invalida as consultas ativas para atualizar listas sem recarregar a página; logout descarta o estado e o cache.
-- A navegação lateral permanece recolhida por padrão e se expande ao receber o mouse ou foco do teclado, sem descartar o estado das telas.
-- A tela de cálculo usa o fluxo horizontal escolhido no modelo 2. Ela mostra as duas imagens do produto na mesma linha quando existirem, omite somente a ausente e remove toda a linha quando nenhuma estiver disponível. O painel de niveladores fica acima do compartilhamento do cálculo.
+- A navegação lateral permanece recolhida por padrão e se expande sobre o conteúdo ao receber o mouse ou foco do teclado, sem redimensionar a tela nem descartar seu estado.
+- A tela de cálculo usa o fluxo horizontal escolhido no modelo 2. Ela mostra as duas imagens do produto na mesma linha quando existirem, omite somente a ausente e remove toda a linha quando nenhuma estiver disponível. O painel de niveladores fica acima do compartilhamento do cálculo; as quantidades aparecem somente no resumo principal, sem repetir lado X/lado Y no painel. O cabeçalho não mostra o total do piso.
+- O campo de quantidade do cálculo não possui exemplo de fundo. A metragem fica alinhada à direita e é normalizada para duas casas decimais com vírgula; caixas aceitam somente números inteiros.
 
 ### 3.5 Parâmetros de negócio
 
@@ -130,6 +131,7 @@ Regras obrigatórias:
 - Rejunte mantém como padrões profundidade 9, coeficiente 1,8 e embalagem de 1 kg.
 - Niveladores seguem a calculadora oficial da Cortag: cada lado usa no mínimo uma peça e acrescenta uma peça a cada 40 cm, o total considera a área efetivamente vendida e os pacotes possuem 100 peças. Intervalo e quantidade por pacote ficam persistidos em `parametros_sistema`.
 - O cálculo aceita exatamente uma entrada: metragem em m² ou quantidade inteira de caixas. Por metragem, aplica a margem padrão de 10% antes de arredondar caixas; por caixas, preserva exatamente a quantidade informada e não aplica margem. Materiais auxiliares usam sempre a metragem efetivamente vendida.
+- Como Render e Cloudflare publicam de forma independente, o frontend aceita temporariamente a resposta da versão anterior da API durante a janela de deploy: campos novos ausentes são derivados para exibição com as mesmas fórmulas, valores recebidos continuam prioritários e `null` explícito nunca é substituído. O Spring permanece a fonte canônica do cálculo.
 - Esses valores não serão constantes fixas no código. Serão configurações persistidas do sistema, editáveis pela área “Configurações” já prevista no menu.
 - Mudanças de parâmetro devem ser validadas e auditáveis; cálculos históricos devem guardar os parâmetros efetivamente usados.
 

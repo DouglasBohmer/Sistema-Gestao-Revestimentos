@@ -70,6 +70,8 @@ const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
 });
 
 function formatarNumero(valor: number, maximoCasas = 2) {
+  if (!Number.isFinite(valor)) return "—";
+
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: maximoCasas,
@@ -82,6 +84,25 @@ function formatarMetragem(valor: number) {
 
 function parseNumero(valor: string) {
   return Number(valor.trim().replace(",", "."));
+}
+
+function normalizarEntradaMetragem(valor: string) {
+  const sanitizado = valor
+    .replace(".", ",")
+    .replace(/[^\d,]/g, "")
+    .replace(/,(?=.*?,)/g, "");
+  const [inteiro = "", decimais] = sanitizado.split(",");
+
+  return decimais === undefined
+    ? inteiro
+    : `${inteiro},${decimais.slice(0, 2)}`;
+}
+
+function completarCasasMetragem(valor: string) {
+  const numero = parseNumero(valor);
+  return Number.isFinite(numero) && numero > 0
+    ? numero.toFixed(2).replace(".", ",")
+    : valor;
 }
 
 function normalizarTelefone(valor: string) {
@@ -101,6 +122,111 @@ function normalizarTelefone(valor: string) {
 
 function acabamento(piso: Piso) {
   return piso.acabamentoBordas === "RETIFICADO" ? "Retificado" : "Bold";
+}
+
+type ResumoCalculo = {
+  metragemVendidaM2: number;
+  quantidadeSacosArgamassa: number;
+  pesoArgamassaKg: number;
+  quantidadeEmbalagensRejunte: number | null;
+  pesoRejunteKg: number | null;
+  quantidadeNiveladores: number | null;
+  quantidadePacotesNiveladores: number | null;
+};
+
+function numeroFinito(valor: unknown): valor is number {
+  return typeof valor === "number" && Number.isFinite(valor);
+}
+
+function numeroDaApiOuFallback(valor: unknown, fallback: number) {
+  return numeroFinito(valor) ? valor : fallback;
+}
+
+function numeroNullableDaApiOuFallback(
+  valor: unknown,
+  fallback: number | null,
+) {
+  if (valor === null) return null;
+  return numeroFinito(valor) ? valor : fallback;
+}
+
+function normalizarResumoCalculo(
+  resultado: CalculoResult,
+  piso: Piso,
+): ResumoCalculo {
+  const metragemVendidaFallback = resultado.quantidadeCaixas * piso.m2PorCaixa;
+  const metragemVendidaM2 = numeroDaApiOuFallback(
+    resultado.metragemVendidaM2,
+    metragemVendidaFallback,
+  );
+
+  const quantidadeSacosArgamassaFallback = Math.ceil(metragemVendidaM2 / 3);
+  const pesoArgamassaKgFallback = (metragemVendidaM2 / 3) * 20;
+
+  let pesoRejunteKgFallback: number | null = null;
+  let quantidadeEmbalagensRejunteFallback: number | null = null;
+  if (
+    piso.largura &&
+    piso.largura > 0 &&
+    piso.altura &&
+    piso.altura > 0 &&
+    piso.rejunte &&
+    piso.rejunte > 0
+  ) {
+    const larguraMm = piso.largura * 10;
+    const alturaMm = piso.altura * 10;
+    const kgPorM2 =
+      ((larguraMm + alturaMm) * 9 * piso.rejunte * 1.8) /
+      (larguraMm * alturaMm);
+    pesoRejunteKgFallback = metragemVendidaM2 * kgPorM2;
+    quantidadeEmbalagensRejunteFallback = Math.ceil(pesoRejunteKgFallback);
+  }
+
+  let niveladoresLadoXFallback: number | null = null;
+  let niveladoresLadoYFallback: number | null = null;
+  let quantidadeNiveladoresFallback: number | null = null;
+  let quantidadePacotesNiveladoresFallback: number | null = null;
+  if (piso.largura && piso.largura > 0 && piso.altura && piso.altura > 0) {
+    niveladoresLadoXFallback = Math.max(1, Math.ceil(piso.largura / 40));
+    niveladoresLadoYFallback = Math.max(1, Math.ceil(piso.altura / 40));
+    const areaPecaM2 = (piso.largura * piso.altura) / 10_000;
+    quantidadeNiveladoresFallback = Math.ceil(
+      ((niveladoresLadoXFallback + niveladoresLadoYFallback) *
+        metragemVendidaM2) /
+        areaPecaM2,
+    );
+    quantidadePacotesNiveladoresFallback = Math.ceil(
+      quantidadeNiveladoresFallback / 100,
+    );
+  }
+
+  return {
+    metragemVendidaM2,
+    quantidadeSacosArgamassa: numeroDaApiOuFallback(
+      resultado.quantidadeSacosArgamassa,
+      quantidadeSacosArgamassaFallback,
+    ),
+    pesoArgamassaKg: numeroDaApiOuFallback(
+      resultado.pesoArgamassaKg,
+      pesoArgamassaKgFallback,
+    ),
+    quantidadeEmbalagensRejunte: numeroNullableDaApiOuFallback(
+      resultado.quantidadeEmbalagensRejunte,
+      quantidadeEmbalagensRejunteFallback,
+    ),
+    pesoRejunteKg: numeroNullableDaApiOuFallback(
+      resultado.pesoRejunteKg,
+      pesoRejunteKgFallback,
+    ),
+    quantidadeNiveladores: numeroNullableDaApiOuFallback(
+      resultado.quantidadeNiveladores,
+      quantidadeNiveladoresFallback,
+    ),
+    quantidadePacotesNiveladores: numeroNullableDaApiOuFallback(
+      resultado.quantidadePacotesNiveladores,
+      quantidadePacotesNiveladoresFallback,
+    ),
+  };
 }
 
 function ResumoMetrica({
@@ -165,6 +291,10 @@ export default function Calcular() {
   const telefoneWhatsApp = useMemo(
     () => normalizarTelefone(telefone),
     [telefone],
+  );
+  const resumoCalculo = useMemo(
+    () => (resultado && piso ? normalizarResumoCalculo(resultado, piso) : null),
+    [resultado, piso],
   );
 
   const fallbackFotoPrincipal = legacyProductImageFallback(
@@ -253,6 +383,9 @@ export default function Calcular() {
       modo: modoEntrada,
       valor: valorDigitado,
     };
+    if (modoEntrada === "METRAGEM") {
+      setMetragem(valorDigitado.toFixed(2).replace(".", ","));
+    }
 
     setOpcoesCodigo([]);
     setQuantidadePendente(null);
@@ -286,7 +419,7 @@ export default function Calcular() {
   };
 
   const handleWhatsApp = () => {
-    if (!resultado || !piso || !telefoneWhatsApp) return;
+    if (!resultado || !piso || !resumoCalculo || !telefoneWhatsApp) return;
 
     const linhas = [
       "Olá! Segue o cálculo do piso:",
@@ -297,17 +430,17 @@ export default function Calcular() {
       entradaCalculada?.modo === "CAIXAS"
         ? `Quantidade solicitada: ${resultado.quantidadeCaixas} caixas`
         : `Área solicitada: ${formatarMetragem(resultado.metragemM2)}`,
-      `Área vendida: ${formatarMetragem(resultado.metragemVendidaM2)}`,
-      `Argamassa: ${resultado.quantidadeSacosArgamassa} sacos`,
-      resultado.quantidadeEmbalagensRejunte === null
+      `Área vendida: ${formatarMetragem(resumoCalculo.metragemVendidaM2)}`,
+      `Argamassa: ${resumoCalculo.quantidadeSacosArgamassa} sacos`,
+      resumoCalculo.quantidadeEmbalagensRejunte === null
         ? "Rejunte: não calculado"
-        : `Rejunte: ${resultado.quantidadeEmbalagensRejunte} embalagens`,
-      resultado.quantidadeNiveladores === null
+        : `Rejunte: ${resumoCalculo.quantidadeEmbalagensRejunte} embalagens`,
+      resumoCalculo.quantidadeNiveladores === null
         ? "Niveladores: não calculados"
-        : `Niveladores: ${resultado.quantidadeNiveladores} peças (${resultado.quantidadePacotesNiveladores} pacotes)`,
-      resultado.valorTotal === null
-        ? "Valor do piso: preço não informado"
-        : `Valor do piso: ${formatadorMoeda.format(resultado.valorTotal)}`,
+        : `Niveladores: ${resumoCalculo.quantidadeNiveladores} peças (${resumoCalculo.quantidadePacotesNiveladores} pacotes)`,
+      numeroFinito(resultado.valorTotal)
+        ? `Valor do piso: ${formatadorMoeda.format(resultado.valorTotal)}`
+        : "Valor do piso: preço não informado",
     ];
 
     window.open(
@@ -379,17 +512,26 @@ export default function Calcular() {
                   <Input
                     id="quantidade-calculo"
                     value={quantidadeAtual}
-                    onChange={(event) =>
-                      modoEntrada === "METRAGEM"
-                        ? setMetragem(event.target.value)
-                        : setQuantidadeCaixas(event.target.value)
-                    }
+                    onChange={(event) => {
+                      if (modoEntrada === "METRAGEM") {
+                        setMetragem(
+                          normalizarEntradaMetragem(event.target.value),
+                        );
+                        return;
+                      }
+                      setQuantidadeCaixas(
+                        event.target.value.replace(/\D/g, ""),
+                      );
+                    }}
+                    onBlur={() => {
+                      if (modoEntrada === "METRAGEM" && metragem) {
+                        setMetragem(completarCasasMetragem(metragem));
+                      }
+                    }}
                     inputMode={
                       modoEntrada === "METRAGEM" ? "decimal" : "numeric"
                     }
-                    placeholder={modoEntrada === "METRAGEM" ? "25,12" : "8"}
-                    className="h-11 pr-16"
-                    aria-describedby="regra-quantidade"
+                    className="h-11 pr-16 text-right tabular-nums"
                   />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                     {modoEntrada === "METRAGEM" ? "m²" : "caixas"}
@@ -406,16 +548,6 @@ export default function Calcular() {
                 {calculando ? "Calculando..." : "Calcular"}
               </Button>
             </form>
-
-            <p
-              id="regra-quantidade"
-              className="mt-3 flex items-start gap-2 text-xs text-muted-foreground"
-            >
-              <Info className="mt-0.5 size-3.5 shrink-0" />
-              {modoEntrada === "METRAGEM"
-                ? `O sistema acrescenta ${MARGEM_QUEBRA}% de margem e arredonda para caixas inteiras.`
-                : "A quantidade de caixas é mantida exatamente como informada, sem acrescentar margem."}
-            </p>
           </CardContent>
         </Card>
 
@@ -449,7 +581,7 @@ export default function Calcular() {
           </Alert>
         )}
 
-        {!resultado || !piso ? (
+        {!resultado || !piso || !resumoCalculo ? (
           <Card className="shadow-sm">
             <Empty className="min-h-[360px]">
               <EmptyHeader>
@@ -530,7 +662,7 @@ export default function Calcular() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-3 xl:shrink-0">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 xl:shrink-0">
                   <div>
                     <p className="text-xs text-muted-foreground">Estoque</p>
                     <p className="font-semibold">
@@ -543,16 +675,6 @@ export default function Calcular() {
                       {piso.valor > 0
                         ? formatadorMoeda.format(piso.valor)
                         : "Não informado"}
-                    </p>
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <p className="text-xs text-muted-foreground">
-                      Total do piso
-                    </p>
-                    <p className="text-lg font-bold">
-                      {resultado.valorTotal === null
-                        ? "Não informado"
-                        : formatadorMoeda.format(resultado.valorTotal)}
                     </p>
                   </div>
                 </div>
@@ -615,40 +737,40 @@ export default function Calcular() {
                   icon={<Package className="size-5" />}
                   titulo="Piso"
                   valor={`${resultado.quantidadeCaixas} ${resultado.quantidadeCaixas === 1 ? "caixa" : "caixas"}`}
-                  detalhe={`Cobre ${formatarMetragem(resultado.metragemVendidaM2)}`}
+                  detalhe={`Cobre ${formatarMetragem(resumoCalculo.metragemVendidaM2)}`}
                 />
                 <ResumoMetrica
                   icon={<Layers className="size-5" />}
                   titulo="Argamassa"
-                  valor={`${resultado.quantidadeSacosArgamassa} ${resultado.quantidadeSacosArgamassa === 1 ? "saco" : "sacos"}`}
-                  detalhe={`${formatarNumero(resultado.pesoArgamassaKg)} kg de consumo teórico`}
+                  valor={`${resumoCalculo.quantidadeSacosArgamassa} ${resumoCalculo.quantidadeSacosArgamassa === 1 ? "saco" : "sacos"}`}
+                  detalhe={`${formatarNumero(resumoCalculo.pesoArgamassaKg)} kg de consumo teórico`}
                 />
                 <ResumoMetrica
                   icon={<ShoppingCart className="size-5" />}
                   titulo="Rejunte"
                   valor={
-                    resultado.quantidadeEmbalagensRejunte === null
+                    resumoCalculo.quantidadeEmbalagensRejunte === null
                       ? "Não calculado"
-                      : `${resultado.quantidadeEmbalagensRejunte} ${resultado.quantidadeEmbalagensRejunte === 1 ? "embalagem" : "embalagens"}`
+                      : `${resumoCalculo.quantidadeEmbalagensRejunte} ${resumoCalculo.quantidadeEmbalagensRejunte === 1 ? "embalagem" : "embalagens"}`
                   }
                   detalhe={
-                    resultado.pesoRejunteKg === null
+                    resumoCalculo.pesoRejunteKg === null
                       ? "Cadastre formato e junta"
-                      : `${formatarNumero(resultado.pesoRejunteKg)} kg de consumo teórico`
+                      : `${formatarNumero(resumoCalculo.pesoRejunteKg)} kg de consumo teórico`
                   }
                 />
                 <ResumoMetrica
                   icon={<Ruler className="size-5" />}
                   titulo="Niveladores"
                   valor={
-                    resultado.quantidadeNiveladores === null
+                    resumoCalculo.quantidadeNiveladores === null
                       ? "Não calculado"
-                      : `${resultado.quantidadeNiveladores} peças`
+                      : `${resumoCalculo.quantidadeNiveladores} peças`
                   }
                   detalhe={
-                    resultado.quantidadePacotesNiveladores === null
+                    resumoCalculo.quantidadePacotesNiveladores === null
                       ? "Cadastre largura e altura"
-                      : `${resultado.quantidadePacotesNiveladores} ${resultado.quantidadePacotesNiveladores === 1 ? "pacote" : "pacotes"} de 100 pçs`
+                      : `${resumoCalculo.quantidadePacotesNiveladores} ${resumoCalculo.quantidadePacotesNiveladores === 1 ? "pacote" : "pacotes"} de 100 pçs`
                   }
                 />
               </CardContent>
@@ -726,7 +848,9 @@ export default function Calcular() {
                       />
                       <DadoTecnico
                         rotulo="Área efetivamente vendida"
-                        valor={formatarMetragem(resultado.metragemVendidaM2)}
+                        valor={formatarMetragem(
+                          resumoCalculo.metragemVendidaM2,
+                        )}
                       />
                       <DadoTecnico
                         rotulo={
@@ -776,7 +900,7 @@ export default function Calcular() {
                         Recomendação calculada conforme o formato da peça.
                       </p>
                     </div>
-                    {resultado.quantidadeNiveladores !== null && (
+                    {resumoCalculo.quantidadeNiveladores !== null && (
                       <Badge
                         variant="outline"
                         className="border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -794,67 +918,6 @@ export default function Calcular() {
                       className="mx-auto h-[220px] w-full object-contain p-3"
                     />
                   </div>
-
-                  {resultado.quantidadeNiveladores === null ? (
-                    <Alert className="mt-4">
-                      <Info className="size-4" />
-                      <AlertTitle>Dimensões não informadas</AlertTitle>
-                      <AlertDescription>
-                        Cadastre a largura e a altura do piso para calcular os
-                        niveladores.
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <p className="text-xs text-muted-foreground">Lado X</p>
-                        <p className="mt-1 text-xl font-bold">
-                          {resultado.niveladoresLadoX}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          pçs/peça
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <p className="text-xs text-muted-foreground">Lado Y</p>
-                        <p className="mt-1 text-xl font-bold">
-                          {resultado.niveladoresLadoY}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          pçs/peça
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <p className="text-xs text-muted-foreground">Total</p>
-                        <p className="mt-1 text-xl font-bold">
-                          {resultado.quantidadeNiveladores}
-                        </p>
-                        <p className="text-xs text-muted-foreground">peças</p>
-                      </div>
-                      <div className="rounded-xl bg-foreground p-3 text-center text-background">
-                        <p className="text-xs text-background/70">Comprar</p>
-                        <p className="mt-1 text-xl font-bold">
-                          {resultado.quantidadePacotesNiveladores}
-                        </p>
-                        <p className="text-xs text-background/70">
-                          pacotes de 100
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                    Referência de uma peça a cada 40 cm em cada lado. Confira a{" "}
-                    <a
-                      href="https://cortag.com/pt-br/calculadora-de-materiais/"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="font-medium text-foreground underline underline-offset-4"
-                    >
-                      calculadora da Cortag
-                    </a>
-                    .
-                  </p>
                 </section>
 
                 <section className="border-t p-5 sm:p-6">
