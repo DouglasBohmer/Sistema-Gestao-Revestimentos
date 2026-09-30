@@ -118,6 +118,8 @@ Regras obrigatórias:
 - Abaixo de “Paginação/Ambiente”, o cadastro oferece um atalho para abrir o site do piso em uma nova guia. As ações Alterar, Excluir e Novo do resumo do produto levam a tela de cadastro de volta ao topo.
 - O resumo de um piso oferece a ação “Ver”, que abre todos os seus dados em modo somente leitura; somente a foto principal aparece na miniatura do resumo. Orçamento, Notificações e Configurações permanecem desativados na navegação até que esses recursos sejam implementados.
 - As telas já visitadas permanecem montadas enquanto a sessão autenticada estiver ativa, preservando cálculos, formulários e seleções ao navegar. Cada navegação invalida as consultas ativas para atualizar listas sem recarregar a página; logout descarta o estado e o cache.
+- A navegação lateral permanece recolhida por padrão e se expande ao receber o mouse ou foco do teclado, sem descartar o estado das telas.
+- A tela de cálculo usa o fluxo horizontal escolhido no modelo 2. Ela mostra as duas imagens do produto na mesma linha quando existirem, omite somente a ausente e remove toda a linha quando nenhuma estiver disponível. O painel de niveladores fica acima do compartilhamento do cálculo.
 
 ### 3.5 Parâmetros de negócio
 
@@ -126,6 +128,8 @@ Regras obrigatórias:
 - O resultado dessa fórmula também é preço por m²; o total do piso deve usar `m2_vendido * preco_por_m2`, e não `quantidade_de_caixas * preco`.
 - Argamassa mantém como padrão 20 kg para cada 3 m².
 - Rejunte mantém como padrões profundidade 9, coeficiente 1,8 e embalagem de 1 kg.
+- Niveladores seguem a calculadora oficial da Cortag: cada lado usa no mínimo uma peça e acrescenta uma peça a cada 40 cm, o total considera a área efetivamente vendida e os pacotes possuem 100 peças. Intervalo e quantidade por pacote ficam persistidos em `parametros_sistema`.
+- O cálculo aceita exatamente uma entrada: metragem em m² ou quantidade inteira de caixas. Por metragem, aplica a margem padrão de 10% antes de arredondar caixas; por caixas, preserva exatamente a quantidade informada e não aplica margem. Materiais auxiliares usam sempre a metragem efetivamente vendida.
 - Esses valores não serão constantes fixas no código. Serão configurações persistidas do sistema, editáveis pela área “Configurações” já prevista no menu.
 - Mudanças de parâmetro devem ser validadas e auditáveis; cálculos históricos devem guardar os parâmetros efetivamente usados.
 
@@ -142,7 +146,7 @@ Retrato confirmado após a conclusão da migração em 15/08/2026:
 
 - O Node/Express foi removido. O runtime de negócio é 100% Spring Boot. Em Docker local, o Spring ainda pode servir o bundle React; em produção, o React fica no Cloudflare Workers e o Spring Render expõe somente a API.
 - CRUD/busca de pisos, cálculo, dashboard/atividades e mapas estão implementados no Spring e persistidos no PostgreSQL por JPA/Flyway.
-- As migrations V1–V8 criam Spring Session, parâmetros-base, pisos/atividades, mapas/células, importam e consolidam os 261 produtos legados, direcionam somente as imagens validadas ao R2 e adicionam a imagem de Paginação/Ambiente. Dados novos sobrevivem a restart do container.
+- As migrations V1–V9 criam Spring Session, parâmetros-base, pisos/atividades, mapas/células, importam e consolidam os 261 produtos legados, direcionam somente as imagens validadas ao R2, adicionam a imagem de Paginação/Ambiente e parametrizam os niveladores. Dados novos sobrevivem a restart do container.
 - O mapa aceita de um a quatro pisos únicos e ordenados por posição, valida dimensões/posições/quantidades e calcula m²/caixas no backend.
 - O acesso temporário `admin/admin` agora cria uma sessão real no Spring, com cookie HttpOnly, CSRF e Spring Session JDBC. O booleano falso de `sessionStorage` foi removido.
 - A limpeza de sessões expiradas do Spring Session JDBC roda uma vez ao dia, às `06:00 UTC` (`03:00` em Brasília), por `SESSION_CLEANUP_CRON`. Não restaurar o padrão de uma execução por minuto, pois isso mantém o Neon acordado sem uso real.

@@ -927,8 +927,10 @@ components:
 
     CalculoInput:
       type: object
-      required:
-        - metragemM2
+      description: Informe exatamente uma quantidade entre metragemM2 e quantidadeCaixas.
+      oneOf:
+        - required: [metragemM2]
+        - required: [quantidadeCaixas]
       properties:
         codigoPiso:
           type: string
@@ -939,10 +941,17 @@ components:
           description: Identificador escolhido quando o código retorna mais de um produto
         metragemM2:
           type: number
+          exclusiveMinimum: 0
           description: Área total do cliente em metros quadrados
+        quantidadeCaixas:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Quantidade exata de caixas desejada
         margemQuebra:
           type: number
-          description: Margem de quebra em percentual (ex 10 = 10%). Padrão 10.
+          minimum: 0
+          description: Margem de quebra em percentual (ex 10 = 10%). Padrão 10 no cálculo por metragem e zero no cálculo por caixas.
           default: 10
 
     CalculoResult:
@@ -953,20 +962,65 @@ components:
         - margemQuebra
         - metragemComMargem
         - quantidadeCaixas
+        - metragemVendidaM2
+        - quantidadeSacosArgamassa
+        - pesoArgamassaKg
+        - quantidadeEmbalagensRejunte
+        - pesoRejunteKg
+        - niveladoresLadoX
+        - niveladoresLadoY
+        - quantidadeNiveladores
+        - quantidadePacotesNiveladores
         - valorTotal
       properties:
         piso:
           $ref: "#/components/schemas/Piso"
         metragemM2:
           type: number
+          description: Área solicitada no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade
         margemQuebra:
           type: number
+          description: Margem aplicada; sempre zero quando a entrada é quantidade de caixas
         metragemComMargem:
           type: number
+          description: Área com margem no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade
         quantidadeCaixas:
           type: integer
           format: int64
-          description: Quantidade de caixas inteiras arredondada para cima
+          description: Quantidade de caixas inteiras arredondada para cima ou quantidade exata solicitada
+        metragemVendidaM2:
+          type: number
+          description: Cobertura efetivamente vendida, calculada por caixas x m² por caixa
+        quantidadeSacosArgamassa:
+          type: integer
+          format: int64
+          description: Quantidade inteira de sacos de argamassa, arredondada para cima
+        pesoArgamassaKg:
+          type: number
+          description: Consumo teórico de argamassa em quilogramas
+        quantidadeEmbalagensRejunte:
+          type: ["integer", "null"]
+          format: int64
+          description: Quantidade inteira de embalagens de rejunte, ou nulo sem largura, altura ou junta válidas
+        pesoRejunteKg:
+          type: ["number", "null"]
+          description: Consumo teórico de rejunte em quilogramas, ou nulo sem largura, altura ou junta válidas
+        niveladoresLadoX:
+          type: ["integer", "null"]
+          format: int64
+          description: Niveladores recomendados no lado X da peça, seguindo o intervalo configurado da calculadora Cortag
+        niveladoresLadoY:
+          type: ["integer", "null"]
+          format: int64
+          description: Niveladores recomendados no lado Y da peça, seguindo o intervalo configurado da calculadora Cortag
+        quantidadeNiveladores:
+          type: ["integer", "null"]
+          format: int64
+          description: Total de niveladores para a metragem efetivamente vendida, ou nulo sem dimensões válidas
+        quantidadePacotesNiveladores:
+          type: ["integer", "null"]
+          format: int64
+          description: Pacotes inteiros de niveladores, conforme a quantidade de peças configurada por pacote
         valorTotal:
           type: ["number", "null"]
           description: M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²

@@ -9,11 +9,50 @@ import type { Piso } from './piso';
 
 export interface CalculoResult {
   piso: Piso;
+  /** Área solicitada no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade */
   metragemM2: number;
+  /** Margem aplicada; sempre zero quando a entrada é quantidade de caixas */
   margemQuebra: number;
+  /** Área com margem no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade */
   metragemComMargem: number;
-  /** Quantidade de caixas inteiras arredondada para cima */
+  /** Quantidade de caixas inteiras arredondada para cima ou quantidade exata solicitada */
   quantidadeCaixas: bigint;
+  /** Cobertura efetivamente vendida, calculada por caixas x m² por caixa */
+  metragemVendidaM2: number;
+  /** Quantidade inteira de sacos de argamassa, arredondada para cima */
+  quantidadeSacosArgamassa: bigint;
+  /** Consumo teórico de argamassa em quilogramas */
+  pesoArgamassaKg: number;
+  /**
+     * Quantidade inteira de embalagens de rejunte, ou nulo sem largura, altura ou junta válidas
+     * @nullable
+     */
+  quantidadeEmbalagensRejunte: bigint | null;
+  /**
+     * Consumo teórico de rejunte em quilogramas, ou nulo sem largura, altura ou junta válidas
+     * @nullable
+     */
+  pesoRejunteKg: number | null;
+  /**
+     * Niveladores recomendados no lado X da peça, seguindo o intervalo configurado da calculadora Cortag
+     * @nullable
+     */
+  niveladoresLadoX: bigint | null;
+  /**
+     * Niveladores recomendados no lado Y da peça, seguindo o intervalo configurado da calculadora Cortag
+     * @nullable
+     */
+  niveladoresLadoY: bigint | null;
+  /**
+     * Total de niveladores para a metragem efetivamente vendida, ou nulo sem dimensões válidas
+     * @nullable
+     */
+  quantidadeNiveladores: bigint | null;
+  /**
+     * Pacotes inteiros de niveladores, conforme a quantidade de peças configurada por pacote
+     * @nullable
+     */
+  quantidadePacotesNiveladores: bigint | null;
   /**
      * M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²
      * @nullable

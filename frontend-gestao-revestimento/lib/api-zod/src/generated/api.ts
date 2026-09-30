@@ -379,14 +379,21 @@ export const ListPisosByCodigoResponse = zod.array(ListPisosByCodigoResponseItem
 /**
  * @summary Calcular quantidade de caixas necessárias
  */
-export const calcularPisoBodyMargemQuebraDefault = 10;
+export const calcularPisoBodyThreeMetragemM2ExclusiveMin = 0;
 
-export const CalcularPisoBody = zod.object({
+
+export const calcularPisoBodyThreeMargemQuebraDefault = 10;
+export const calcularPisoBodyThreeMargemQuebraMin = 0;
+
+
+
+export const CalcularPisoBody = zod.union([zod.unknown(),zod.unknown()]).and(zod.object({
   "codigoPiso": zod.string().optional().describe('Código Loja ou Código Rede do piso'),
   "pisoId": zod.number().int().optional().describe('Identificador escolhido quando o código retorna mais de um produto'),
-  "metragemM2": zod.number().describe('Área total do cliente em metros quadrados'),
-  "margemQuebra": zod.number().default(calcularPisoBodyMargemQuebraDefault).describe('Margem de quebra em percentual (ex 10 = 10%). Padrão 10.')
-})
+  "metragemM2": zod.number().gt(calcularPisoBodyThreeMetragemM2ExclusiveMin).optional().describe('Área total do cliente em metros quadrados'),
+  "quantidadeCaixas": zod.number().int().min(1).optional().describe('Quantidade exata de caixas desejada'),
+  "margemQuebra": zod.number().min(calcularPisoBodyThreeMargemQuebraMin).default(calcularPisoBodyThreeMargemQuebraDefault).describe('Margem de quebra em percentual (ex 10 = 10%). Padrão 10 no cálculo por metragem e zero no cálculo por caixas.')
+})).describe('Informe exatamente uma quantidade entre metragemM2 e quantidadeCaixas.')
 
 export const CalcularPisoResponse = zod.object({
   "piso": zod.object({
@@ -418,10 +425,19 @@ export const CalcularPisoResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }),
-  "metragemM2": zod.number(),
-  "margemQuebra": zod.number(),
-  "metragemComMargem": zod.number(),
-  "quantidadeCaixas": zod.number().int().describe('Quantidade de caixas inteiras arredondada para cima'),
+  "metragemM2": zod.number().describe('Área solicitada no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade'),
+  "margemQuebra": zod.number().describe('Margem aplicada; sempre zero quando a entrada é quantidade de caixas'),
+  "metragemComMargem": zod.number().describe('Área com margem no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade'),
+  "quantidadeCaixas": zod.number().int().describe('Quantidade de caixas inteiras arredondada para cima ou quantidade exata solicitada'),
+  "metragemVendidaM2": zod.number().describe('Cobertura efetivamente vendida, calculada por caixas x m² por caixa'),
+  "quantidadeSacosArgamassa": zod.number().int().describe('Quantidade inteira de sacos de argamassa, arredondada para cima'),
+  "pesoArgamassaKg": zod.number().describe('Consumo teórico de argamassa em quilogramas'),
+  "quantidadeEmbalagensRejunte": zod.number().int().nullable().describe('Quantidade inteira de embalagens de rejunte, ou nulo sem largura, altura ou junta válidas'),
+  "pesoRejunteKg": zod.number().nullable().describe('Consumo teórico de rejunte em quilogramas, ou nulo sem largura, altura ou junta válidas'),
+  "niveladoresLadoX": zod.number().int().nullable().describe('Niveladores recomendados no lado X da peça, seguindo o intervalo configurado da calculadora Cortag'),
+  "niveladoresLadoY": zod.number().int().nullable().describe('Niveladores recomendados no lado Y da peça, seguindo o intervalo configurado da calculadora Cortag'),
+  "quantidadeNiveladores": zod.number().int().nullable().describe('Total de niveladores para a metragem efetivamente vendida, ou nulo sem dimensões válidas'),
+  "quantidadePacotesNiveladores": zod.number().int().nullable().describe('Pacotes inteiros de niveladores, conforme a quantidade de peças configurada por pacote'),
   "valorTotal": zod.number().nullable().describe('M² efetivamente vendidos (caixas x m²\/caixa) multiplicados pelo preço em R$\/m²')
 })
 

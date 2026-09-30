@@ -217,24 +217,77 @@ export interface PisoInput {
   ativo?: boolean;
 }
 
-export interface CalculoInput {
+/**
+ * Informe exatamente uma quantidade entre metragemM2 e quantidadeCaixas.
+ */
+export type CalculoInput = (unknown & {
   /** Código Loja ou Código Rede do piso */
   codigoPiso?: string;
   /** Identificador escolhido quando o código retorna mais de um produto */
   pisoId?: number;
-  /** Área total do cliente em metros quadrados */
-  metragemM2: number;
-  /** Margem de quebra em percentual (ex 10 = 10%). Padrão 10. */
+  /**
+     * Área total do cliente em metros quadrados
+     * @exclusiveMinimum 0
+     */
+  metragemM2?: number;
+  /**
+     * Quantidade exata de caixas desejada
+     * @minimum 1
+     */
+  quantidadeCaixas?: number;
+  /**
+     * Margem de quebra em percentual (ex 10 = 10%). Padrão 10 no cálculo por metragem e zero no cálculo por caixas.
+     * @minimum 0
+     */
   margemQuebra?: number;
-}
+});
 
 export interface CalculoResult {
   piso: Piso;
+  /** Área solicitada no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade */
   metragemM2: number;
+  /** Margem aplicada; sempre zero quando a entrada é quantidade de caixas */
   margemQuebra: number;
+  /** Área com margem no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade */
   metragemComMargem: number;
-  /** Quantidade de caixas inteiras arredondada para cima */
+  /** Quantidade de caixas inteiras arredondada para cima ou quantidade exata solicitada */
   quantidadeCaixas: number;
+  /** Cobertura efetivamente vendida, calculada por caixas x m² por caixa */
+  metragemVendidaM2: number;
+  /** Quantidade inteira de sacos de argamassa, arredondada para cima */
+  quantidadeSacosArgamassa: number;
+  /** Consumo teórico de argamassa em quilogramas */
+  pesoArgamassaKg: number;
+  /**
+     * Quantidade inteira de embalagens de rejunte, ou nulo sem largura, altura ou junta válidas
+     * @nullable
+     */
+  quantidadeEmbalagensRejunte: number | null;
+  /**
+     * Consumo teórico de rejunte em quilogramas, ou nulo sem largura, altura ou junta válidas
+     * @nullable
+     */
+  pesoRejunteKg: number | null;
+  /**
+     * Niveladores recomendados no lado X da peça, seguindo o intervalo configurado da calculadora Cortag
+     * @nullable
+     */
+  niveladoresLadoX: number | null;
+  /**
+     * Niveladores recomendados no lado Y da peça, seguindo o intervalo configurado da calculadora Cortag
+     * @nullable
+     */
+  niveladoresLadoY: number | null;
+  /**
+     * Total de niveladores para a metragem efetivamente vendida, ou nulo sem dimensões válidas
+     * @nullable
+     */
+  quantidadeNiveladores: number | null;
+  /**
+     * Pacotes inteiros de niveladores, conforme a quantidade de peças configurada por pacote
+     * @nullable
+     */
+  quantidadePacotesNiveladores: number | null;
   /**
      * M² efetivamente vendidos (caixas x m²/caixa) multiplicados pelo preço em R$/m²
      * @nullable

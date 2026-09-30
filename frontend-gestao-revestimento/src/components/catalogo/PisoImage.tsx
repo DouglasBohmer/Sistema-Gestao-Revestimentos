@@ -9,6 +9,7 @@ type PisoImageProps = {
   alt: string;
   className?: string;
   fallbackClassName?: string;
+  onUnavailable?: () => void;
 };
 
 export function legacyProductImageFallback(
@@ -54,6 +55,7 @@ export function PisoImage({
   alt,
   className,
   fallbackClassName,
+  onUnavailable,
 }: PisoImageProps) {
   const candidates = useMemo(
     () => imageCandidates(primaryUrl, fallbackUrl),
@@ -66,6 +68,14 @@ export function PisoImage({
   }, [primaryUrl, fallbackUrl]);
 
   const currentUrl = candidates[candidateIndex];
+
+  const handleError = () => {
+    const nextIndex = candidateIndex + 1;
+    setCandidateIndex(nextIndex);
+    if (nextIndex >= candidates.length) {
+      onUnavailable?.();
+    }
+  };
 
   if (!currentUrl) {
     return (
@@ -89,7 +99,7 @@ export function PisoImage({
       className={className}
       decoding="async"
       referrerPolicy="no-referrer"
-      onError={() => setCandidateIndex((index) => index + 1)}
+      onError={handleError}
     />
   );
 }

@@ -23,6 +23,7 @@ public class CalculoController {
                 request.pisoId(),
                 request.codigoPiso(),
                 request.metragemM2(),
+                request.quantidadeCaixas(),
                 request.margemQuebra());
     }
 }

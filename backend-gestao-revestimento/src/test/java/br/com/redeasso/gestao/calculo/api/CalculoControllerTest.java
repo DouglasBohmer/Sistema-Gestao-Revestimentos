@@ -39,7 +39,7 @@ class CalculoControllerTest {
 
     @Test
     void mantemOContratoConsumidoPeloReact() throws Exception {
-        when(calculoService.calcular(any(), any(), any(), any())).thenReturn(resposta());
+        when(calculoService.calcular(any(), any(), any(), any(), any())).thenReturn(resposta());
 
         mockMvc.perform(post("/api/pisos/calcular")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -50,13 +50,29 @@ class CalculoControllerTest {
                 .andExpect(jsonPath("$.piso.codigoLoja").value("L-001"))
                 .andExpect(jsonPath("$.metragemComMargem").value(50.05))
                 .andExpect(jsonPath("$.quantidadeCaixas").value(35))
+                .andExpect(jsonPath("$.quantidadeNiveladores").isEmpty())
                 .andExpect(jsonPath("$.valorTotal").value(4530.96));
 
         verify(calculoService).calcular(
                 null,
                 "L-001",
                 new BigDecimal("45.5"),
+                null,
                 new BigDecimal("10"));
+    }
+
+    @Test
+    void aceitaQuantidadeExataDeCaixas() throws Exception {
+        when(calculoService.calcular(any(), any(), any(), any(), any())).thenReturn(resposta());
+
+        mockMvc.perform(post("/api/pisos/calcular")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigoPiso":"L-001","quantidadeCaixas":4}
+                                """))
+                .andExpect(status().isOk());
+
+        verify(calculoService).calcular(null, "L-001", null, 4L, null);
     }
 
     @Test
@@ -72,8 +88,41 @@ class CalculoControllerTest {
     }
 
     @Test
+    void rejeitaQuantidadeDeCaixasNaoPositiva() throws Exception {
+        mockMvc.perform(post("/api/pisos/calcular")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigoPiso":"L-001","quantidadeCaixas":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void rejeitaMetragemECaixasInformadasAoMesmoTempo() throws Exception {
+        mockMvc.perform(post("/api/pisos/calcular")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigoPiso":"L-001","metragemM2":10,"quantidadeCaixas":4}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void rejeitaPedidoSemMetragemNemCaixas() throws Exception {
+        mockMvc.perform(post("/api/pisos/calcular")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"codigoPiso":"L-001"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void responde404QuandoOcodigoNaoExiste() throws Exception {
-        when(calculoService.calcular(any(), any(), any(), any()))
+        when(calculoService.calcular(any(), any(), any(), any(), any()))
                 .thenThrow(new PisoNaoEncontradoException());
 
         mockMvc.perform(post("/api/pisos/calcular")
@@ -121,6 +170,15 @@ class CalculoControllerTest {
                 new BigDecimal("10"),
                 new BigDecimal("50.050000"),
                 35,
+                new BigDecimal("50.400000"),
+                17,
+                new BigDecimal("336.000000"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 new BigDecimal("4530.96"));
     }
 }

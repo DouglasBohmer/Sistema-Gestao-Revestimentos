@@ -63,13 +63,19 @@ class GestaoRevestimentoApplicationIT {
                 String.class)).isEqualTo("spring_session");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM parametros_sistema",
-                Integer.class)).isEqualTo(7);
+                Integer.class)).isEqualTo(9);
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT valor FROM parametros_sistema WHERE chave = 'PRECO_LUCRO_PERCENTUAL'",
                 BigDecimal.class)).isEqualByComparingTo("90");
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT valor FROM parametros_sistema WHERE chave = 'PRECO_DESCONTO_PERCENTUAL'",
                 BigDecimal.class)).isEqualByComparingTo("12");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT valor FROM parametros_sistema WHERE chave = 'NIVELADOR_INTERVALO_CM'",
+                BigDecimal.class)).isEqualByComparingTo("40");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT valor FROM parametros_sistema WHERE chave = 'NIVELADOR_PECAS_PACOTE'",
+                BigDecimal.class)).isEqualByComparingTo("100");
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pisos", Integer.class)).isEqualTo(261);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pisos WHERE ativo", Integer.class)).isZero();
         assertThat(jdbcTemplate.queryForObject("""

@@ -6,13 +6,27 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CalculoInput {
+/**
+ * Informe exatamente uma quantidade entre metragemM2 e quantidadeCaixas.
+ */
+export type CalculoInput = (unknown & {
   /** Código Loja ou Código Rede do piso */
   codigoPiso?: string;
   /** Identificador escolhido quando o código retorna mais de um produto */
   pisoId?: bigint;
-  /** Área total do cliente em metros quadrados */
-  metragemM2: number;
-  /** Margem de quebra em percentual (ex 10 = 10%). Padrão 10. */
+  /**
+     * Área total do cliente em metros quadrados
+     * @exclusiveMinimum 0
+     */
+  metragemM2?: number;
+  /**
+     * Quantidade exata de caixas desejada
+     * @minimum 1
+     */
+  quantidadeCaixas?: bigint;
+  /**
+     * Margem de quebra em percentual (ex 10 = 10%). Padrão 10 no cálculo por metragem e zero no cálculo por caixas.
+     * @minimum 0
+     */
   margemQuebra?: number;
-}
+});
