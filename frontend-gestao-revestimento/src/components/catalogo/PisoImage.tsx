@@ -98,6 +98,7 @@ export function PisoImage({
       alt={alt}
       className={className}
       decoding="async"
+      loading="lazy"
       referrerPolicy="no-referrer"
       onError={handleError}
     />

@@ -33,6 +33,7 @@ interface Environment {
 const PRODUCT_IMAGE_API_PATH = "/api/product-images";
 const PRODUCT_IMAGE_PUBLIC_PREFIX = "/product-images/";
 const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024;
+const LEGACY_IMAGE_FETCH_TIMEOUT_MS = 12_000;
 const LEGACY_MIGRATION_BATCH_SIZE = 10;
 const LEGACY_MIGRATION_COMPLETE_KEY =
   "_migrations/legacy-product-images-v7/complete";
@@ -194,6 +195,12 @@ async function copyLegacyImageToR2(
   const definition = definitions[key];
   if (!definition || !environment.PRODUCT_IMAGES) return false;
 
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(
+    () => abortController.abort(),
+    LEGACY_IMAGE_FETCH_TIMEOUT_MS,
+  );
+
   try {
     const response = await fetch(definition.sourceUrl, {
       headers: {
@@ -201,6 +208,7 @@ async function copyLegacyImageToR2(
         "user-agent": "RedeASSO-image-migration/1.0",
       },
       redirect: "follow",
+      signal: abortController.signal,
     });
     if (!response.ok) return false;
 
@@ -233,6 +241,8 @@ async function copyLegacyImageToR2(
   } catch (error) {
     console.error("Falha ao copiar uma imagem legada para o R2.", key, error);
     return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

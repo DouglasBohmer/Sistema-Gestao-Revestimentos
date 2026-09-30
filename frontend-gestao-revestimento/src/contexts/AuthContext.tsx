@@ -31,8 +31,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    const abortController = new AbortController()
+    const timeoutId = window.setTimeout(() => abortController.abort(), 15_000)
 
-    getAuthSession()
+    getAuthSession({ signal: abortController.signal })
       .then((currentSession) => {
         if (mounted) setSession(currentSession)
       })
@@ -40,11 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) setSession(null)
       })
       .finally(() => {
+        window.clearTimeout(timeoutId)
         if (mounted) setIsLoading(false)
       })
 
     return () => {
       mounted = false
+      window.clearTimeout(timeoutId)
+      abortController.abort()
     }
   }, [])
 

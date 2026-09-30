@@ -86,23 +86,17 @@ function parseNumero(valor: string) {
   return Number(valor.trim().replace(",", "."));
 }
 
-function normalizarEntradaMetragem(valor: string) {
-  const sanitizado = valor
-    .replace(".", ",")
-    .replace(/[^\d,]/g, "")
-    .replace(/,(?=.*?,)/g, "");
-  const [inteiro = "", decimais] = sanitizado.split(",");
+function mascararEntradaMetragem(valor: string) {
+  const digitos = valor.replace(/\D/g, "").replace(/^0+(?=\d)/, "") || "0";
+  const valorComCentavos = digitos.padStart(3, "0");
+  const separador = valorComCentavos.length - 2;
 
-  return decimais === undefined
-    ? inteiro
-    : `${inteiro},${decimais.slice(0, 2)}`;
+  return `${valorComCentavos.slice(0, separador)},${valorComCentavos.slice(separador)}`;
 }
 
-function completarCasasMetragem(valor: string) {
-  const numero = parseNumero(valor);
-  return Number.isFinite(numero) && numero > 0
-    ? numero.toFixed(2).replace(".", ",")
-    : valor;
+function posicionarCursorNoFim(input: HTMLInputElement) {
+  const fim = input.value.length;
+  input.setSelectionRange(fim, fim);
 }
 
 function normalizarTelefone(valor: string) {
@@ -130,6 +124,8 @@ type ResumoCalculo = {
   pesoArgamassaKg: number;
   quantidadeEmbalagensRejunte: number | null;
   pesoRejunteKg: number | null;
+  niveladoresLadoX: number | null;
+  niveladoresLadoY: number | null;
   quantidadeNiveladores: number | null;
   quantidadePacotesNiveladores: number | null;
 };
@@ -218,6 +214,14 @@ function normalizarResumoCalculo(
       resultado.pesoRejunteKg,
       pesoRejunteKgFallback,
     ),
+    niveladoresLadoX: numeroNullableDaApiOuFallback(
+      resultado.niveladoresLadoX,
+      niveladoresLadoXFallback,
+    ),
+    niveladoresLadoY: numeroNullableDaApiOuFallback(
+      resultado.niveladoresLadoY,
+      niveladoresLadoYFallback,
+    ),
     quantidadeNiveladores: numeroNullableDaApiOuFallback(
       resultado.quantidadeNiveladores,
       quantidadeNiveladoresFallback,
@@ -273,7 +277,7 @@ export default function Calcular() {
 
   const [codigoBusca, setCodigoBusca] = useState("");
   const [modoEntrada, setModoEntrada] = useState<ModoEntrada>("METRAGEM");
-  const [metragem, setMetragem] = useState("");
+  const [metragem, setMetragem] = useState("0,00");
   const [quantidadeCaixas, setQuantidadeCaixas] = useState("");
   const [telefone, setTelefone] = useState("");
   const [resultado, setResultado] = useState<CalculoResult | null>(null);
@@ -514,8 +518,10 @@ export default function Calcular() {
                     value={quantidadeAtual}
                     onChange={(event) => {
                       if (modoEntrada === "METRAGEM") {
-                        setMetragem(
-                          normalizarEntradaMetragem(event.target.value),
+                        const input = event.currentTarget;
+                        setMetragem(mascararEntradaMetragem(input.value));
+                        requestAnimationFrame(() =>
+                          posicionarCursorNoFim(input),
                         );
                         return;
                       }
@@ -523,9 +529,14 @@ export default function Calcular() {
                         event.target.value.replace(/\D/g, ""),
                       );
                     }}
-                    onBlur={() => {
-                      if (modoEntrada === "METRAGEM" && metragem) {
-                        setMetragem(completarCasasMetragem(metragem));
+                    onFocus={(event) => {
+                      if (modoEntrada === "METRAGEM") {
+                        posicionarCursorNoFim(event.currentTarget);
+                      }
+                    }}
+                    onClick={(event) => {
+                      if (modoEntrada === "METRAGEM") {
+                        posicionarCursorNoFim(event.currentTarget);
                       }
                     }}
                     inputMode={
@@ -916,8 +927,49 @@ export default function Calcular() {
                       src="/images/niveladores-cortag.png"
                       alt="Exemplo de posicionamento dos niveladores nos lados X e Y de um piso"
                       className="mx-auto h-[220px] w-full object-contain p-3"
+                      loading="lazy"
                     />
                   </div>
+
+                  {(resumoCalculo.niveladoresLadoX !== null ||
+                    resumoCalculo.niveladoresLadoY !== null) && (
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      {resumoCalculo.niveladoresLadoX !== null &&
+                        piso.largura != null && (
+                          <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Comprimento X
+                            </p>
+                            <div className="mt-1 flex items-end justify-between gap-2">
+                              <strong className="text-sm">
+                                {formatarNumero(piso.largura)} cm
+                              </strong>
+                              <span className="text-right text-xs text-muted-foreground">
+                                Recomendado: {resumoCalculo.niveladoresLadoX}{" "}
+                                pçs
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      {resumoCalculo.niveladoresLadoY !== null &&
+                        piso.altura != null && (
+                          <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Largura Y
+                            </p>
+                            <div className="mt-1 flex items-end justify-between gap-2">
+                              <strong className="text-sm">
+                                {formatarNumero(piso.altura)} cm
+                              </strong>
+                              <span className="text-right text-xs text-muted-foreground">
+                                Recomendado: {resumoCalculo.niveladoresLadoY}{" "}
+                                pçs
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
                 </section>
 
                 <section className="border-t p-5 sm:p-6">

@@ -47,9 +47,11 @@ export function Sidebar() {
         {/* Logo */}
         <div className="flex h-24 shrink-0 items-center border-b border-white/10">
           <div className="flex w-16 shrink-0 items-center justify-center">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-sm font-black tracking-tight text-black">
-              RA
-            </span>
+            <img
+              src="/images/redeasso-logo.png"
+              alt="RedeASSO"
+              className="h-11 w-11 object-contain"
+            />
           </div>
           <div className="min-w-0 whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover/sidebar:opacity-100 group-focus-within/sidebar:opacity-100">
             <h1 className="text-xl font-bold tracking-tight text-white">
