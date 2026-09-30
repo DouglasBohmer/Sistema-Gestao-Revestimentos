@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ImageOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const IMAGE_LOAD_TIMEOUT_MS = 10_000;
 
 type PisoImageProps = {
   primaryUrl?: string | null;
@@ -62,20 +64,64 @@ export function PisoImage({
     [primaryUrl, fallbackUrl],
   );
   const [candidateIndex, setCandidateIndex] = useState(0);
+  const [isNearViewport, setIsNearViewport] = useState(false);
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const failedCandidateRef = useRef<string | null>(null);
+  const onUnavailableRef = useRef(onUnavailable);
+
+  useEffect(() => {
+    onUnavailableRef.current = onUnavailable;
+  }, [onUnavailable]);
 
   useEffect(() => {
     setCandidateIndex(0);
+    setLoadedUrl(null);
+    failedCandidateRef.current = null;
   }, [primaryUrl, fallbackUrl]);
 
   const currentUrl = candidates[candidateIndex];
 
-  const handleError = () => {
+  useEffect(() => {
+    if (isNearViewport || !currentUrl) return;
+
+    const image = imageRef.current;
+    if (!image || typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setIsNearViewport(true);
+        observer.disconnect();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(image);
+
+    return () => observer.disconnect();
+  }, [currentUrl, isNearViewport]);
+
+  const handleError = useCallback(() => {
+    if (!currentUrl || failedCandidateRef.current === currentUrl) return;
+
+    failedCandidateRef.current = currentUrl;
     const nextIndex = candidateIndex + 1;
+    setLoadedUrl(null);
     setCandidateIndex(nextIndex);
     if (nextIndex >= candidates.length) {
-      onUnavailable?.();
+      onUnavailableRef.current?.();
     }
-  };
+  }, [candidateIndex, candidates.length, currentUrl]);
+
+  useEffect(() => {
+    if (!isNearViewport || !currentUrl || loadedUrl === currentUrl) return;
+
+    const timeoutId = window.setTimeout(handleError, IMAGE_LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [currentUrl, handleError, isNearViewport, loadedUrl]);
 
   if (!currentUrl) {
     return (
@@ -93,6 +139,7 @@ export function PisoImage({
 
   return (
     <img
+      ref={imageRef}
       key={currentUrl}
       src={currentUrl}
       alt={alt}
@@ -101,6 +148,7 @@ export function PisoImage({
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={handleError}
+      onLoad={() => setLoadedUrl(currentUrl)}
     />
   );
 }

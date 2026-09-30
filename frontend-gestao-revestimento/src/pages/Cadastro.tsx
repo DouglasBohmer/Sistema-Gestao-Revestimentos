@@ -1502,12 +1502,13 @@ export default function Cadastro() {
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-56 lg:justify-end">
+                  <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:w-48">
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
                       onClick={handleView}
+                      className="h-9 w-full justify-center"
                     >
                       <Eye size={15} className="mr-1.5" />
                       Ver
@@ -1517,6 +1518,7 @@ export default function Cadastro() {
                       size="sm"
                       variant="outline"
                       onClick={handleEdit}
+                      className="h-9 w-full justify-center"
                     >
                       <Edit size={15} className="mr-1.5" />
                       Alterar
@@ -1526,6 +1528,7 @@ export default function Cadastro() {
                       size="sm"
                       variant="destructive"
                       onClick={handleDelete}
+                      className="h-9 w-full justify-center"
                     >
                       <Trash2 size={15} className="mr-1.5" />
                       Excluir
@@ -1535,6 +1538,7 @@ export default function Cadastro() {
                       size="sm"
                       variant="secondary"
                       onClick={handleNew}
+                      className="h-9 w-full justify-center"
                     >
                       <Plus size={15} className="mr-1.5" />
                       Novo

@@ -4,6 +4,10 @@ interface AssetsBinding {
   fetch(request: Request): Promise<Response>;
 }
 
+interface WorkerExecutionContext {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
 interface ProductImageObject {
   body: ReadableStream<Uint8Array>;
   httpEtag: string;
@@ -369,6 +373,7 @@ async function handleProductImageMutation(
 async function serveProductImage(
   requestUrl: URL,
   environment: Environment,
+  context: WorkerExecutionContext,
 ): Promise<Response> {
   if (!environment.PRODUCT_IMAGES) return new Response(null, { status: 404 });
 
@@ -377,12 +382,20 @@ async function serveProductImage(
     return new Response(null, { status: 404 });
   }
 
-  let image = await environment.PRODUCT_IMAGES.get(key);
+  const image = await environment.PRODUCT_IMAGES.get(key);
   if (!image && isLegacyImageKey(key)) {
-    const copied = await copyLegacyImageToR2(key, environment);
-    if (copied) image = await environment.PRODUCT_IMAGES.get(key);
+    context.waitUntil(copyLegacyImageToR2(key, environment));
+    return new Response(null, {
+      status: 404,
+      headers: { "cache-control": "no-store" },
+    });
   }
-  if (!image) return new Response(null, { status: 404 });
+  if (!image) {
+    return new Response(null, {
+      status: 404,
+      headers: { "cache-control": "no-store" },
+    });
+  }
 
   const headers = new Headers({
     "cache-control": "public, max-age=31536000, immutable",
@@ -394,10 +407,14 @@ async function serveProductImage(
 }
 
 export default {
-  async fetch(request: Request, environment: Environment): Promise<Response> {
+  async fetch(
+    request: Request,
+    environment: Environment,
+    context: WorkerExecutionContext,
+  ): Promise<Response> {
     const requestUrl = new URL(request.url);
     if (requestUrl.pathname.startsWith(PRODUCT_IMAGE_PUBLIC_PREFIX)) {
-      return serveProductImage(requestUrl, environment);
+      return serveProductImage(requestUrl, environment, context);
     }
     if (requestUrl.pathname === PRODUCT_IMAGE_API_PATH) {
       return handleProductImageMutation(request, requestUrl, environment);

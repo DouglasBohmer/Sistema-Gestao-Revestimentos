@@ -38,6 +38,15 @@ const authenticatedRoutes: Array<{
   { path: "/conexao-area-central", component: ConexaoAreaCentral },
 ];
 
+const refreshQueryKeysByRoute: Record<string, ReadonlyArray<readonly unknown[]>> = {
+  "/": [
+    ["/api/dashboard/stats"],
+    ["/api/dashboard/atividade-recente"],
+  ],
+  "/cadastro": [["/api/pisos"]],
+  "/mapa-estoque": [["mapas"], ["/api/pisos"]],
+};
+
 function PersistentRoutes() {
   const [location] = useLocation();
   const activeQueryClient = useQueryClient();
@@ -47,7 +56,12 @@ function PersistentRoutes() {
   );
 
   useEffect(() => {
-    void activeQueryClient.invalidateQueries({ refetchType: "active" });
+    for (const queryKey of refreshQueryKeysByRoute[location] ?? []) {
+      void activeQueryClient.invalidateQueries({
+        queryKey,
+        refetchType: "active",
+      });
+    }
   }, [activeQueryClient, location]);
 
   if (routeExists) visitedRoutes.add(location);

@@ -99,6 +99,36 @@ function posicionarCursorNoFim(input: HTMLInputElement) {
   input.setSelectionRange(fim, fim);
 }
 
+function obterDigitosTelefoneNacional(valor: string) {
+  const digitos = valor.replace(/\D/g, "");
+  const possuiPrefixoInternacional = /^\s*\+\s*55/.test(valor);
+  const possuiCodigoPaisColado =
+    digitos.startsWith("55") && digitos.length > 11;
+  const numeroNacional =
+    possuiPrefixoInternacional || possuiCodigoPaisColado
+      ? digitos.slice(2)
+      : digitos;
+
+  return numeroNacional.slice(0, 11);
+}
+
+function mascararTelefone(valor: string) {
+  const digitos = obterDigitosTelefoneNacional(valor);
+
+  if (!digitos) return "";
+  if (digitos.length <= 2) return `(${digitos}`;
+
+  const ddd = digitos.slice(0, 2);
+  const numero = digitos.slice(2);
+  const tamanhoPrefixo = numero.length > 8 ? 5 : 4;
+
+  if (numero.length <= tamanhoPrefixo) {
+    return `(${ddd}) ${numero}`;
+  }
+
+  return `(${ddd}) ${numero.slice(0, tamanhoPrefixo)}-${numero.slice(tamanhoPrefixo)}`;
+}
+
 function normalizarTelefone(valor: string) {
   const digitos = valor.replace(/\D/g, "");
 
@@ -989,8 +1019,17 @@ export default function Calcular() {
                       type="tel"
                       inputMode="tel"
                       value={telefone}
-                      onChange={(event) => setTelefone(event.target.value)}
+                      onChange={(event) =>
+                        setTelefone(mascararTelefone(event.target.value))
+                      }
+                      onPaste={(event) => {
+                        event.preventDefault();
+                        setTelefone(
+                          mascararTelefone(event.clipboardData.getData("text")),
+                        );
+                      }}
                       placeholder="(00) 00000-0000"
+                      autoComplete="tel-national"
                       className="h-11"
                     />
                   </div>
