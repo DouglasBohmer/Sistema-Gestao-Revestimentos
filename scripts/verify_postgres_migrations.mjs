@@ -54,8 +54,8 @@ try {
 
   assert.deepEqual(
     migrations.map(migrationVersion),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    "A sequência de migrations deve ser contínua de V1 a V9",
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "A sequência de migrations deve ser contínua de V1 a V10",
   );
 
   for (const migration of migrations) {
@@ -264,6 +264,16 @@ try {
     1,
     "O código CTC 6877 deve ter sido consolidado",
   );
+  assert.equal(
+    await scalar(
+      database,
+      `SELECT link_paginacao AS value
+         FROM pisos
+        WHERE codigo_rede = '2183343'`,
+    ),
+    "https://grupoembramaco.com.br/public/images/product/bc7df15dec999e399610432b2496f3c2.jpg",
+    "O piso ASSO 2183343 deve receber a imagem de Paginação/Ambiente",
+  );
 
   await expectConstraintViolation(
     database,
@@ -309,7 +319,7 @@ try {
   );
 
   console.log(
-    "\nVerificação concluída: V1–V9 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
+    "\nVerificação concluída: V1–V10 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
   );
 } finally {
   await database.close();
