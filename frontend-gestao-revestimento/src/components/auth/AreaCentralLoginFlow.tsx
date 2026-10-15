@@ -8,15 +8,12 @@ import {
 } from '@workspace/api-client-react'
 import { AlertCircle, Eye, EyeOff, LoaderCircle, Lock, ShieldCheck, User, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { areaCentralLoginError } from './area-central-login-error'
 
 function errorMessage(error: unknown) {
-  if (error instanceof ApiError && error.data && typeof error.data === 'object') {
-    const message = (error.data as { message?: string }).message
-    if (message) return message
-  }
-  return error instanceof Error
-    ? error.message.replace(/^HTTP \d+ [^:]+:\s*/, '')
-    : 'Não foi possível concluir a operação.'
+  if (error instanceof ApiError) return areaCentralLoginError(error.status, error.data)
+  return 'Não foi possível comunicar com o serviço de login. Verifique o serviço no Render e tente novamente.'
 }
 
 export function AreaCentralLoginFlow() {
@@ -28,6 +25,7 @@ export function AreaCentralLoginFlow() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const [verificationVersion, setVerificationVersion] = useState(0)
   const cancelled = useRef(false)
   const completing = useRef(false)
 
@@ -44,36 +42,15 @@ export function AreaCentralLoginFlow() {
         if (!active || cancelled.current) return
         setAttempt(current)
 
-        if (current.status === 'WAITING_FOR_HUMAN') setModalOpen(true)
         if (current.status !== 'READY_TO_COMPLETE') {
           timeout = window.setTimeout(() => void checkLoginState(), 2_000)
-          return
         }
-
-        completing.current = true
-        setLoading(true)
-        const authenticated = await completeAreaCentralLogin()
-        if (!active) return
-
-        if (authenticated) {
-          setAttempt(null)
-          setModalOpen(false)
-          return
-        }
-        setError('A Área Central não confirmou a sessão.')
-        setAttempt(null)
-        setModalOpen(false)
+        // Modo de observação: não fecha o navegador nem conclui o acesso sozinho.
       } catch (cause) {
         if (!active || cancelled.current) return
-        const message = errorMessage(cause)
-        setError(message)
-        setAttempt(null)
-        setModalOpen(false)
-        // Cancelar também no erro evita prender o único navegador disponível.
-        void cancelCurrentAreaCentralLoginAttempt().catch(() => undefined)
-      } finally {
-        completing.current = false
-        if (active && !cancelled.current) setLoading(false)
+        setError(errorMessage(cause))
+        // Preserva a janela e a concessão existente para inspeção. O limite de
+        // dez minutos e o cancelamento explícito continuam sendo respeitados.
       }
     }
 
@@ -83,7 +60,7 @@ export function AreaCentralLoginFlow() {
       window.clearTimeout(timeout)
       controller.abort()
     }
-  }, [attempt?.expiresAt, attempt?.interactiveUrl, completeAreaCentralLogin])
+  }, [attempt?.expiresAt, attempt?.interactiveUrl, verificationVersion])
 
   async function start(event: FormEvent) {
     event.preventDefault()
@@ -91,6 +68,7 @@ export function AreaCentralLoginFlow() {
 
     setError('')
     setLoading(true)
+    setModalOpen(true)
     cancelled.current = false
     try {
       const pending = startAreaCentralLoginAttempt({
@@ -101,13 +79,32 @@ export function AreaCentralLoginFlow() {
       setShowPassword(false)
       const nextAttempt = await pending
       setAttempt(nextAttempt)
-      setModalOpen(nextAttempt.status === 'WAITING_FOR_HUMAN')
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
       setLoading(false)
       setPassword('')
       setShowPassword(false)
+    }
+  }
+
+  async function finish() {
+    if (!attempt || attempt.status !== 'READY_TO_COMPLETE' || completing.current) return
+    completing.current = true
+    setLoading(true)
+    setError('')
+    try {
+      if (await completeAreaCentralLogin()) {
+        setAttempt(null)
+        setModalOpen(false)
+      } else {
+        setError('A Área Central não confirmou a sessão. A janela foi mantida para análise.')
+      }
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      completing.current = false
+      setLoading(false)
     }
   }
 
@@ -131,7 +128,7 @@ export function AreaCentralLoginFlow() {
     <>
       <form onSubmit={event => void start(event)} className="space-y-5">
         <p className="text-sm leading-relaxed text-gray-600">
-          Use sua conta da Área Central. Seu acesso permanece conectado por até 12 horas, enquanto a sessão estiver válida.
+          Use sua conta da Área Central e acompanhe o login nesta tela. Seu acesso permanece conectado por até 12 horas, enquanto a sessão estiver válida.
         </p>
 
         <div>
@@ -194,24 +191,28 @@ export function AreaCentralLoginFlow() {
         )}
       </form>
 
-      {error && (
+      {error && !modalOpen && (
         <div className="mt-4 flex items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-2.5 text-sm text-zinc-800">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
 
-      {attempt && modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="area-central-modal-title">
-          <section className="flex h-[min(760px,calc(100vh-1.5rem))] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      {modalOpen && (
+        <Dialog open={modalOpen} onOpenChange={open => { if (!open && !loading) void cancel() }}>
+          <DialogContent
+            className="flex h-[min(760px,calc(100dvh-1.5rem))] w-[calc(100vw-1.5rem)] max-w-5xl flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 shadow-2xl sm:rounded-2xl [&>button]:hidden"
+            onInteractOutside={event => event.preventDefault()}
+            onEscapeKeyDown={event => { if (loading) event.preventDefault() }}
+          >
             <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
               <div>
-                <h3 id="area-central-modal-title" className="font-semibold text-zinc-900">
-                  {attempt.status === 'READY_TO_COMPLETE' ? 'Concluindo acesso...' : 'Confirme seu acesso'}
-                </h3>
-                <p className="mt-1 text-sm text-zinc-600">
-                  Os dados já foram preenchidos. Conclua a verificação solicitada pela Área Central nesta janela.
-                </p>
+                <DialogTitle className="font-semibold text-zinc-900">
+                  Login da Área Central — acompanhamento
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-zinc-600">
+                  A janela fica aberta para você analisar o login e a verificação. Quando o acesso for reconhecido, clique em “Concluir e entrar”.
+                </DialogDescription>
               </div>
               <button
                 type="button"
@@ -225,36 +226,68 @@ export function AreaCentralLoginFlow() {
               </button>
             </header>
 
+            {error && (
+              <div role="alert" className="flex shrink-0 items-start gap-2 border-b border-zinc-300 bg-zinc-100 px-5 py-3 text-sm text-zinc-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">{error}</span>
+              </div>
+            )}
+
             <div className="relative min-h-0 flex-1 bg-zinc-100">
-              <iframe
-                src={attempt.interactiveUrl}
-                title="Navegador isolado da Área Central"
-                referrerPolicy="no-referrer"
-                className="h-full w-full border-0 bg-white"
-              />
-              {attempt.status === 'READY_TO_COMPLETE' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/85 backdrop-blur-sm">
-                  <div className="flex items-center gap-3 rounded-xl bg-white px-5 py-4 text-sm font-medium text-zinc-800 shadow-lg">
-                    <LoaderCircle className="h-5 w-5 animate-spin" />
-                    Salvando a sessão segura...
+              {attempt ? (
+                <iframe
+                  src={attempt.interactiveUrl}
+                  title="Navegador isolado da Área Central"
+                  referrerPolicy="no-referrer"
+                  className="h-full w-full border-0 bg-white"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center p-6 text-center">
+                  <div className="max-w-md space-y-3 text-sm text-zinc-600" role="status">
+                    {loading && <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-black" />}
+                    <p className="font-medium text-zinc-900">{loading ? 'Abrindo o navegador da Área Central...' : 'A tela da Área Central não foi disponibilizada.'}</p>
+                    <p>{loading
+                      ? 'A sessão protegida está sendo iniciada no serviço. A página real aparecerá aqui assim que estiver disponível.'
+                      : 'A comunicação falhou antes de recebermos a sessão do navegador. Feche esta janela e tente novamente após verificar o serviço no Render.'}</p>
                   </div>
                 </div>
               )}
             </div>
 
-            <footer className="flex items-center justify-between gap-3 border-t border-zinc-200 px-5 py-3 text-xs text-zinc-500">
-              <span>O CAPTCHA não é automatizado e a senha não é armazenada.</span>
-              <button
-                type="button"
-                onClick={() => void cancel()}
-                disabled={loading}
-                className="font-medium text-zinc-700 hover:text-black disabled:opacity-60"
-              >
-                Cancelar
-              </button>
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 px-5 py-3 text-xs text-zinc-500">
+              <div className="space-y-1" role="status">
+                <p className="font-medium text-zinc-800">{attempt?.status === 'READY_TO_COMPLETE'
+                  ? 'Login reconhecido. Aguardando você concluir.'
+                  : error ? 'Verificação interrompida; janela mantida para análise.'
+                    : attempt ? 'Acompanhando o login na página real...' : 'Aguardando a abertura da sessão...'}</p>
+                <p>O CAPTCHA não é automatizado e a senha não é armazenada.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                {attempt && error && (
+                  <button type="button" disabled={loading} onClick={() => {
+                    setError('')
+                    setVerificationVersion(value => value + 1)
+                  }} className="font-medium text-zinc-700 underline disabled:opacity-60">Verificar novamente</button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void cancel()}
+                  disabled={loading}
+                  className="font-medium text-zinc-700 hover:text-black disabled:opacity-60"
+                >
+                  Fechar e cancelar
+                </button>
+                {attempt?.status === 'READY_TO_COMPLETE' && !error && (
+                  <button type="button" onClick={() => void finish()} disabled={loading}
+                    className="flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                    {loading && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                    {loading ? 'Salvando sessão...' : 'Concluir e entrar'}
+                  </button>
+                )}
+              </div>
             </footer>
-          </section>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

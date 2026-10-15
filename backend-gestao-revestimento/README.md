@@ -148,8 +148,13 @@ Não aponte uma prévia de branch para o banco de produção.
 O usuário informa login e senha no RedeASSO. O Spring os encaminha somente
 para preencher o formulário real do portal no Chromium isolado. O gateway
 espera o próprio portal aprovar o Turnstile e liberar o botão, então envia uma
-única vez. O CAPTCHA não é clicado/resolvido por automação. Se a aprovação não
-ocorrer, um modal noVNC permite a intervenção na mesma tela, sem nova guia.
+única vez. O CAPTCHA não é clicado/resolvido por automação. No modo de observação
+atual, o modal noVNC sempre abre na mesma tela, sem nova guia. Ele permanece
+visível inclusive nos erros; após reconhecer o login, o app aguarda o botão
+“Concluir e entrar” para capturar a sessão e fechar o navegador.
+Se o preenchimento automático falhar após abrir a página, ela é preservada
+para inspeção/interação manual. Uma falha ao iniciar o serviço ainda pode
+impedir a exibição; nesse caso o modal apresenta diagnóstico sem HTML bruto.
 A senha não é persistida, devolvida ou registrada em logs.
 
 Configure `AREA_CENTRAL_SESSION_ENCRYPTION_KEY` com 32 bytes aleatórios em

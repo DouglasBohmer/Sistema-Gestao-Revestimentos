@@ -365,16 +365,21 @@ func (app *app) openBrowser(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	origin := loginURL.Scheme + "://" + loginURL.Host
-	if payload.Password != "" {
+	automatic := payload.Password != ""
+	if automatic {
 		if err := app.fillCredentials(request.Context(), target, origin, payload.Username, payload.Password); err != nil {
-			_ = app.clearCookiesAndNavigate(request.Context(), target, "about:blank")
-			app.stopBrowser()
-			writer.WriteHeader(http.StatusBadGateway)
-			return
+			if request.Context().Err() != nil {
+				app.stopBrowser()
+				writer.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			// A página pode estar num desafio ou ter mudado o formulário. Mantém
+			// o navegador visível para análise/interação, sem fabricar aprovação.
+			automatic = false
 		}
 	}
 	app.activeSession = &browserSession{id: payload.AccessID, targetID: target.ID,
-		origin: origin, expiresAt: expiresAt, automatic: payload.Password != "", startedAt: time.Now()}
+		origin: origin, expiresAt: expiresAt, automatic: automatic, startedAt: time.Now()}
 	app.grantMu.Lock()
 	ctx, cancel := context.WithDeadline(context.Background(), expiresAt)
 	app.activeGrant = &accessGrant{id: payload.AccessID, expiresAt: expiresAt.UTC(), ctx: ctx, cancel: cancel}

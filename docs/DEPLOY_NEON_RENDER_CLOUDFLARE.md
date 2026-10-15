@@ -109,10 +109,17 @@ uma dependência de produção. Neon e Cloudflare permanecem inalterados.
    real é preenchido; o gateway espera o próprio portal liberar o botão e
    produzir uma resposta válida do Turnstile. Só então submete uma vez. Não
    há clique automatizado no CAPTCHA, callback forçado ou token fabricado.
-   Se precisar de intervenção, o modal mostra a página real no mesmo app.
+   No modo de observação solicitado pelo usuário, o modal abre imediatamente
+   e mostra a página real assim que a sessão protegida estiver disponível.
+   Ele não fecha sozinho ao detectar o login: clique em **Concluir e entrar**
+   após analisar a página. Erros permanecem visíveis no modal; se a API falhar
+   antes de devolver a sessão, há diagnóstico, mas não é possível exibir o
+   navegador remoto. Nenhum HTML bruto de erro é reproduzido na interface.
+   Se o formulário não puder ser preenchido, o gateway mantém a página real
+   disponível para inspeção/manual, sem criar uma autenticação fictícia.
 
-6. Homologue com conta autorizada: entrada automática quando aprovada pelo
-   portal, modal quando solicitado, senha incorreta, cancelamento, logout,
+6. Homologue com conta autorizada: envio automático quando aprovado pelo
+   portal, modal sempre visível, conclusão explícita, senha incorreta, cancelamento, logout,
    primeira consulta ao catálogo, reabertura do navegador e novo deploy com
    a mesma chave. Monitore memória no Render durante o login. O processo
    enxuto e sob demanda reduz consumo, mas **não comprova** que Chromium +

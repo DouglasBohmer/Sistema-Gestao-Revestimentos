@@ -143,6 +143,15 @@ func TestPublicRequestsCannotAccessBrowserControls(t *testing.T) {
 }
 
 func TestAutomaticLoginStateAndCleanupUsingFakeChrome(t *testing.T) {
+	assertLoginBrowserPreserved(t, false)
+}
+
+func TestFillFailureKeepsActualPageAvailableForInspection(t *testing.T) {
+	assertLoginBrowserPreserved(t, true)
+}
+
+func assertLoginBrowserPreserved(t *testing.T, failFill bool) {
+	t.Helper()
 	var mu sync.Mutex
 	state := map[string]any{"origin": "https://redeasso.areacentral.com.br", "form": true, "ready": true}
 	var filled bool
@@ -174,6 +183,10 @@ func TestAutomaticLoginStateAndCleanupUsingFakeChrome(t *testing.T) {
 			value := any(state)
 			if strings.Contains(expression, "function fillPortalLogin") {
 				filled = strings.Contains(expression, "fixture-user") && strings.Contains(expression, "fixture-password")
+				if failFill {
+					_ = connection.WriteJSON(map[string]any{"id": command.ID, "error": map[string]string{"message": "falha-ficticia-de-preenchimento"}})
+					return
+				}
 				value = true
 			}
 			result = map[string]any{"result": map[string]any{"value": value}}
@@ -196,8 +209,15 @@ func TestAutomaticLoginStateAndCleanupUsingFakeChrome(t *testing.T) {
 	if response.Code != http.StatusCreated || !filled || strings.Contains(response.Body.String(), "fixture-password") {
 		t.Fatal("preenchimento deve ser transitório, sem credenciais na resposta")
 	}
-	if r := call(http.MethodGet, "/internal/browser/fixture-session-id/state", ""); !strings.Contains(r.Body.String(), "AUTHENTICATING") {
-		t.Fatalf("esperava início automático: %s", r.Body)
+	expectedStatus := "AUTHENTICATING"
+	if failFill {
+		expectedStatus = "WAITING_FOR_HUMAN"
+	}
+	if r := call(http.MethodGet, "/internal/browser/fixture-session-id/state", ""); !strings.Contains(r.Body.String(), expectedStatus) {
+		t.Fatalf("esperava estado %s: %s", expectedStatus, r.Body)
+	}
+	if application.activeGrant == nil || application.activeSession == nil {
+		t.Fatal("a página e a concessão devem continuar disponíveis até o cancelamento explícito")
 	}
 	application.activeSession.startedAt = time.Now().Add(-11 * time.Second)
 	if r := call(http.MethodGet, "/internal/browser/fixture-session-id/state", ""); !strings.Contains(r.Body.String(), "WAITING_FOR_HUMAN") {
