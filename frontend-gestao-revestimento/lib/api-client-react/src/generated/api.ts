@@ -306,8 +306,8 @@ export const getStartAreaCentralLoginAttemptUrl = () => {
 }
 
 /**
- * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são digitados manualmente no noVNC; a senha não passa pela API, não é persistida, devolvida nem registrada em logs.
- * @summary Iniciar login assistido da Área Central
+ * Abre o navegador isolado e preenche as credenciais transitórias no formulário real. O envio aguarda a aprovação do Turnstile pelo portal. A confirmação humana aparece somente quando necessária. A senha nunca é persistida, devolvida ou registrada; o cookie jar é protegido no backend. A ausência de password mantém compatibilidade com a interação manual.
+ * @summary Entrar com a conta da Área Central
  */
 export const startAreaCentralLoginAttempt = async (startAreaCentralLoginRequest: StartAreaCentralLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralLoginAttempt> => {
 
@@ -356,7 +356,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type StartAreaCentralLoginAttemptMutationError = ErrorType<ApiError>
 
     /**
- * @summary Iniciar login assistido da Área Central
+ * @summary Entrar com a conta da Área Central
  */
 export const useStartAreaCentralLoginAttempt = <TError = ErrorType<ApiError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralLoginAttempt>>, TError,{data: BodyType<StartAreaCentralLoginRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}

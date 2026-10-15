@@ -41,6 +41,7 @@ server:
         http-only: true
         secure: ${SESSION_COOKIE_SECURE:false}
         same-site: ${SESSION_COOKIE_SAME_SITE:lax}
+        max-age: ${SESSION_COOKIE_MAX_AGE:12h}
 
 management:
   endpoints:
@@ -58,7 +59,7 @@ redeasso:
       enabled: false
   integration:
     area-central:
-      enabled: false
+      enabled: ${REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED:false}
       base-url: ${AREA_CENTRAL_BASE_URL:https://redeasso.areacentral.com.br}
       login-url: ${AREA_CENTRAL_LOGIN_URL:https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc}
       browser-gateway-url: ${AREA_CENTRAL_BROWSER_GATEWAY_URL:http://area-central-browser:10000}

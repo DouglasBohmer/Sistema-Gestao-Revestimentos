@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * Controla um navegador remoto exclusivamente para o login assistido. O
  * contrato não expõe conteúdo da página ao frontend nem aceita ações no
- * CAPTCHA. O usuário digita as credenciais manualmente no Chrome gráfico
- * isolado, sem WebDriver, e elas jamais passam pelo backend.
+ * CAPTCHA. Credenciais podem preencher o formulário real, sem resolver,
+ * desativar ou simular a aprovação do Turnstile.
  */
 public interface AreaCentralBrowserGateway {
 
@@ -16,6 +16,15 @@ public interface AreaCentralBrowserGateway {
             URI loginUrl,
             String interactiveAccessId,
             Instant expiresAt);
+
+    default AreaCentralBrowserSession open(
+            URI loginUrl, String interactiveAccessId, Instant expiresAt, String username, String password) {
+        return open(loginUrl, interactiveAccessId, expiresAt);
+    }
+
+    default String loginStatus(String browserSessionId) {
+        return loginFormDisplayed(browserSessionId) ? "WAITING_FOR_HUMAN" : "READY_TO_COMPLETE";
+    }
 
     List<AreaCentralCookie> cookies(String browserSessionId);
 

@@ -35,6 +35,7 @@ jobs:
 
       - name: Validate frontend and Cloudflare Worker assets
         run: |
+          node --test infra/area-central-browser/portal-login.test.mjs
           pnpm run typecheck
           pnpm --filter @workspace/redeasso run build
           pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc --dry-run

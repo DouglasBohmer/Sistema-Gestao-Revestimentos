@@ -38,7 +38,7 @@ public class AreaCentralLoginController {
     public ResponseEntity<AreaCentralLoginAttemptResponse> start(
             @Valid @RequestBody StartAreaCentralLoginRequest start,
             HttpServletRequest request) {
-        AreaCentralLoginAttemptState state = loginService.start(sessionId(request), start.username());
+        AreaCentralLoginAttemptState state = loginService.start(sessionId(request), start.username().trim(), start.password());
         return ResponseEntity.status(201).body(AreaCentralLoginAttemptResponse.from(state));
     }
 

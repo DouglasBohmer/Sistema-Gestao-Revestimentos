@@ -3,7 +3,7 @@ package br.com.redeasso.gestao.integracao.areacentral.application;
 import java.time.Instant;
 import java.util.Objects;
 
-/** Cookie externo mantido somente na memória do processo. */
+/** Cookie externo: persistência somente criptografada, nunca em resposta HTTP ou log. */
 public final class AreaCentralCookie {
 
     private final String name;

@@ -114,9 +114,10 @@ ser usado apenas naquele ambiente.
 
 ## Produção: Neon + Render
 
-O Render executa apenas a API Spring usando
+O único serviço Render (`redeasso-api`) executa Spring e o gateway usando
 [`Dockerfile.render`](Dockerfile.render); a SPA é publicada separadamente no
-Cloudflare Workers. O arquivo [`../render.yaml`](../render.yaml) descreve o
+Cloudflare Workers. O contexto Docker é a **raiz do repositório**. O navegador
+gráfico é um subprocesso sob demanda no mesmo contêiner. O arquivo [`../render.yaml`](../render.yaml) descreve o
 serviço `redeasso-api` e o Render faz deploy automático da `main` depois que os
 checks do GitHub passarem.
 
@@ -144,13 +145,19 @@ Não aponte uma prévia de branch para o banco de produção.
 
 ## Área Central e CAPTCHA
 
-O login externo é assistido. Ao escolhê-lo no RedeASSO, o Spring abre um Chrome
-gráfico isolado e o noVNC aparece em um modal do RedeASSO. A pessoa digita
-usuário, senha e confirma o CAPTCHA na página real; o Spring não recebe a senha
-nem usa WebDriver nessa etapa. Ao concluir, o Spring coleta o cookie jar apenas
-na memória do processo, vinculado à sessão atual. Senhas e cookies externos não
-são devolvidos ao React, não vão para o PostgreSQL e não sobrevivem ao reinício
-da aplicação.
+O usuário informa login e senha no RedeASSO. O Spring os encaminha somente
+para preencher o formulário real do portal no Chromium isolado. O gateway
+espera o próprio portal aprovar o Turnstile e liberar o botão, então envia uma
+única vez. O CAPTCHA não é clicado/resolvido por automação. Se a aprovação não
+ocorrer, um modal noVNC permite a intervenção na mesma tela, sem nova guia.
+A senha não é persistida, devolvida ou registrada em logs.
+
+Configure `AREA_CENTRAL_SESSION_ENCRYPTION_KEY` com 32 bytes aleatórios em
+Base64, estáveis entre deploys. O cookie jar fica em envelope AES-GCM na sessão
+JDBC/Neon, ligado ao ID da sessão e com validade absoluta de até 12 horas.
+`SESSION_COOKIE_MAX_AGE=12h` permite reabrir o navegador durante esse período.
+A expiração do portal pode exigir novo login antes. Sem a chave, apenas o
+fallback volátil em memória fica disponível. Nenhum cookie externo vai ao React.
 
 O navegador não faz parte do Compose padrão. Para habilitá-lo localmente,
 copie `.env.example` para `.env`, defina dois segredos diferentes com pelo
@@ -172,8 +179,10 @@ O contêiner aceita somente uma tentativa de login interativo por vez. Uma
 tentativa expira em dez minutos, pode ser cancelada pela interface e fecha o
 navegador remoto. Não há resolução ou contorno automático de CAPTCHA.
 
-Em produção, este mesmo contêiner pode rodar apenas no servidor da loja com
-`docker-compose.area-central-browser.server.yml`. O Render continua hospedando
-a API, que acessa o gateway HTTPS publicado por Tailscale Funnel; os dois
-serviços compartilham as mesmas duas chaves, configuradas apenas como segredos.
-O servidor e o Funnel precisam estar ligados para o login externo funcionar.
+Em produção, não crie outro serviço nem retome o antigo navegador suspenso.
+O entrypoint Render gera/compartilha as chaves internas entre Spring e gateway
+e usa `RENDER_EXTERNAL_URL` para o modal. Chromium, Xvfb, VNC e noVNC iniciam
+somente ao abrir a tentativa e encerram ao concluir, cancelar ou expirar. O
+health check `/api/healthz` não inicia navegador nem consulta o Neon. A memória
+durante o login e a aprovação real do Turnstile ainda exigem homologação.
+O roteiro completo está em [`../docs/DEPLOY_NEON_RENDER_CLOUDFLARE.md`](../docs/DEPLOY_NEON_RENDER_CLOUDFLARE.md).

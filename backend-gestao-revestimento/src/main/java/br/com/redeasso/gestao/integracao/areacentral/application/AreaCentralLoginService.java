@@ -28,6 +28,11 @@ public class AreaCentralLoginService {
     public synchronized AreaCentralLoginAttemptState start(
             String applicationSessionId,
             String username) {
+        return start(applicationSessionId, username, null);
+    }
+
+    public synchronized AreaCentralLoginAttemptState start(
+            String applicationSessionId, String username, String password) {
         validateConfiguration();
         expireAttempts();
 
@@ -42,7 +47,7 @@ public class AreaCentralLoginService {
         Instant expiresAt = Instant.now().plus(properties.loginAttemptTimeout());
         String interactiveAccessId = UUID.randomUUID().toString();
         AreaCentralBrowserSession browserSession = browserGateway.open(
-                properties.loginUrl(), interactiveAccessId, expiresAt);
+                properties.loginUrl(), interactiveAccessId, expiresAt, username, password);
         AreaCentralLoginAttempt attempt = new AreaCentralLoginAttempt(
                 applicationSessionId,
                 browserSession.id(),
@@ -50,7 +55,12 @@ public class AreaCentralLoginService {
                 username,
                 expiresAt);
         attempts.put(applicationSessionId, attempt);
-        return stateOf(attempt);
+        try {
+            return stateOf(attempt);
+        } catch (RuntimeException exception) {
+            if (attempts.containsKey(applicationSessionId)) removeAttempt(attempt);
+            throw exception;
+        }
     }
 
     public synchronized AreaCentralAuthenticatedLogin complete(String applicationSessionId) {
@@ -105,15 +115,24 @@ public class AreaCentralLoginService {
                 properties.interactiveTokenSecret(),
                 attempt.interactiveAccessId(),
                 attempt.expiresAt());
-        if (authenticatedCookieJar(attempt) != null) {
+        String status = browserGateway.loginStatus(attempt.browserSessionId());
+        if ("INVALID_CREDENTIALS".equals(status)) {
+            removeAttempt(attempt);
+            throw new br.com.redeasso.gestao.auth.application.InvalidCredentialsException();
+        }
+        if ("READY_TO_COMPLETE".equals(status) && authenticatedCookieJar(attempt) != null) {
             return AreaCentralLoginAttemptState.readyToComplete(interactiveUrl, attempt.expiresAt());
+        }
+        if ("AUTHENTICATING".equals(status)) {
+            return new AreaCentralLoginAttemptState("AUTHENTICATING", interactiveUrl, attempt.expiresAt());
         }
         return AreaCentralLoginAttemptState.waitingForHuman(interactiveUrl, attempt.expiresAt());
     }
 
     private AreaCentralCookieJar authenticatedCookieJar(AreaCentralLoginAttempt attempt) {
         AreaCentralCookieJar cookieJar = new AreaCentralCookieJar(browserGateway.cookies(attempt.browserSessionId()));
-        if (!cookieJar.hasAuthenticatedSessionCookie()
+        if (!"READY_TO_COMPLETE".equals(browserGateway.loginStatus(attempt.browserSessionId()))
+                || !cookieJar.hasAuthenticatedSessionCookie()
                 || browserGateway.loginFormDisplayed(attempt.browserSessionId())) {
             return null;
         }

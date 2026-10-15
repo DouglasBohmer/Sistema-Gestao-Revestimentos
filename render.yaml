@@ -6,7 +6,7 @@ services:
     plan: free
     branch: main
     dockerfilePath: ./backend-gestao-revestimento/Dockerfile.render
-    dockerContext: ./backend-gestao-revestimento
+    dockerContext: .
     # Sonda de processo sem o indicador Actuator de DataSource: não mantém o
     # PostgreSQL Neon acordado apenas por verificações de disponibilidade.
     healthCheckPath: /api/healthz
@@ -21,6 +21,12 @@ services:
         value: lax
       - key: SESSION_TIMEOUT
         value: 12h
+      - key: SESSION_COOKIE_MAX_AGE
+        value: 12h
+      # Chave estável AES-256, em Base64. Não trocar a cada deploy: a troca
+      # invalida as sessões externas existentes. Nunca expor no frontend.
+      - key: AREA_CENTRAL_SESSION_ENCRYPTION_KEY
+        generateValue: true
       # Limpa sessões expiradas uma vez ao dia (06:00 UTC / 03:00 Brasília),
       # em vez do padrão do Spring Session de uma consulta por minuto.
       - key: SESSION_CLEANUP_CRON
@@ -43,18 +49,13 @@ services:
         sync: false
       - key: REDEASSO_LOCAL_ADMIN_PASSWORD
         sync: false
-      # O navegador assistido roda no servidor Docker da loja e e alcancado
-      # pela URL HTTPS publica do Tailscale Funnel. Estes valores sao
-      # operacionais e ficam somente no painel Render.
+      # Um único serviço: o gateway público encaminha a API para Spring em
+      # loopback; Chromium só é iniciado durante uma tentativa de login.
       - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
-        sync: false
-      - key: AREA_CENTRAL_BROWSER_GATEWAY_URL
-        sync: false
+        value: "true"
       - key: AREA_CENTRAL_INTERACTIVE_URL
-        sync: false
-      - key: AREA_CENTRAL_BROWSER_SERVICE_KEY
-        sync: false
-      - key: AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET
-        sync: false
+        value: https://redeasso-api.onrender.com/vnc.html
+      - key: AREA_CENTRAL_ALLOWED_FRAME_ORIGIN
+        value: https://redeasso.assocom.workers.dev
       - key: AREA_CENTRAL_READ_TIMEOUT
         value: 90s

@@ -43,83 +43,84 @@ Blueprint, em particular:
 - `SESSION_COOKIE_SECURE=true`;
 - `SESSION_CLEANUP_CRON=0 0 6 * * *` para limpar sessões expiradas uma vez ao
   dia, às 06:00 UTC (03:00 em Brasília), sem manter o Neon acordado por minuto;
-- `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=false`, até concluir a seção 3.1
-  abaixo.
+- `SESSION_TIMEOUT=12h` e `SESSION_COOKIE_MAX_AGE=12h`;
+- `AREA_CENTRAL_SESSION_ENCRYPTION_KEY`: segredo estável de 32 bytes em Base64,
+  gerado pelo Blueprint. Preserve o mesmo valor nos próximos deploys;
+- `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=true`, com o runtime abaixo.
 
 Depois do deploy, guarde a URL HTTPS pública da API, sem barra final, por
 exemplo `https://redeasso-api.onrender.com`.
 
 ### 2.1 Habilitar o navegador assistido da Área Central
 
-Chrome gráfico/noVNC não cabe com confiabilidade na memória do plano Free do
-Render. Ele roda no servidor Docker da loja; API, banco e frontend continuam
-na nuvem. O login externo só fica disponível enquanto esse servidor e o Funnel
-estiverem ligados. O usuário digita a senha e confirma o CAPTCHA diretamente
-nesse Chrome; o RedeASSO não usa WebDriver no login.
+Decisão de 15/10/2026: existe **somente `redeasso-api` no Render**. Não retome
+nem crie `redeasso-area-central-browser`. Docker da loja/Tailscale não é mais
+uma dependência de produção. Neon e Cloudflare permanecem inalterados.
 
-1. No servidor, copie `.env.example` para `.env` caso ainda não exista e
-   preencha, com os mesmos valores configurados na API Render:
+1. Sincronize o Blueprint existente, sem criar outro serviço. Em **Settings /
+   Build & Deploy**, confirme:
 
-   ```text
-   AREA_CENTRAL_BROWSER_SERVICE_KEY=<mesmo valor da API Render>
-   AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET=<mesmo valor da API Render>
-   AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.assocom.workers.dev
-   AREA_CENTRAL_BROWSER_BIND_ADDRESS=127.0.0.1
-   AREA_CENTRAL_BROWSER_PORT=7900
-   ```
-
-2. A `main` publica a imagem do navegador no GHCR. No servidor, puxe e inicie
-   somente o navegador:
-
-   ```powershell
-   docker compose -f docker-compose.area-central-browser.server.yml pull area-central-browser
-   docker compose -f docker-compose.area-central-browser.server.yml up -d area-central-browser
-   docker compose -f docker-compose.area-central-browser.server.yml ps
-   curl.exe http://127.0.0.1:7900/healthz
-   ```
-
-   O Watchtower já instalado verifica a tag
-   `area-central-browser-main` a cada cinco minutos. Assim, commits futuros na
-   `main` atualizam tanto a API (`main`) quanto o navegador sem `git pull` no
-   servidor.
-
-3. O Funnel atual em `https://usuario-pc.tailbc9bf3.ts.net` encaminha para o
-   Apache e deve ser preservado. Em um PowerShell administrativo no servidor,
-   publique o gateway em uma segunda porta HTTPS:
-
-   ```powershell
-   tailscale funnel --bg --https=8443 http://127.0.0.1:7900
-   tailscale funnel status
-   curl.exe https://usuario-pc.tailbc9bf3.ts.net:8443/healthz
-   ```
-
-   O `--bg` faz o Funnel voltar após reiniciar o computador ou o Tailscale.
-   Nunca aponte o Funnel para 4444 ou 7900 dentro do contêiner: a única porta
-   publicada deve ser a do gateway local `127.0.0.1:7900`.
-
-4. No serviço `redeasso-api` do Render, configure:
-
-   | Variável | Valor |
+   | Campo | Valor |
    | --- | --- |
-   | `AREA_CENTRAL_BROWSER_GATEWAY_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443` |
-   | `AREA_CENTRAL_INTERACTIVE_URL` | `https://usuario-pc.tailbc9bf3.ts.net:8443/vnc.html` |
-   | `AREA_CENTRAL_READ_TIMEOUT` | `90s` |
-   | `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED` | `true` |
+   | Root Directory | vazio (raiz do repositório) |
+   | Dockerfile Path | `backend-gestao-revestimento/Dockerfile.render` |
+   | Docker Build Context Directory | `.` (raiz do repositório) |
+   | Docker Command | vazio (usa o entrypoint da imagem) |
+   | Health Check Path | `/api/healthz` |
 
-   `AREA_CENTRAL_BROWSER_SERVICE_KEY` e
-   `AREA_CENTRAL_INTERACTIVE_TOKEN_SECRET` continuam com os mesmos valores do
-   `.env` do servidor. Depois, faça redeploy da API.
+   O contexto antigo `backend-gestao-revestimento` não inclui os arquivos
+   `infra/area-central-browser` e fará o build falhar. O workflow Docker também
+   valida a imagem Render usando o contexto da raiz.
 
-5. Quando o endpoint local estiver saudável, suspenda ou remova do painel
-   Render o antigo `redeasso-area-central-browser`, que não é mais usado e
-   excede a memória do plano Free. O `render.yaml` não o declara mais.
+2. Confirme as variáveis `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=true`,
+   `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.assocom.workers.dev` e
+   `AREA_CENTRAL_READ_TIMEOUT=90s`. O entrypoint deriva a URL interativa de
+   `RENDER_EXTERNAL_URL`, ficando em `https://redeasso-api.onrender.com/vnc.html`.
+   Ele configura automaticamente o gateway interno em loopback e compartilha
+   as chaves transitórias entre Spring e gateway. Não precisa parear segredos
+   com outro serviço. URLs antigas de Funnel ou do navegador suspenso não são
+   usadas por esse runtime.
 
-Se o contêiner reiniciar, colete o diagnóstico antes de tentar novamente:
+3. Garanta que `AREA_CENTRAL_SESSION_ENCRYPTION_KEY` está configurada e não
+   mude entre deploys. Para configuração manual, gere uma vez no PowerShell
+   e cole o resultado **somente no segredo do Render**, nunca no Git:
 
-```powershell
-docker compose -f docker-compose.area-central-browser.server.yml logs --tail 200 area-central-browser
-docker compose -f docker-compose.area-central-browser.server.yml ps
-```
+   ```powershell
+   $sessionKeyBytes = New-Object byte[] 32
+   $sessionKeyRng = [Security.Cryptography.RandomNumberGenerator]::Create()
+   $sessionKeyRng.GetBytes($sessionKeyBytes)
+   [Convert]::ToBase64String($sessionKeyBytes)
+   $sessionKeyRng.Dispose()
+   [Array]::Clear($sessionKeyBytes, 0, $sessionKeyBytes.Length)
+   ```
+
+   A senha do portal nunca é persistida. Apenas cookies externos são
+   criptografados com AES-GCM no Spring Session JDBC/Neon, com validade
+   absoluta de até 12 horas. Logout e expiração removem o envelope. Sem a
+   chave, o fallback em memória não sobrevive a um reinício da API.
+
+4. Publique a `main`. O gateway escuta a porta pública e encaminha `/api/*`
+   e Actuator para Spring em loopback. Chromium/Xvfb/VNC/noVNC iniciam somente
+   numa tentativa de login e encerram após captura dos cookies, cancelamento
+   ou dez minutos. Sem login em andamento, esses processos não ficam ativos.
+   `/api/healthz` não inicia Chrome nem consulta o banco.
+
+5. Na tela RedeASSO, informe usuário e senha e clique em **Entrar**. O formulário
+   real é preenchido; o gateway espera o próprio portal liberar o botão e
+   produzir uma resposta válida do Turnstile. Só então submete uma vez. Não
+   há clique automatizado no CAPTCHA, callback forçado ou token fabricado.
+   Se precisar de intervenção, o modal mostra a página real no mesmo app.
+
+6. Homologue com conta autorizada: entrada automática quando aprovada pelo
+   portal, modal quando solicitado, senha incorreta, cancelamento, logout,
+   primeira consulta ao catálogo, reabertura do navegador e novo deploy com
+   a mesma chave. Monitore memória no Render durante o login. O processo
+   enxuto e sob demanda reduz consumo, mas **não comprova** que Chromium +
+   Spring caberão nos 512 MB do Free nem garante aprovação do Turnstile.
+   O sandbox do Chromium permanece habilitado. Se o ambiente não permitir
+   iniciá-lo, não desabilite proteções automaticamente. Se faltar memória ou
+   o portal rejeitar o navegador, registre o diagnóstico
+   e discuta a alternativa antes de trocar plano/topologia.
 
 Nunca abra `/internal/browser/*` ou `/internal/access/*` no navegador: sem a chave
 interna eles retornam `401`. O `/vnc.html` isoladamente também não dá acesso à
@@ -187,7 +188,7 @@ gerado pelo Vite.
 1. Abra a URL Cloudflare e confirme que as rotas SPA, inclusive uma rota
    interna como `/mapa-estoque`, retornam a aplicação.
 2. Confirme `GET /api/healthz` pelo mesmo domínio Cloudflare.
-3. Entre com as credenciais locais fortes configuradas no Render e execute uma
+3. Homologue o login externo conforme a seção 2.1. Entre também com as credenciais locais fortes configuradas no Render e execute uma
    leitura de pisos e uma alteração de mapa.
 4. Confirme no Neon que migrations, sessões, pisos e mapas foram persistidos.
 5. Registre um backup Neon e faça um ensaio de rollback antes de habilitar o

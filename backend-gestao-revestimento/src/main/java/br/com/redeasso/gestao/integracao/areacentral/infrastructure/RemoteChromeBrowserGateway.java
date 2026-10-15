@@ -6,6 +6,7 @@ import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralBrow
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralBrowserUnavailableException;
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralCookie;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Component;
@@ -21,8 +22,8 @@ import java.util.List;
 
 /**
  * Cliente do gateway privado do Chrome gráfico. O gateway abre a página de
- * login e lê somente o estado/cookies após a interação humana; ele nunca
- * recebe a senha nem emula a confirmação anti-bot.
+ * login, preenche credenciais transitórias e lê estado/cookies. O Turnstile
+ * continua sendo executado e validado exclusivamente pelo portal.
  */
 @Component
 public class RemoteChromeBrowserGateway implements AreaCentralBrowserGateway {
@@ -36,17 +37,32 @@ public class RemoteChromeBrowserGateway implements AreaCentralBrowserGateway {
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.connectTimeout())
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
     @Override
     public AreaCentralBrowserSession open(URI loginUrl, String interactiveAccessId, Instant expiresAt) {
+        return open(loginUrl, interactiveAccessId, expiresAt, null, null);
+    }
+
+    @Override
+    public AreaCentralBrowserSession open(
+            URI loginUrl, String interactiveAccessId, Instant expiresAt, String username, String password) {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("loginUrl", loginUrl.toString());
         payload.put("accessId", interactiveAccessId);
         payload.put("expiresAt", expiresAt.toString());
-        String browserSessionId = send("POST", "/internal/browser/open", payload).path("id").asText();
+        if (password != null) {
+            payload.put("username", username);
+            payload.put("password", password);
+        }
+        String browserSessionId;
+        try {
+            browserSessionId = send("POST", "/internal/browser/open", payload).path("id").asText();
+        } finally {
+            payload.remove("password");
+        }
         if (browserSessionId.isBlank()) {
             throw new AreaCentralBrowserUnavailableException();
         }
@@ -68,6 +84,13 @@ public class RemoteChromeBrowserGateway implements AreaCentralBrowserGateway {
             if (name.isBlank() || cookieValue.isBlank()) {
                 continue;
             }
+            String domain = value.path("domain").asText().replaceFirst("^\\.", "");
+            String host = properties.baseUrl().getHost();
+            Instant expiresAt = expiry(value.path("expires"));
+            if (domain.isBlank() || !(host.equalsIgnoreCase(domain) || host.endsWith("." + domain))
+                    || (expiresAt != null && !expiresAt.isAfter(Instant.now()))) {
+                continue;
+            }
             cookies.add(new AreaCentralCookie(
                     name,
                     cookieValue,
@@ -82,10 +105,20 @@ public class RemoteChromeBrowserGateway implements AreaCentralBrowserGateway {
     }
 
     @Override
+    public String loginStatus(String browserSessionId) {
+        String status = send("GET", "/internal/browser/%s/state".formatted(browserSessionId), null)
+                .path("status").asText();
+        if (!List.of("AUTHENTICATING", "WAITING_FOR_HUMAN", "READY_TO_COMPLETE", "INVALID_CREDENTIALS").contains(status)) {
+            throw new AreaCentralBrowserUnavailableException();
+        }
+        return status;
+    }
+
+    @Override
     public boolean loginFormDisplayed(String browserSessionId) {
         return send("GET", "/internal/browser/%s/login-form".formatted(browserSessionId), null)
                 .path("displayed")
-                .asBoolean(false);
+                .asBoolean(true);
     }
 
     @Override
@@ -122,12 +155,27 @@ public class RemoteChromeBrowserGateway implements AreaCentralBrowserGateway {
 
             HttpResponse<String> response = httpClient.send(request.build(), HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                if (response.statusCode() == 503 && response.body().contains("suspended by its owner")) {
+                    throw new AreaCentralBrowserUnavailableException(
+                            "A configuração ainda aponta para um navegador desativado. Republique o serviço redeasso-api com a configuração atual.");
+                }
+                if (response.statusCode() == 401 || response.statusCode() == 403) {
+                    throw new AreaCentralBrowserUnavailableException(
+                            "A chave de comunicação com o navegador da Área Central não confere. Verifique os serviços no Render.");
+                }
+                if (response.statusCode() == 400 || response.statusCode() == 404) {
+                    throw new AreaCentralBrowserUnavailableException(
+                            "O navegador da Área Central precisa ser atualizado para a mesma versão da API no Render.");
+                }
                 throw new AreaCentralBrowserUnavailableException();
             }
             if (response.body() == null || response.body().isBlank()) {
                 return objectMapper.createObjectNode();
             }
             return objectMapper.readTree(response.body());
+        } catch (JacksonException exception) {
+            // O corpo inválido pode conter dados privados; não propagar causa/conteúdo.
+            throw new AreaCentralBrowserUnavailableException();
         } catch (IOException exception) {
             throw new AreaCentralBrowserUnavailableException(exception);
         } catch (InterruptedException exception) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,9 +14,12 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -23,22 +27,33 @@ import (
 
 const browserKeyHeader = "X-Redeasso-Browser-Key"
 
+//go:embed portal-login.js
+var fillLoginScript string
+
 type configuration struct {
 	browserServiceKey      []byte
 	interactiveTokenSecret []byte
 	allowedFrameOrigin     string
 	chromeDebugURL         *url.URL
 	noVNCUpstream          *url.URL
+	applicationUpstream    *url.URL
+	browserStartCommand    string
 }
 
 type accessGrant struct {
 	id        string
 	expiresAt time.Time
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 type browserSession struct {
-	id       string
-	targetID string
+	id        string
+	targetID  string
+	origin    string
+	expiresAt time.Time
+	automatic bool
+	startedAt time.Time
 }
 
 type cdpTarget struct {
@@ -48,12 +63,16 @@ type cdpTarget struct {
 }
 
 type app struct {
-	configuration configuration
-	noVNC         *httputil.ReverseProxy
-	grantMu       sync.RWMutex
-	activeGrant   *accessGrant
-	sessionMu     sync.Mutex
-	activeSession *browserSession
+	configuration   configuration
+	noVNC           *httputil.ReverseProxy
+	application     *httputil.ReverseProxy
+	grantMu         sync.RWMutex
+	activeGrant     *accessGrant
+	sessionMu       sync.Mutex
+	activeSession   *browserSession
+	browserProcess  *exec.Cmd
+	browserDone     chan struct{}
+	expirationTimer *time.Timer
 }
 
 func main() {
@@ -63,13 +82,24 @@ func main() {
 		os.Exit(1)
 	}
 
+	application := newApp(config)
 	server := &http.Server{
 		Addr:              "0.0.0.0:" + valueOrDefault(os.Getenv("PORT"), "10000"),
-		Handler:           newApp(config),
+		Handler:           application,
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 		MaxHeaderBytes:    16 << 10,
 	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		application.sessionMu.Lock()
+		application.revokeGrant("")
+		application.stopBrowser()
+		application.sessionMu.Unlock()
+		_ = server.Close()
+	}()
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Print("gateway do navegador isolado foi encerrado")
 		os.Exit(1)
@@ -91,20 +121,33 @@ func configurationFromEnvironment() (configuration, error) {
 	}
 	chromeDebug, _ := url.Parse("http://127.0.0.1:9222")
 	noVNC, _ := url.Parse("http://127.0.0.1:7900")
+	var application *url.URL
+	if upstream := os.Getenv("APP_UPSTREAM"); upstream != "" {
+		application, err = url.ParseRequestURI(upstream)
+		if err != nil || application.Scheme != "http" || application.Hostname() != "127.0.0.1" || application.User != nil {
+			return configuration{}, errors.New("invalid application upstream")
+		}
+	}
 	return configuration{
 		browserServiceKey:      []byte(browserKey),
 		interactiveTokenSecret: []byte(tokenSecret),
 		allowedFrameOrigin:     frameOrigin,
 		chromeDebugURL:         chromeDebug,
 		noVNCUpstream:          noVNC,
+		applicationUpstream:    application,
+		browserStartCommand:    os.Getenv("BROWSER_START_COMMAND"),
 	}, nil
 }
 
 func newApp(config configuration) *app {
-	return &app{
+	application := &app{
 		configuration: config,
 		noVNC:         reverseProxy(config.noVNCUpstream, "", true, config.allowedFrameOrigin),
 	}
+	if config.applicationUpstream != nil {
+		application.application = reverseProxy(config.applicationUpstream, "", false, "")
+	}
+	return application
 }
 
 func (app *app) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -134,8 +177,24 @@ func (app *app) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 			unauthorized(writer)
 			return
 		}
-		app.noVNC.ServeHTTP(writer, request)
+		app.grantMu.RLock()
+		grant := app.activeGrant
+		if grant == nil || grant.ctx == nil {
+			app.grantMu.RUnlock()
+			unauthorized(writer)
+			return
+		}
+		ctx, cancel := context.WithCancel(request.Context())
+		stop := context.AfterFunc(grant.ctx, cancel)
+		app.grantMu.RUnlock()
+		defer cancel()
+		defer stop()
+		app.noVNC.ServeHTTP(writer, request.WithContext(ctx))
 	default:
+		if app.application != nil && !isNoVNCAsset(request.URL.Path) {
+			app.application.ServeHTTP(writer, request)
+			return
+		}
 		if request.Method != http.MethodGet && request.Method != http.MethodHead {
 			writer.Header().Set("Allow", "GET, HEAD")
 			writer.WriteHeader(http.StatusMethodNotAllowed)
@@ -143,6 +202,72 @@ func (app *app) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 		}
 		app.noVNC.ServeHTTP(writer, request)
 	}
+}
+
+func isNoVNCAsset(path string) bool {
+	return path == "/vnc.html" || path == "/vnc_lite.html" ||
+		strings.HasPrefix(path, "/app/") || strings.HasPrefix(path, "/core/") || strings.HasPrefix(path, "/vendor/")
+}
+
+// Chamado sob sessionMu. O navegador existe somente durante a tentativa de login.
+func (app *app) ensureBrowser(ctx context.Context) error {
+	if app.configuration.browserStartCommand == "" {
+		return nil
+	}
+	if app.browserProcess != nil {
+		select {
+		case <-app.browserDone:
+			app.browserProcess = nil
+		default:
+			return nil
+		}
+	}
+	command := exec.Command(app.configuration.browserStartCommand)
+	// Saídas de Chrome/VNC podem conter URLs e conteúdo privado; não registrar.
+	// nil conecta diretamente a /dev/null, sem pipes que prendam o Wait nos filhos.
+	command.Stdout, command.Stderr = nil, nil
+	if err := command.Start(); err != nil {
+		return errors.New("browser process unavailable")
+	}
+	app.browserProcess = command
+	done := make(chan struct{})
+	app.browserDone = done
+	go func() { _ = command.Wait(); close(done) }()
+	startup, cancel := context.WithTimeout(ctx, 25*time.Second)
+	defer cancel()
+	for {
+		if _, err := app.pageTarget(startup, ""); err == nil {
+			return nil
+		}
+		select {
+		case <-done:
+			app.stopBrowser()
+			return errors.New("browser exited during startup")
+		case <-startup.Done():
+			app.stopBrowser()
+			return errors.New("browser startup timeout")
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+}
+
+// Chamado sob sessionMu; a chave de sessão criptografada NÃO depende deste processo.
+func (app *app) stopBrowser() {
+	if app.expirationTimer != nil {
+		app.expirationTimer.Stop()
+		app.expirationTimer = nil
+	}
+	if app.browserProcess == nil {
+		return
+	}
+	_ = app.browserProcess.Process.Signal(syscall.SIGTERM)
+	select {
+	case <-app.browserDone:
+	case <-time.After(5 * time.Second):
+		_ = app.browserProcess.Process.Kill()
+		<-app.browserDone
+	}
+	app.browserProcess = nil
 }
 
 func (app *app) health(writer http.ResponseWriter, request *http.Request) {
@@ -183,6 +308,8 @@ type openBrowserRequest struct {
 	LoginURL  string `json:"loginUrl"`
 	AccessID  string `json:"accessId"`
 	ExpiresAt string `json:"expiresAt"`
+	Username  string `json:"username,omitempty"`
+	Password  string `json:"password,omitempty"`
 }
 
 func (app *app) openBrowser(writer http.ResponseWriter, request *http.Request) {
@@ -192,14 +319,20 @@ func (app *app) openBrowser(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	var payload openBrowserRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 2048))
+	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 16<<10))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	defer func() { payload.Password = "" }()
+	if (payload.Username == "") != (payload.Password == "") || len(payload.Username) > 640 || len(payload.Password) > 4096 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	loginURL, err := url.ParseRequestURI(payload.LoginURL)
-	if err != nil || loginURL.Scheme != "https" || loginURL.Host == "" || !validAccessID(payload.AccessID) {
+	if err != nil || loginURL.Scheme != "https" || loginURL.Hostname() != "redeasso.areacentral.com.br" ||
+		loginURL.User != nil || loginURL.Port() != "" || !validAccessID(payload.AccessID) {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -211,20 +344,51 @@ func (app *app) openBrowser(writer http.ResponseWriter, request *http.Request) {
 
 	app.sessionMu.Lock()
 	defer app.sessionMu.Unlock()
+	if app.activeSession != nil && !app.activeSession.expiresAt.After(time.Now()) {
+		app.activeSession = nil
+		app.revokeGrant("")
+		app.stopBrowser()
+	}
 	if app.activeSession != nil {
 		writer.WriteHeader(http.StatusConflict)
 		return
 	}
+	if err := app.ensureBrowser(request.Context()); err != nil {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
 	target, err := app.pageTarget(request.Context(), "")
 	if err != nil || app.clearCookiesAndNavigate(request.Context(), target, loginURL.String()) != nil {
+		app.stopBrowser()
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
-	app.activeSession = &browserSession{id: payload.AccessID, targetID: target.ID}
+	origin := loginURL.Scheme + "://" + loginURL.Host
+	if payload.Password != "" {
+		if err := app.fillCredentials(request.Context(), target, origin, payload.Username, payload.Password); err != nil {
+			_ = app.clearCookiesAndNavigate(request.Context(), target, "about:blank")
+			app.stopBrowser()
+			writer.WriteHeader(http.StatusBadGateway)
+			return
+		}
+	}
+	app.activeSession = &browserSession{id: payload.AccessID, targetID: target.ID,
+		origin: origin, expiresAt: expiresAt, automatic: payload.Password != "", startedAt: time.Now()}
 	app.grantMu.Lock()
-	app.activeGrant = &accessGrant{id: payload.AccessID, expiresAt: expiresAt.UTC()}
+	ctx, cancel := context.WithDeadline(context.Background(), expiresAt)
+	app.activeGrant = &accessGrant{id: payload.AccessID, expiresAt: expiresAt.UTC(), ctx: ctx, cancel: cancel}
 	app.grantMu.Unlock()
+	accessID := payload.AccessID
+	app.expirationTimer = time.AfterFunc(time.Until(expiresAt), func() {
+		app.sessionMu.Lock()
+		defer app.sessionMu.Unlock()
+		if app.activeSession != nil && app.activeSession.id == accessID {
+			app.revokeGrant(accessID)
+			app.activeSession = nil
+			app.stopBrowser()
+		}
+	})
 	writeJSON(writer, http.StatusCreated, map[string]string{"id": payload.AccessID})
 }
 
@@ -242,12 +406,25 @@ func (app *app) browserOperation(writer http.ResponseWriter, request *http.Reque
 		writer.WriteHeader(http.StatusNotFound)
 		return
 	}
+	if request.Method == http.MethodDelete && operation == "session" && app.configuration.browserStartCommand != "" {
+		app.revokeGrant(sessionID)
+		app.activeSession = nil
+		app.stopBrowser()
+		writer.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if !app.activeSession.expiresAt.After(time.Now()) {
+		writer.WriteHeader(http.StatusNotFound)
+		return
+	}
 	target, err := app.pageTarget(request.Context(), app.activeSession.targetID)
 	if err != nil {
 		writer.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 	switch {
+	case request.Method == http.MethodGet && operation == "state":
+		app.loginState(writer, request, target)
 	case request.Method == http.MethodGet && operation == "cookies":
 		app.browserCookies(writer, request, target)
 	case request.Method == http.MethodGet && operation == "login-form":
@@ -258,9 +435,95 @@ func (app *app) browserOperation(writer http.ResponseWriter, request *http.Reque
 			return
 		}
 		app.activeSession = nil
+		app.revokeGrant(sessionID)
+		app.stopBrowser()
 		writer.WriteHeader(http.StatusNoContent)
 	default:
 		writer.WriteHeader(http.StatusNotFound)
+	}
+}
+
+func (app *app) fillCredentials(ctx context.Context, target cdpTarget, origin, username, password string) error {
+	credentials, err := json.Marshal(map[string]string{"origin": origin, "username": username, "password": password})
+	if err != nil {
+		return errors.New("invalid credentials payload")
+	}
+	defer func() {
+		for i := range credentials {
+			credentials[i] = 0
+		}
+	}()
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		var result struct {
+			Result struct {
+				Value bool `json:"value"`
+			} `json:"result"`
+		}
+		params := map[string]any{"expression": "(" + fillLoginScript + ")(" + string(credentials) + ")", "returnByValue": true}
+		if err := app.callPage(ctx, target, "Runtime.evaluate", params, &result); err != nil {
+			return errors.New("login page unavailable")
+		}
+		if result.Result.Value {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+	return errors.New("login form unavailable")
+}
+
+func (app *app) loginState(writer http.ResponseWriter, request *http.Request, target cdpTarget) {
+	var result struct {
+		Result struct {
+			Value struct {
+				Origin    string `json:"origin"`
+				Ready     bool   `json:"ready"`
+				Form      bool   `json:"form"`
+				Submitted bool   `json:"submitted"`
+				Error     bool   `json:"error"`
+				Invalid   bool   `json:"invalid"`
+			} `json:"value"`
+		} `json:"result"`
+	}
+	// Somente metadados do formulário; nenhuma credencial ou token é retornado.
+	expression := `(() => {
+		const form = document.querySelector('#form-login');
+		const error = document.querySelector('.alert-danger');
+		const text = error ? error.textContent : '';
+		const catalog = document.querySelector('.product-name, select[name="filtro[]"] option[value="PF.REFERENCIA"]');
+		return {origin: location.origin, ready: document.readyState === 'complete' && location.pathname.startsWith('/401/') && Boolean(catalog),
+			form: Boolean(document.querySelector('input[type="password"], input[name*="senha" i]')),
+			submitted: Boolean(form && form.dataset.redeassoSubmitted), error: Boolean(error),
+			invalid: /(?:usu[aá]rio|senha|credencia[il]s?).{0,80}(?:inv[aá]lid|incorret)|invalid credentials/i.test(text)};
+	})()`
+	if err := app.callPage(request.Context(), target, "Runtime.evaluate", map[string]any{"expression": expression, "returnByValue": true}, &result); err != nil {
+		writer.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	value := result.Result.Value
+	status := "WAITING_FOR_HUMAN"
+	if value.Origin == app.activeSession.origin && value.Invalid {
+		status = "INVALID_CREDENTIALS"
+	} else if value.Origin == app.activeSession.origin && value.Ready && !value.Form {
+		status = "READY_TO_COMPLETE"
+	} else if app.activeSession.automatic && !value.Error && (time.Since(app.activeSession.startedAt) < 10*time.Second || (value.Submitted && time.Since(app.activeSession.startedAt) < 45*time.Second)) {
+		status = "AUTHENTICATING"
+	}
+	writeJSON(writer, http.StatusOK, map[string]string{"status": status})
+}
+
+func (app *app) revokeGrant(accessID string) {
+	app.grantMu.Lock()
+	defer app.grantMu.Unlock()
+	if app.activeGrant != nil && (accessID == "" || app.activeGrant.id == accessID) {
+		if app.activeGrant.cancel != nil {
+			app.activeGrant.cancel()
+		}
+		app.activeGrant = nil
 	}
 }
 
@@ -327,17 +590,15 @@ func (app *app) accessGrant(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		app.revokeGrant("")
 		app.grantMu.Lock()
-		app.activeGrant = &accessGrant{id: accessID, expiresAt: expiresAt.UTC()}
+		ctx, cancel := context.WithDeadline(context.Background(), expiresAt)
+		app.activeGrant = &accessGrant{id: accessID, expiresAt: expiresAt.UTC(), ctx: ctx, cancel: cancel}
 		app.grantMu.Unlock()
 		writer.Header().Set("Cache-Control", "no-store")
 		writer.WriteHeader(http.StatusNoContent)
 	case http.MethodDelete:
-		app.grantMu.Lock()
-		if app.activeGrant != nil && app.activeGrant.id == accessID {
-			app.activeGrant = nil
-		}
-		app.grantMu.Unlock()
+		app.revokeGrant(accessID)
 		writer.WriteHeader(http.StatusNoContent)
 	default:
 		writer.Header().Set("Allow", "PUT, DELETE")

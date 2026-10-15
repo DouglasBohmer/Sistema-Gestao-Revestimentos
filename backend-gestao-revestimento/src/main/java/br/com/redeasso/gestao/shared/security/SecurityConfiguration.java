@@ -2,6 +2,9 @@ package br.com.redeasso.gestao.shared.security;
 
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralSessionStore;
 import br.com.redeasso.gestao.integracao.areacentral.application.InMemoryAreaCentralSessionStore;
+import br.com.redeasso.gestao.integracao.areacentral.infrastructure.HttpSessionAreaCentralSessionStore;
+import org.springframework.beans.factory.annotation.Value;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import jakarta.servlet.http.HttpServletResponse;
@@ -112,7 +115,9 @@ public class SecurityConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(AreaCentralSessionStore.class)
-    AreaCentralSessionStore areaCentralSessionStore() {
-        return new InMemoryAreaCentralSessionStore();
+    AreaCentralSessionStore areaCentralSessionStore(
+            @Value("${AREA_CENTRAL_SESSION_ENCRYPTION_KEY:}") String encryptionKey, ObjectMapper mapper) {
+        return encryptionKey.isBlank() ? new InMemoryAreaCentralSessionStore()
+                : new HttpSessionAreaCentralSessionStore(encryptionKey, mapper);
     }
 }

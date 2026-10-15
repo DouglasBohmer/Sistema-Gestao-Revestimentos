@@ -9,4 +9,8 @@ public class AreaCentralBrowserUnavailableException extends RuntimeException {
     public AreaCentralBrowserUnavailableException(Throwable cause) {
         super("O navegador assistido da Área Central não está disponível", cause);
     }
+
+    public AreaCentralBrowserUnavailableException(String message) {
+        super(message);
+    }
 }

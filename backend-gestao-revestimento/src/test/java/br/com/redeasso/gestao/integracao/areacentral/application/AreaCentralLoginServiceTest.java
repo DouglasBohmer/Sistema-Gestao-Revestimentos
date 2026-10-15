@@ -107,7 +107,51 @@ class AreaCentralLoginServiceTest {
     void identificadorDeEntradaNuncaIncluiSenhaEmRepresentacaoTextual() {
         StartAreaCentralLoginRequest request = new StartAreaCentralLoginRequest("usuario");
 
-        assertThat(request).hasToString("StartAreaCentralLoginRequest[username=usuario]");
+        assertThat(request).hasToString("StartAreaCentralLoginRequest[credentials=REDACTED]");
+    }
+
+    @Test
+    void credenciaisPreenchemSomenteATentativaENaoAparecemNoEstado() {
+        FakeBrowserGateway browser = new FakeBrowserGateway();
+        browser.status = "AUTHENTICATING";
+        AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
+        var request = new StartAreaCentralLoginRequest("usuario", "senha-transitoria-de-teste");
+
+        var attempt = service.start("sessao-1", request.username(), request.password());
+
+        assertThat(browser.receivedPassword).isEqualTo("senha-transitoria-de-teste");
+        assertThat(attempt.status()).isEqualTo("AUTHENTICATING");
+        assertThat(request.toString()).doesNotContain(request.password());
+        assertThat(attempt.toString()).doesNotContain(request.password());
+        browser.status = "WAITING_FOR_HUMAN";
+        assertThat(service.current("sessao-1").status()).isEqualTo("WAITING_FOR_HUMAN");
+    }
+
+    @Test
+    void senhaIncorretaEncerraTentativaELiberaProximoLogin() {
+        FakeBrowserGateway browser = new FakeBrowserGateway();
+        browser.status = "AUTHENTICATING";
+        AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
+        service.start("sessao-1", "usuario", "senha-teste");
+        browser.status = "INVALID_CREDENTIALS";
+        assertThatThrownBy(() -> service.current("sessao-1"))
+                .isInstanceOf(br.com.redeasso.gestao.auth.application.InvalidCredentialsException.class);
+        assertThat(browser.closedSessionIds).hasSize(1);
+        browser.status = "AUTHENTICATING";
+        assertThat(service.start("sessao-2", "outro", "outra-senha").status()).isEqualTo("AUTHENTICATING");
+    }
+
+    @Test
+    void falhaAoConsultarEstadoInicialNaoPrendeNavegador() {
+        FakeBrowserGateway browser = new FakeBrowserGateway();
+        browser.failState = true;
+        AreaCentralLoginService service = new AreaCentralLoginService(properties(true), browser);
+        assertThatThrownBy(() -> service.start("sessao-1", "usuario", "senha-teste"))
+                .isInstanceOf(AreaCentralBrowserUnavailableException.class);
+        assertThat(browser.closedSessionIds).hasSize(1);
+        browser.failState = false;
+        browser.status = "AUTHENTICATING";
+        assertThat(service.start("sessao-2", "outro", "senha-teste").status()).isEqualTo("AUTHENTICATING");
     }
 
     private static AreaCentralProperties properties(boolean enabled) {
@@ -128,6 +172,9 @@ class AreaCentralLoginServiceTest {
         private URI openedUrl;
         private List<AreaCentralCookie> cookies = List.of();
         private boolean loginFormDisplayed;
+        private String receivedPassword;
+        private String status;
+        private boolean failState;
         private final java.util.ArrayList<String> closedSessionIds = new java.util.ArrayList<>();
 
         @Override
@@ -142,6 +189,18 @@ class AreaCentralLoginServiceTest {
         @Override
         public List<AreaCentralCookie> cookies(String browserSessionId) {
             return cookies;
+        }
+
+        @Override
+        public AreaCentralBrowserSession open(URI loginUrl, String accessId, java.time.Instant expiresAt, String username, String password) {
+            receivedPassword = password;
+            return open(loginUrl, accessId, expiresAt);
+        }
+
+        @Override
+        public String loginStatus(String browserSessionId) {
+            if (failState) throw new AreaCentralBrowserUnavailableException();
+            return status == null ? AreaCentralBrowserGateway.super.loginStatus(browserSessionId) : status;
         }
 
         @Override

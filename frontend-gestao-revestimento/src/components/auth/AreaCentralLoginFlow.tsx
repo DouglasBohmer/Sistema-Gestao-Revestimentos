@@ -1,14 +1,19 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import {
   cancelCurrentAreaCentralLoginAttempt,
   getCurrentAreaCentralLoginAttempt,
   startAreaCentralLoginAttempt,
+  ApiError,
   type AreaCentralLoginAttempt,
 } from '@workspace/api-client-react'
-import { AlertCircle, LoaderCircle, ShieldCheck, User, X } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, LoaderCircle, Lock, ShieldCheck, User, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 function errorMessage(error: unknown) {
+  if (error instanceof ApiError && error.data && typeof error.data === 'object') {
+    const message = (error.data as { message?: string }).message
+    if (message) return message
+  }
   return error instanceof Error
     ? error.message.replace(/^HTTP \d+ [^:]+:\s*/, '')
     : 'Não foi possível concluir a operação.'
@@ -18,27 +23,35 @@ export function AreaCentralLoginFlow() {
   const { completeAreaCentralLogin } = useAuth()
   const [attempt, setAttempt] = useState<AreaCentralLoginAttempt | null>(null)
   const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const cancelled = useRef(false)
+  const completing = useRef(false)
 
   useEffect(() => {
     if (!attempt) return
 
     let active = true
-    let completing = false
+    let timeout: number | undefined
+    const controller = new AbortController()
 
     async function checkLoginState() {
-      if (completing) return
-
       try {
-        const current = await getCurrentAreaCentralLoginAttempt()
-        if (!active) return
+        const current = await getCurrentAreaCentralLoginAttempt({ signal: controller.signal })
+        if (!active || cancelled.current) return
         setAttempt(current)
 
-        if (current.status !== 'READY_TO_COMPLETE') return
+        if (current.status === 'WAITING_FOR_HUMAN') setModalOpen(true)
+        if (current.status !== 'READY_TO_COMPLETE') {
+          timeout = window.setTimeout(() => void checkLoginState(), 2_000)
+          return
+        }
 
-        completing = true
+        completing.current = true
+        setLoading(true)
         const authenticated = await completeAreaCentralLogin()
         if (!active) return
 
@@ -48,54 +61,64 @@ export function AreaCentralLoginFlow() {
           return
         }
         setError('A Área Central não confirmou a sessão.')
-        completing = false
+        setAttempt(null)
+        setModalOpen(false)
       } catch (cause) {
-        if (!active) return
+        if (!active || cancelled.current) return
         const message = errorMessage(cause)
-        if (message.includes('Não há uma verificação')) {
-          setAttempt(null)
-          setModalOpen(false)
-          return
-        }
         setError(message)
-        completing = false
+        setAttempt(null)
+        setModalOpen(false)
+        // Cancelar também no erro evita prender o único navegador disponível.
+        void cancelCurrentAreaCentralLoginAttempt().catch(() => undefined)
+      } finally {
+        completing.current = false
+        if (active && !cancelled.current) setLoading(false)
       }
     }
 
-    const timeout = window.setTimeout(() => void checkLoginState(), 1_000)
-    const interval = window.setInterval(() => void checkLoginState(), 2_000)
+    timeout = window.setTimeout(() => void checkLoginState(), 1_000)
     return () => {
       active = false
       window.clearTimeout(timeout)
-      window.clearInterval(interval)
+      controller.abort()
     }
-  }, [attempt?.expiresAt, attempt?.interactiveUrl, attempt?.status, completeAreaCentralLogin])
+  }, [attempt?.expiresAt, attempt?.interactiveUrl, completeAreaCentralLogin])
 
   async function start(event: FormEvent) {
     event.preventDefault()
-    if (!username.trim()) return
+    if (!username.trim() || !password) return
 
     setError('')
     setLoading(true)
+    cancelled.current = false
     try {
-      const nextAttempt = await startAreaCentralLoginAttempt({
+      const pending = startAreaCentralLoginAttempt({
         username: username.trim(),
+        password,
       })
+      setPassword('')
+      setShowPassword(false)
+      const nextAttempt = await pending
       setAttempt(nextAttempt)
-      setModalOpen(true)
+      setModalOpen(nextAttempt.status === 'WAITING_FOR_HUMAN')
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
       setLoading(false)
+      setPassword('')
+      setShowPassword(false)
     }
   }
 
   async function cancel() {
+    if (completing.current) return
+    cancelled.current = true
     setLoading(true)
+    setAttempt(null)
+    setModalOpen(false)
     try {
       await cancelCurrentAreaCentralLoginAttempt()
-      setAttempt(null)
-      setModalOpen(false)
       setError('')
     } catch (cause) {
       setError(errorMessage(cause))
@@ -108,23 +131,49 @@ export function AreaCentralLoginFlow() {
     <>
       <form onSubmit={event => void start(event)} className="space-y-5">
         <p className="text-sm leading-relaxed text-gray-600">
-          Informe seu usuário para identificar a sessão. A senha será digitada somente no navegador isolado da Área Central e não passa pelo RedeASSO.
+          Use sua conta da Área Central. Seu acesso permanece conectado por até 12 horas, enquanto a sessão estiver válida.
         </p>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Usuário da Área Central</label>
+          <label htmlFor="area-central-username" className="mb-1.5 block text-sm font-medium text-gray-700">Usuário da Área Central</label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
+              id="area-central-username"
               type="text"
               value={username}
               onChange={event => setUsername(event.target.value)}
               placeholder="Seu usuário"
               autoComplete="username"
+              maxLength={160}
               required
               disabled={loading || Boolean(attempt)}
               className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm transition focus:border-black focus:outline-none focus:ring-2 focus:ring-black/30 disabled:cursor-not-allowed disabled:opacity-60"
             />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="area-central-password" className="mb-1.5 block text-sm font-medium text-gray-700">Senha</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              id="area-central-password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={event => setPassword(event.target.value)}
+              autoComplete="current-password"
+              maxLength={1024}
+              placeholder="Sua senha"
+              required
+              disabled={loading || Boolean(attempt)}
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-12 text-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/30 disabled:opacity-60"
+            />
+            <button type="button" onClick={() => setShowPassword(value => !value)}
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={showPassword}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-gray-500 hover:text-black">
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
         </div>
 
@@ -133,9 +182,16 @@ export function AreaCentralLoginFlow() {
           disabled={loading || Boolean(attempt)}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-          {loading ? 'Abrindo a Área Central...' : 'Abrir login da Área Central'}
+          {loading || attempt ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+          {loading || attempt ? 'Entrando...' : 'Entrar'}
         </button>
+        {attempt && !modalOpen && (
+          <div className="flex items-center justify-between gap-3 text-sm text-gray-600" role="status">
+            <span>Aguardando a confirmação da Área Central...</span>
+            <button type="button" onClick={() => setModalOpen(true)} className="underline">Verificação</button>
+            <button type="button" disabled={loading} onClick={() => void cancel()} className="underline">Cancelar</button>
+          </div>
+        )}
       </form>
 
       {error && (
@@ -151,10 +207,10 @@ export function AreaCentralLoginFlow() {
             <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4">
               <div>
                 <h3 id="area-central-modal-title" className="font-semibold text-zinc-900">
-                  {attempt.status === 'READY_TO_COMPLETE' ? 'Concluindo acesso...' : 'Entre na Área Central'}
+                  {attempt.status === 'READY_TO_COMPLETE' ? 'Concluindo acesso...' : 'Confirme seu acesso'}
                 </h3>
                 <p className="mt-1 text-sm text-zinc-600">
-                  Digite seu usuário e senha na página real e confirme “Sou humano”. O RedeASSO não preenche nem recebe sua senha.
+                  Os dados já foram preenchidos. Conclua a verificação solicitada pela Área Central nesta janela.
                 </p>
               </div>
               <button

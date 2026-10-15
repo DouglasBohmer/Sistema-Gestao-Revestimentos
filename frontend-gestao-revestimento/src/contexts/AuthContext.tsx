@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react'
 import {
   ApiError,
   clearCsrfToken,
@@ -66,11 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function completeAreaCentralLogin() {
+  const completeAreaCentralLogin = useCallback(async () => {
     const authenticatedSession = await completeAreaCentralLoginAttempt()
     setSession(authenticatedSession)
     return authenticatedSession.authenticated
-  }
+  }, [])
 
   async function logout() {
     try {

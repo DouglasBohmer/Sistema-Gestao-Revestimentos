@@ -1,35 +1,47 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# O entry point oficial mantém Xvfb, VNC e noVNC. Nenhuma sessão WebDriver é
-# criada; o Chrome gráfico abaixo é um processo separado, com perfil efêmero.
-/opt/bin/entry_point.sh &
-supervisor_pid="$!"
-gateway_pid=""
-chrome_pid=""
+# Inicia somente os componentes usados pelo login. O Grid Java e o serviço
+# de vídeo da imagem base consumiam memória sem participar deste fluxo.
+export DISPLAY=:99
+pids=()
 
 terminate() {
-  for pid in "$gateway_pid" "$chrome_pid" "$supervisor_pid"; do
-    if [[ -n "$pid" ]]; then
-      kill -TERM "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
-    fi
+  for pid in "${pids[@]}"; do
+    kill -TERM "$pid" 2>/dev/null || true
   done
+  wait || true
+  # Só remove o perfil efêmero criado por este processo, nunca um perfil pessoal.
+  if [[ "${profile_dir:-}" == /tmp/redeasso-chrome.* && -d "$profile_dir" ]]; then
+    rm -rf -- "$profile_dir"
+  fi
 }
-trap terminate EXIT INT TERM
+trap terminate EXIT
+trap 'exit 143' INT TERM
 
-for _ in $(seq 1 30); do
+Xvfb :99 -screen 0 1280x800x24 -nolisten tcp -ac &
+pids+=("$!")
+for _ in $(seq 1 100); do
   if [[ -S /tmp/.X11-unix/X99 ]]; then
     break
   fi
   sleep 0.2
 done
 
-profile_dir="/tmp/redeasso-normal-chrome"
-rm -rf "$profile_dir"
-mkdir -p "$profile_dir"
+if [[ ! -S /tmp/.X11-unix/X99 ]]; then
+  echo 'O display do navegador não iniciou.' >&2
+  exit 1
+fi
 
-google-chrome \
+fluxbox -display :99 &
+pids+=("$!")
+x11vnc -localhost -display :99 -rfbport 5900 -nopw -forever -shared -quiet &
+pids+=("$!")
+websockify --web "${NOVNC_WEB_DIR:-/opt/bin/noVNC}" 127.0.0.1:7900 127.0.0.1:5900 &
+pids+=("$!")
+profile_dir="$(mktemp -d /tmp/redeasso-chrome.XXXXXX)"
+
+"${CHROME_BIN:-google-chrome}" \
   --display=:99 \
   --remote-debugging-address=127.0.0.1 \
   --remote-debugging-port=9222 \
@@ -39,14 +51,21 @@ google-chrome \
   --disable-background-networking \
   --disable-component-update \
   --disable-sync \
+  --disable-extensions \
+  --renderer-process-limit=2 \
   --disable-translate \
   --disable-dev-shm-usage \
+  --password-store=basic \
+  --disable-save-password-bubble \
   --window-size=1280,800 \
+  ${CHROME_CONTAINER_ARGS:-} \
   about:blank &
-chrome_pid="$!"
+pids+=("$!")
 
-/usr/local/bin/redeasso-browser-gateway &
-gateway_pid="$!"
+if [[ "${BROWSER_ONLY:-false}" != true ]]; then
+  /usr/local/bin/redeasso-browser-gateway &
+  pids+=("$!")
+fi
 
-wait -n "$supervisor_pid" "$chrome_pid" "$gateway_pid"
+wait -n "${pids[@]}"
 exit "$?"

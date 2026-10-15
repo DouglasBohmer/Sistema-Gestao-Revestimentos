@@ -13,9 +13,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * The Área Central cookie jar is deliberately in-memory.  A persisted Spring
- * session therefore cannot remain authenticated as an external user after an
- * application restart, because its external session no longer exists.
+ * Uma sessão externa sem cookie jar válido (expirado, revogado ou chave
+ * alterada) exige novo login. O armazenamento criptografado sobrevive a restart.
  */
 final class AreaCentralSessionConsistencyFilter extends OncePerRequestFilter {
 

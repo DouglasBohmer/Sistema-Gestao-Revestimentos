@@ -13,4 +13,10 @@ export interface StartAreaCentralLoginRequest {
      * @maxLength 160
      */
   username: string;
+  /**
+     * Usada somente para preencher esta tentativa de login; nunca armazenada.
+     * @minLength 1
+     * @maxLength 1024
+     */
+  password?: string;
 }

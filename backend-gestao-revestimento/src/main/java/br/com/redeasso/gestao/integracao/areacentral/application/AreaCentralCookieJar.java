@@ -3,8 +3,8 @@ package br.com.redeasso.gestao.integracao.areacentral.application;
 import java.util.List;
 
 /**
- * Jar opaco e efêmero. Nunca deve ser serializado para a sessão JDBC, banco,
- * resposta HTTP ou log.
+ * Jar opaco. A persistência aceita somente envelope criptografado; nunca
+ * serializar cookies em claro na sessão JDBC, resposta HTTP ou log.
  */
 public final class AreaCentralCookieJar {
 

@@ -50,19 +50,22 @@ export const LocalLoginResponse = zod.object({
 
 
 /**
- * Abre um Chrome gráfico isolado no servidor. Usuário, senha e CAPTCHA são digitados manualmente no noVNC; a senha não passa pela API, não é persistida, devolvida nem registrada em logs.
- * @summary Iniciar login assistido da Área Central
+ * Abre o navegador isolado e preenche as credenciais transitórias no formulário real. O envio aguarda a aprovação do Turnstile pelo portal. A confirmação humana aparece somente quando necessária. A senha nunca é persistida, devolvida ou registrada; o cookie jar é protegido no backend. A ausência de password mantém compatibilidade com a interação manual.
+ * @summary Entrar com a conta da Área Central
  */
 export const startAreaCentralLoginAttemptBodyUsernameMax = 160;
+
+export const startAreaCentralLoginAttemptBodyPasswordMax = 1024;
 
 
 
 export const StartAreaCentralLoginAttemptBody = zod.object({
-  "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.')
+  "username": zod.string().min(1).max(startAreaCentralLoginAttemptBodyUsernameMax).describe('Identificador da conta usada na Área Central durante esta tentativa.'),
+  "password": zod.string().min(1).max(startAreaCentralLoginAttemptBodyPasswordMax).optional().describe('Usada somente para preencher esta tentativa de login; nunca armazenada.')
 })
 
 export const StartAreaCentralLoginAttemptResponse = zod.object({
-  "status": zod.enum(['WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
+  "status": zod.enum(['AUTHENTICATING', 'WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
   "interactiveUrl": zod.string().url().describe('URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.'),
   "expiresAt": zod.coerce.date()
 })
@@ -85,7 +88,7 @@ export const CompleteAreaCentralLoginAttemptResponse = zod.object({
  * @summary Consultar o estado do login assistido atual
  */
 export const GetCurrentAreaCentralLoginAttemptResponse = zod.object({
-  "status": zod.enum(['WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
+  "status": zod.enum(['AUTHENTICATING', 'WAITING_FOR_HUMAN', 'READY_TO_COMPLETE']),
   "interactiveUrl": zod.string().url().describe('URL privada do noVNC; nunca inclui a senha do VNC nem cookies externos.'),
   "expiresAt": zod.coerce.date()
 })

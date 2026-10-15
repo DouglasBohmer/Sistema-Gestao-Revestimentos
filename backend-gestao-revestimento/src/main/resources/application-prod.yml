@@ -12,6 +12,11 @@ redeasso:
       password: ${REDEASSO_LOCAL_ADMIN_PASSWORD:}
 
 server:
+  address: ${APP_ADDRESS:0.0.0.0}
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 2
   servlet:
     session:
       cookie:

@@ -20,6 +20,7 @@ export type AreaCentralLoginAttemptStatus = typeof AreaCentralLoginAttemptStatus
 
 
 export const AreaCentralLoginAttemptStatus = {
+  AUTHENTICATING: 'AUTHENTICATING',
   WAITING_FOR_HUMAN: 'WAITING_FOR_HUMAN',
   READY_TO_COMPLETE: 'READY_TO_COMPLETE',
 } as const;
@@ -38,6 +39,12 @@ export interface StartAreaCentralLoginRequest {
      * @maxLength 160
      */
   username: string;
+  /**
+     * Usada somente para preencher esta tentativa de login; nunca armazenada.
+     * @minLength 1
+     * @maxLength 1024
+     */
+  password?: string;
 }
 
 /**
