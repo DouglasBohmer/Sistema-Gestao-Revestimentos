@@ -19,7 +19,8 @@
 artifacts/
 attached_assets/
 lib/
-scripts/
+scripts/*
+!scripts/package_area_central_extension.mjs
 
 *.log
 *.log.*

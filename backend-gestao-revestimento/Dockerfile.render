@@ -1,13 +1,7 @@
 # syntax=docker/dockerfile:1.7
-# Único serviço Render: Spring e gateway, com navegador gráfico sob demanda.
+# Único serviço Render: somente Spring. O login ocorre no Chrome do usuário
+# com a extensão RedeASSO, sem Chromium, Selenium, VNC ou gateway no servidor.
 # O frontend permanece no Cloudflare; este contexto de build é a raiz do repo.
-FROM golang:1.24-bookworm AS gateway-build
-WORKDIR /gateway
-COPY infra/area-central-browser/go.mod infra/area-central-browser/go.sum ./
-RUN go mod download
-COPY infra/area-central-browser/gateway.go infra/area-central-browser/gateway_test.go infra/area-central-browser/portal-login.js ./
-RUN go test ./... && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /gateway/redeasso-browser-gateway .
-
 FROM eclipse-temurin:21-jdk-jammy AS build
 
 WORKDIR /workspace
@@ -22,32 +16,13 @@ COPY backend-gestao-revestimento/src src
 RUN --mount=type=cache,id=redeasso-render-maven,target=/root/.m2 \
     ./mvnw -B -ntp package
 
-FROM eclipse-temurin:21-jre-jammy AS jre
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash ca-certificates chromium chromium-sandbox xvfb fluxbox x11vnc novnc websockify \
-    openssl tini curl libfontconfig1 libfreetype6 \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system redeasso && useradd --system --create-home --gid redeasso redeasso
-COPY --from=jre /opt/java/openjdk /opt/java/openjdk
-ENV JAVA_HOME=/opt/java/openjdk \
-    PATH=/opt/java/openjdk/bin:$PATH \
-    JAVA_TOOL_OPTIONS="-Xms32m -Xmx160m -XX:+UseSerialGC -XX:ActiveProcessorCount=2 -XX:MaxMetaspaceSize=112m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=24m -Xss512k -XX:+ExitOnOutOfMemoryError" \
-    CHROME_BIN=chromium \
-    NOVNC_WEB_DIR=/usr/share/novnc \
-    BROWSER_ONLY=true \
-    BROWSER_START_COMMAND=/opt/redeasso/start-browser.sh \
-    APP_UPSTREAM=http://127.0.0.1:8080
+FROM eclipse-temurin:21-jre-jammy
+RUN groupadd --system redeasso && useradd --system --create-home --gid redeasso redeasso
+ENV JAVA_TOOL_OPTIONS="-Xms32m -XX:MaxRAMPercentage=60.0 -XX:+UseSerialGC -XX:ActiveProcessorCount=2 -XX:+ExitOnOutOfMemoryError"
 WORKDIR /app
 
 COPY --from=build --chown=redeasso:redeasso /workspace/target/*.jar /app/redeasso.jar
-COPY --from=gateway-build /gateway/redeasso-browser-gateway /usr/local/bin/redeasso-browser-gateway
-COPY infra/area-central-browser/start.sh /opt/redeasso/start-browser.sh
-COPY infra/area-central-browser/start-render.sh /opt/redeasso/start-render.sh
-RUN sed -i 's/\r$//' /opt/redeasso/*.sh && chmod +x /opt/redeasso/*.sh
-
 USER redeasso
 EXPOSE 10000
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/opt/redeasso/start-render.sh"]
+ENTRYPOINT ["java", "-jar", "/app/redeasso.jar"]

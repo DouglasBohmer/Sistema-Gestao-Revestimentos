@@ -193,6 +193,93 @@ paths:
         "204":
           description: Tentativa cancelada ou já encerrada
 
+  /auth/area-central/browser-transfers:
+    post:
+      operationId: startAreaCentralBrowserTransfer
+      tags: [auth]
+      summary: Autorizar a extensão a enviar a sessão da Área Central
+      description: Requer CSRF. Concessão aleatória de uso único, vinculada à sessão atual, válida por dez minutos. Não abre navegador no Render.
+      responses:
+        "201":
+          description: Concessão privada para a extensão; nunca incluir em URL ou logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCentralBrowserGrant"
+        "409":
+          description: Limite de tentativas simultâneas
+        "503":
+          description: Integração desabilitada
+
+  /auth/area-central/browser-transfers/receive:
+    post:
+      operationId: receiveAreaCentralBrowserTransfer
+      tags: [auth]
+      summary: Receber cookies diretamente da extensão autorizada
+      description: >-
+        Uso exclusivo do background da extensão. Usa transferToken de 256 bits,
+        de uso único, no lugar de cookie/CSRF. Não autentica esta requisição nem
+        retorna cookies; valida o catálogo no servidor e guarda o resultado
+        transitoriamente para conclusão com CSRF na sessão RedeASSO original.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AreaCentralBrowserTransferInput"
+      responses:
+        "204":
+          description: Sessão externa validada; aguarda conclusão na guia original
+        "400":
+          description: Dados inválidos
+        "404":
+          description: Concessão inválida, revogada ou expirada
+        "409":
+          description: Concessão já utilizada ou cookies inválidos
+        "503":
+          description: O portal recusou a validação pelo Render; nenhum acesso liberado
+
+  /auth/area-central/browser-transfers/current:
+    get:
+      operationId: getCurrentAreaCentralBrowserTransfer
+      tags: [auth]
+      summary: Consultar a transferência desta sessão, sem cookies
+      responses:
+        "200":
+          description: Estado da tentativa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AreaCentralBrowserTransferState"
+        "404":
+          description: Não há tentativa válida nesta sessão
+    delete:
+      operationId: cancelAreaCentralBrowserTransfer
+      tags: [auth]
+      summary: Revogar a transferência desta sessão
+      description: Requer CSRF. Não faz logout nem remove cookies do portal pessoal.
+      responses:
+        "204":
+          description: Tentativa removida
+
+  /auth/area-central/browser-transfers/complete:
+    post:
+      operationId: completeAreaCentralBrowserTransfer
+      tags: [auth]
+      summary: Concluir o acesso após validar a sessão recebida da extensão
+      description: Requer a sessão original e CSRF. Consome a tentativa validada, rotaciona a sessão e guarda o jar no envelope AES-GCM existente por no máximo 12 horas.
+      responses:
+        "200":
+          description: Sessão RedeASSO autenticada ou vinculada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "404":
+          description: Tentativa inexistente ou expirada
+        "409":
+          description: Sessão externa ainda não validada
+
   /auth/session:
     get:
       operationId: getAuthSession
@@ -719,6 +806,79 @@ components:
           maxLength: 1024
           writeOnly: true
           description: Usada somente para preencher esta tentativa de login; nunca armazenada.
+
+    AreaCentralBrowserGrant:
+      type: object
+      additionalProperties: false
+      required: [transferToken, expiresAt]
+      properties:
+        transferToken:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          description: Concessão curta e privada, somente no corpo HTTPS; não é um cookie externo.
+        expiresAt:
+          type: string
+          format: date-time
+
+    AreaCentralBrowserTransferState:
+      type: object
+      additionalProperties: false
+      required: [status, expiresAt]
+      properties:
+        status:
+          type: string
+          enum: [WAITING_FOR_BROWSER, VALIDATING, READY_TO_COMPLETE, REJECTED]
+        expiresAt:
+          type: string
+          format: date-time
+
+    AreaCentralBrowserTransferInput:
+      type: object
+      additionalProperties: false
+      required: [transferToken, cookies]
+      properties:
+        transferToken:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          writeOnly: true
+        cookies:
+          type: array
+          minItems: 1
+          maxItems: 6
+          writeOnly: true
+          items:
+            $ref: "#/components/schemas/AreaCentralTransferredCookie"
+
+    AreaCentralTransferredCookie:
+      type: object
+      additionalProperties: false
+      description: Entrada exclusiva do background da extensão; nunca retornar ao React, persistir em claro ou registrar.
+      required: [name, value, domain, path, secure, httpOnly]
+      properties:
+        name:
+          type: string
+          enum: [PHPSESSID, cf_clearance, __cf_bm]
+        value:
+          type: string
+          minLength: 1
+          maxLength: 4096
+          writeOnly: true
+        domain:
+          type: string
+          maxLength: 100
+        path:
+          type: string
+          enum: ["/"]
+        secure:
+          type: boolean
+        httpOnly:
+          type: boolean
+        sameSite:
+          type: [string, "null"]
+          maxLength: 20
+        expiresAt:
+          type: [string, "null"]
+          format: date-time
 
     SessionResponse:
       type: object

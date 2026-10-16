@@ -9,6 +9,7 @@ node_modules/
 
 # Frontend build/cache
 **/dist/
+frontend-gestao-revestimento/public/extensions/*.zip
 **/*.tsbuildinfo
 
 # Local environment files (templates remain versioned)

@@ -51,97 +51,39 @@ Blueprint, em particular:
 Depois do deploy, guarde a URL HTTPS pública da API, sem barra final, por
 exemplo `https://redeasso-api.onrender.com`.
 
-### 2.1 Habilitar o navegador assistido da Área Central
+### 2.1 Conectar a Área Central pela extensão
 
-Decisão de 15/10/2026: existe **somente `redeasso-api` no Render**. Não retome
-nem crie `redeasso-area-central-browser`. Docker da loja/Tailscale não é mais
-uma dependência de produção. Neon e Cloudflare permanecem inalterados.
+Decisão de 15/10/2026: o login principal acontece diretamente no Chrome/Edge
+do usuário, pela extensão própria RedeASSO. A produção continua em **Neon +
+Render + Cloudflare**, sem servidor local ou navegador remoto no Render.
 
-1. Sincronize o Blueprint existente, sem criar outro serviço. Em **Settings /
-   Build & Deploy**, confirme:
+1. Sincronize o Blueprint existente `redeasso-api`. Não crie nem retome o antigo
+   `redeasso-area-central-browser`. Root Directory vazio, Dockerfile
+   `backend-gestao-revestimento/Dockerfile.render`, contexto `.`, Docker Command
+   vazio e Health Check Path `/api/healthz`.
+2. Confirme `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=true` e
+   `APP_ADDRESS=0.0.0.0`. Remova eventual override de `APP_ADDRESS=127.0.0.1`
+   do runtime anterior. `PORT` é fornecida pelo Render.
+3. Preserve `AREA_CENTRAL_SESSION_ENCRYPTION_KEY`: os mesmos 32 bytes em Base64
+   dos deploys anteriores. Não gerar outra chave a cada publicação. Cookies
+   externos continuam no envelope AES-GCM da sessão JDBC, por até 12 horas.
+4. Publique a `main`. A imagem executa somente Spring/Java, sem Chromium, VNC,
+   gateway ou Selenium. O ping de saúde continua independente do banco.
+5. Instale a extensão em cada computador pelo link de download da tela de login.
+   Siga [o guia da extensão](EXTENSAO_AREA_CENTRAL.md), que explica instalação,
+   atualização, permissões, protocolo e homologação.
+6. No RedeASSO, clique em **Entrar com Área Central**. A extensão abre o portal
+   real. Com autofill dos dois campos e Turnstile aprovado legitimamente, o
+   botão Entrar é acionado uma vez; sem autofill, o usuário confirma no portal.
+   Depois da validação independente do catálogo pelo Render, volte ao RedeASSO
+   e clique em **Concluir e entrar**.
 
-   | Campo | Valor |
-   | --- | --- |
-   | Root Directory | vazio (raiz do repositório) |
-   | Dockerfile Path | `backend-gestao-revestimento/Dockerfile.render` |
-   | Docker Build Context Directory | `.` (raiz do repositório) |
-   | Docker Command | vazio (usa o entrypoint da imagem) |
-   | Health Check Path | `/api/healthz` |
-
-   O contexto antigo `backend-gestao-revestimento` não inclui os arquivos
-   `infra/area-central-browser` e fará o build falhar. O workflow Docker também
-   valida a imagem Render usando o contexto da raiz.
-
-2. Confirme as variáveis `REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED=true`,
-   `AREA_CENTRAL_ALLOWED_FRAME_ORIGIN=https://redeasso.assocom.workers.dev` e
-   `AREA_CENTRAL_READ_TIMEOUT=90s`. O entrypoint deriva a URL interativa de
-   `RENDER_EXTERNAL_URL`, ficando em `https://redeasso-api.onrender.com/vnc.html`.
-   Ele configura automaticamente o gateway interno em loopback e compartilha
-   as chaves transitórias entre Spring e gateway. Não precisa parear segredos
-   com outro serviço. URLs antigas de Funnel ou do navegador suspenso não são
-   usadas por esse runtime.
-
-3. Garanta que `AREA_CENTRAL_SESSION_ENCRYPTION_KEY` está configurada e não
-   mude entre deploys. Para configuração manual, gere uma vez no PowerShell
-   e cole o resultado **somente no segredo do Render**, nunca no Git:
-
-   ```powershell
-   $sessionKeyBytes = New-Object byte[] 32
-   $sessionKeyRng = [Security.Cryptography.RandomNumberGenerator]::Create()
-   $sessionKeyRng.GetBytes($sessionKeyBytes)
-   [Convert]::ToBase64String($sessionKeyBytes)
-   $sessionKeyRng.Dispose()
-   [Array]::Clear($sessionKeyBytes, 0, $sessionKeyBytes.Length)
-   ```
-
-   A senha do portal nunca é persistida. Apenas cookies externos são
-   criptografados com AES-GCM no Spring Session JDBC/Neon, com validade
-   absoluta de até 12 horas. Logout e expiração removem o envelope. Sem a
-   chave, o fallback em memória não sobrevive a um reinício da API.
-
-4. Publique a `main`. O gateway escuta a porta pública e encaminha `/api/*`
-   e Actuator para Spring em loopback. Chromium/Xvfb/VNC/noVNC iniciam somente
-   numa tentativa de login e encerram após captura dos cookies, cancelamento
-   ou dez minutos. Sem login em andamento, esses processos não ficam ativos.
-   `/api/healthz` não inicia Chrome nem consulta o banco.
-
-5. Na tela RedeASSO, informe usuário e senha e clique em **Entrar**. O formulário
-   real é preenchido; o gateway espera o próprio portal liberar o botão e
-   produzir uma resposta válida do Turnstile. Só então submete uma vez. Não
-   há clique automatizado no CAPTCHA, callback forçado ou token fabricado.
-   No modo de observação atual, **Entrar abre uma nova guia**, sem modal/iframe.
-   Ela é reservada imediatamente no clique e mostra o andamento até receber
-   a URL protegida do viewer. Se o navegador bloquear pop-ups, permita-os
-   para o RedeASSO e tente novamente; nenhuma tentativa é iniciada sem guia.
-   Depois da verificação, volte à guia original e clique em **Concluir e entrar**.
-   O botão **Abrir guia do login** permite voltar/reabrir o viewer. **Fechar e
-   cancelar** encerra a tentativa e a guia aberta pelo app.
-   Se a API falhar antes de devolver a sessão, a guia mostra o diagnóstico,
-   mas não consegue exibir o navegador remoto. Nenhum HTML bruto de erro é
-   reproduzido e a mudança para nova guia não resolve o 503 de inicialização.
-   A guia externa não recebe acesso à origem por `window.opener`; URLs não
-   incluem as credenciais nem os cookies da Área Central. Não abrir apenas o
-   portal no Chrome pessoal para tentar capturar os cookies: o Spring não
-   pode ler essa sessão de outro domínio/navegador.
-   Se o formulário não puder ser preenchido, o gateway mantém a página real
-   disponível para inspeção/manual, sem criar uma autenticação fictícia.
-
-6. Homologue com conta autorizada: envio automático quando aprovado pelo
-   portal, abertura/reabertura da nova guia, bloqueio de pop-ups, conclusão explícita, senha incorreta, cancelamento, logout,
-   primeira consulta ao catálogo, reabertura do navegador e novo deploy com
-   a mesma chave. Monitore memória no Render durante o login. O processo
-   enxuto e sob demanda reduz consumo, mas **não comprova** que Chromium +
-   Spring caberão nos 512 MB do Free nem garante aprovação do Turnstile.
-   O sandbox do Chromium permanece habilitado. Se o ambiente não permitir
-   iniciá-lo, não desabilite proteções automaticamente. Se faltar memória ou
-   o portal rejeitar o navegador, registre o diagnóstico
-   e discuta a alternativa antes de trocar plano/topologia.
-
-Nunca abra `/internal/browser/*` ou `/internal/access/*` no navegador: sem a chave
-interna eles retornam `401`. O `/vnc.html` isoladamente também não dá acesso à
-sessão; o websocket exige uma concessão ativa e o token temporário emitido
-pelo Spring. Não coloque nenhum desses segredos em Cloudflare, `wrangler`,
-`VITE_*`, URL fixa ou Git.
+A sessão obtida no Chrome ainda precisa ser aceita pelo portal numa consulta
+feita pelo Render. Bloqueio de IP/Cloudflare resulta em recusa segura, nunca
+em login fictício. Não contornar CAPTCHA, fingerprint ou segurança do portal.
+Homologar transferência real, primeira consulta, logout e duração da sessão
+antes de declarar a integração concluída. O código remoto anterior permanece
+somente como fallback de desenvolvimento e não é iniciado por este deploy.
 
 ## 3. Criar o Worker Cloudflare
 

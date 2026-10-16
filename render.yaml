@@ -49,13 +49,9 @@ services:
         sync: false
       - key: REDEASSO_LOCAL_ADMIN_PASSWORD
         sync: false
-      # Um único serviço: o gateway público encaminha a API para Spring em
-      # loopback; Chromium só é iniciado durante uma tentativa de login.
+      # Um único serviço Spring. A extensão usa o navegador do usuário;
+      # nenhum navegador/gateway remoto é iniciado no Render.
       - key: REDEASSO_INTEGRATION_AREA_CENTRAL_ENABLED
         value: "true"
-      - key: AREA_CENTRAL_INTERACTIVE_URL
-        value: https://redeasso-api.onrender.com/vnc.html
-      - key: AREA_CENTRAL_ALLOWED_FRAME_ORIGIN
-        value: https://redeasso.assocom.workers.dev
-      - key: AREA_CENTRAL_READ_TIMEOUT
-        value: 90s
+      - key: APP_ADDRESS
+        value: 0.0.0.0

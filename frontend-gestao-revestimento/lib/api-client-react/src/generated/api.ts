@@ -21,6 +21,9 @@ import type {
 
 import type {
   ApiError,
+  AreaCentralBrowserGrant,
+  AreaCentralBrowserTransferInput,
+  AreaCentralBrowserTransferState,
   AreaCentralLoginAttempt,
   Atividade,
   CalculoInput,
@@ -589,6 +592,371 @@ export const useCancelCurrentAreaCentralLoginAttempt = <TError = ErrorType<unkno
         TContext
       > => {
       return useMutation(getCancelCurrentAreaCentralLoginAttemptMutationOptions(options));
+    }
+
+export const getStartAreaCentralBrowserTransferUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/browser-transfers`
+}
+
+/**
+ * Requer CSRF. Concessão aleatória de uso único, vinculada à sessão atual, válida por dez minutos. Não abre navegador no Render.
+ * @summary Autorizar a extensão a enviar a sessão da Área Central
+ */
+export const startAreaCentralBrowserTransfer = async ( options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralBrowserGrant> => {
+
+  return customFetch<AreaCentralBrowserGrant>(getStartAreaCentralBrowserTransferUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartAreaCentralBrowserTransferMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>, TError,void, TContext> => {
+
+const mutationKey = ['startAreaCentralBrowserTransfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>, void> = () => {
+
+
+          return  startAreaCentralBrowserTransfer(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartAreaCentralBrowserTransferMutationResult = NonNullable<Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>>
+
+    export type StartAreaCentralBrowserTransferMutationError = ErrorType<void>
+
+    /**
+ * @summary Autorizar a extensão a enviar a sessão da Área Central
+ */
+export const useStartAreaCentralBrowserTransfer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startAreaCentralBrowserTransfer>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartAreaCentralBrowserTransferMutationOptions(options));
+    }
+
+export const getReceiveAreaCentralBrowserTransferUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/browser-transfers/receive`
+}
+
+/**
+ * Uso exclusivo do background da extensão. Usa transferToken de 256 bits, de uso único, no lugar de cookie/CSRF. Não autentica esta requisição nem retorna cookies; valida o catálogo no servidor e guarda o resultado transitoriamente para conclusão com CSRF na sessão RedeASSO original.
+ * @summary Receber cookies diretamente da extensão autorizada
+ */
+export const receiveAreaCentralBrowserTransfer = async (areaCentralBrowserTransferInput: AreaCentralBrowserTransferInput, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getReceiveAreaCentralBrowserTransferUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(areaCentralBrowserTransferInput)
+  }
+);}
+
+
+
+
+
+export const getReceiveAreaCentralBrowserTransferMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>, TError,{data: BodyType<AreaCentralBrowserTransferInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>, TError,{data: BodyType<AreaCentralBrowserTransferInput>}, TContext> => {
+
+const mutationKey = ['receiveAreaCentralBrowserTransfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>, {data: BodyType<AreaCentralBrowserTransferInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  receiveAreaCentralBrowserTransfer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReceiveAreaCentralBrowserTransferMutationResult = NonNullable<Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>>
+    export type ReceiveAreaCentralBrowserTransferMutationBody = BodyType<AreaCentralBrowserTransferInput>
+    export type ReceiveAreaCentralBrowserTransferMutationError = ErrorType<void>
+
+    /**
+ * @summary Receber cookies diretamente da extensão autorizada
+ */
+export const useReceiveAreaCentralBrowserTransfer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>, TError,{data: BodyType<AreaCentralBrowserTransferInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof receiveAreaCentralBrowserTransfer>>,
+        TError,
+        {data: BodyType<AreaCentralBrowserTransferInput>},
+        TContext
+      > => {
+      return useMutation(getReceiveAreaCentralBrowserTransferMutationOptions(options));
+    }
+
+export const getGetCurrentAreaCentralBrowserTransferUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/browser-transfers/current`
+}
+
+/**
+ * @summary Consultar a transferência desta sessão, sem cookies
+ */
+export const getCurrentAreaCentralBrowserTransfer = async ( options?: Parameters<typeof customFetch>[1]): Promise<AreaCentralBrowserTransferState> => {
+
+  return customFetch<AreaCentralBrowserTransferState>(getGetCurrentAreaCentralBrowserTransferUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentAreaCentralBrowserTransferQueryKey = () => {
+    return [
+    `/api/auth/area-central/browser-transfers/current`
+    ] as const;
+    }
+
+
+export const getGetCurrentAreaCentralBrowserTransferQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentAreaCentralBrowserTransferQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>> = ({ signal }) => getCurrentAreaCentralBrowserTransfer({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCurrentAreaCentralBrowserTransferQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>>
+export type GetCurrentAreaCentralBrowserTransferQueryError = ErrorType<void>
+
+
+/**
+ * @summary Consultar a transferência desta sessão, sem cookies
+ */
+
+export function useGetCurrentAreaCentralBrowserTransfer<TData = Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCurrentAreaCentralBrowserTransfer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCurrentAreaCentralBrowserTransferQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCancelAreaCentralBrowserTransferUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/browser-transfers/current`
+}
+
+/**
+ * Requer CSRF. Não faz logout nem remove cookies do portal pessoal.
+ * @summary Revogar a transferência desta sessão
+ */
+export const cancelAreaCentralBrowserTransfer = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getCancelAreaCentralBrowserTransferUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelAreaCentralBrowserTransferMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>, TError,void, TContext> => {
+
+const mutationKey = ['cancelAreaCentralBrowserTransfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>, void> = () => {
+
+
+          return  cancelAreaCentralBrowserTransfer(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelAreaCentralBrowserTransferMutationResult = NonNullable<Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>>
+
+    export type CancelAreaCentralBrowserTransferMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revogar a transferência desta sessão
+ */
+export const useCancelAreaCentralBrowserTransfer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelAreaCentralBrowserTransfer>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelAreaCentralBrowserTransferMutationOptions(options));
+    }
+
+export const getCompleteAreaCentralBrowserTransferUrl = () => {
+
+
+
+
+  return `/api/auth/area-central/browser-transfers/complete`
+}
+
+/**
+ * Requer a sessão original e CSRF. Consome a tentativa validada, rotaciona a sessão e guarda o jar no envelope AES-GCM existente por no máximo 12 horas.
+ * @summary Concluir o acesso após validar a sessão recebida da extensão
+ */
+export const completeAreaCentralBrowserTransfer = async ( options?: Parameters<typeof customFetch>[1]): Promise<SessionResponse> => {
+
+  return customFetch<SessionResponse>(getCompleteAreaCentralBrowserTransferUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteAreaCentralBrowserTransferMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>, TError,void, TContext> => {
+
+const mutationKey = ['completeAreaCentralBrowserTransfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>, void> = () => {
+
+
+          return  completeAreaCentralBrowserTransfer(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteAreaCentralBrowserTransferMutationResult = NonNullable<Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>>
+
+    export type CompleteAreaCentralBrowserTransferMutationError = ErrorType<void>
+
+    /**
+ * @summary Concluir o acesso após validar a sessão recebida da extensão
+ */
+export const useCompleteAreaCentralBrowserTransfer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeAreaCentralBrowserTransfer>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCompleteAreaCentralBrowserTransferMutationOptions(options));
     }
 
 export const getGetAuthSessionUrl = () => {

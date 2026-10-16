@@ -3,6 +3,7 @@ import {
   ApiError,
   clearCsrfToken,
   completeAreaCentralLoginAttempt,
+  completeAreaCentralBrowserTransfer,
   getAuthSession,
   localLogin,
   logout as apiLogout,
@@ -20,6 +21,7 @@ interface AuthContextType {
   session: SessionResponse | null
   login: (username: string, password: string) => Promise<LocalLoginResult>
   completeAreaCentralLogin: () => Promise<boolean>
+  completeAreaCentralBrowserLogin: () => Promise<boolean>
   logout: () => Promise<void>
 }
 
@@ -72,6 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return authenticatedSession.authenticated
   }, [])
 
+  const completeAreaCentralBrowserLogin = useCallback(async () => {
+    const authenticatedSession = await completeAreaCentralBrowserTransfer()
+    clearCsrfToken()
+    setSession(authenticatedSession)
+    return authenticatedSession.authenticated
+  }, [])
+
   async function logout() {
     try {
       await apiLogout()
@@ -88,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       login,
       completeAreaCentralLogin,
+      completeAreaCentralBrowserLogin,
       logout,
     }}>
       {children}

@@ -102,6 +102,79 @@ export const CancelCurrentAreaCentralLoginAttemptResponse = zod.void()
 
 
 /**
+ * Requer CSRF. Concessão aleatória de uso único, vinculada à sessão atual, válida por dez minutos. Não abre navegador no Render.
+ * @summary Autorizar a extensão a enviar a sessão da Área Central
+ */
+export const startAreaCentralBrowserTransferResponseTransferTokenRegExp = new RegExp('^[A-Za-z0-9_-]{43}$');
+
+
+export const StartAreaCentralBrowserTransferResponse = zod.object({
+  "transferToken": zod.string().regex(startAreaCentralBrowserTransferResponseTransferTokenRegExp).describe('Concessão curta e privada, somente no corpo HTTPS; não é um cookie externo.'),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * Uso exclusivo do background da extensão. Usa transferToken de 256 bits, de uso único, no lugar de cookie/CSRF. Não autentica esta requisição nem retorna cookies; valida o catálogo no servidor e guarda o resultado transitoriamente para conclusão com CSRF na sessão RedeASSO original.
+ * @summary Receber cookies diretamente da extensão autorizada
+ */
+export const receiveAreaCentralBrowserTransferBodyTransferTokenRegExp = new RegExp('^[A-Za-z0-9_-]{43}$');
+export const receiveAreaCentralBrowserTransferBodyCookiesItemValueMax = 4096;
+
+export const receiveAreaCentralBrowserTransferBodyCookiesItemDomainMax = 100;
+
+export const receiveAreaCentralBrowserTransferBodyCookiesItemSameSiteMax = 20;
+
+export const receiveAreaCentralBrowserTransferBodyCookiesMax = 6;
+
+
+
+export const ReceiveAreaCentralBrowserTransferBody = zod.object({
+  "transferToken": zod.string().regex(receiveAreaCentralBrowserTransferBodyTransferTokenRegExp),
+  "cookies": zod.array(zod.object({
+  "name": zod.enum(['PHPSESSID', 'cf_clearance', '__cf_bm']),
+  "value": zod.string().min(1).max(receiveAreaCentralBrowserTransferBodyCookiesItemValueMax),
+  "domain": zod.string().max(receiveAreaCentralBrowserTransferBodyCookiesItemDomainMax),
+  "path": zod.enum(['/']),
+  "secure": zod.boolean(),
+  "httpOnly": zod.boolean(),
+  "sameSite": zod.string().max(receiveAreaCentralBrowserTransferBodyCookiesItemSameSiteMax).nullish(),
+  "expiresAt": zod.coerce.date().nullish()
+}).describe('Entrada exclusiva do background da extensão; nunca retornar ao React, persistir em claro ou registrar.')).min(1).max(receiveAreaCentralBrowserTransferBodyCookiesMax)
+})
+
+export const ReceiveAreaCentralBrowserTransferResponse = zod.void()
+
+
+/**
+ * @summary Consultar a transferência desta sessão, sem cookies
+ */
+export const GetCurrentAreaCentralBrowserTransferResponse = zod.object({
+  "status": zod.enum(['WAITING_FOR_BROWSER', 'VALIDATING', 'READY_TO_COMPLETE', 'REJECTED']),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * Requer CSRF. Não faz logout nem remove cookies do portal pessoal.
+ * @summary Revogar a transferência desta sessão
+ */
+export const CancelAreaCentralBrowserTransferResponse = zod.void()
+
+
+/**
+ * Requer a sessão original e CSRF. Consome a tentativa validada, rotaciona a sessão e guarda o jar no envelope AES-GCM existente por no máximo 12 horas.
+ * @summary Concluir o acesso após validar a sessão recebida da extensão
+ */
+export const CompleteAreaCentralBrowserTransferResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "username": zod.string().nullish(),
+  "authType": zod.union([zod.literal('LOCAL'),zod.literal('AREA_CENTRAL'),zod.literal(null)]).nullish().describe('Forma usada para autenticar a identidade atual no RedeASSO.'),
+  "areaCentralConnected": zod.boolean().describe('Indica se a sessão atual possui uma sessão externa válida da Área Central vinculada.')
+})
+
+
+/**
  * Retorna sempre o estado da sessão. Uma sessão anônima é representada por `authenticated: false`, sem responder 401.
  * @summary Consultar a sessão atual
  */

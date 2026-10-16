@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
+    "build": "node ../scripts/package_area_central_extension.mjs && vite build --config vite.config.ts",
     "dev:cloudflare": "wrangler dev --config wrangler.jsonc",
     "deploy:cloudflare": "pnpm run build && wrangler deploy --config wrangler.jsonc",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",

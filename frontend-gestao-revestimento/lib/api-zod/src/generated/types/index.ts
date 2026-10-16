@@ -8,8 +8,15 @@
 
 export * from './acabamentoBordas';
 export * from './apiError';
+export * from './areaCentralBrowserGrant';
+export * from './areaCentralBrowserTransferInput';
+export * from './areaCentralBrowserTransferState';
+export * from './areaCentralBrowserTransferStateStatus';
 export * from './areaCentralLoginAttempt';
 export * from './areaCentralLoginAttemptStatus';
+export * from './areaCentralTransferredCookie';
+export * from './areaCentralTransferredCookieName';
+export * from './areaCentralTransferredCookiePath';
 export * from './atividade';
 export * from './calculoInput';
 export * from './calculoResult';

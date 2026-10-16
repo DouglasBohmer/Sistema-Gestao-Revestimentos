@@ -1,9 +1,11 @@
 package br.com.redeasso.gestao.shared.security;
 
 import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralSessionStore;
+import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralBrowserTransferService;
 import br.com.redeasso.gestao.integracao.areacentral.application.InMemoryAreaCentralSessionStore;
 import br.com.redeasso.gestao.integracao.areacentral.infrastructure.HttpSessionAreaCentralSessionStore;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -34,12 +36,15 @@ public class SecurityConfiguration {
             JsonAccessDeniedHandler accessDeniedHandler,
             SecurityContextRepository securityContextRepository,
             CsrfTokenRepository csrfTokenRepository,
+            ObjectProvider<AreaCentralBrowserTransferService> transfers,
             AreaCentralSessionStore areaCentralSessionStore) throws Exception {
         CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
 
         http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
+                        .ignoringRequestMatchers(request -> "POST".equals(request.getMethod())
+                                && (request.getContextPath() + "/api/auth/area-central/browser-transfers/receive").equals(request.getRequestURI()))
                         .csrfTokenRequestHandler(csrfRequestHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
@@ -52,6 +57,10 @@ public class SecurityConfiguration {
                                 "/api/auth/area-central/attempts/complete",
                                 "/api/auth/area-central/attempts/current")
                         .permitAll()
+                        .requestMatchers("/api/auth/area-central/browser-transfers",
+                                "/api/auth/area-central/browser-transfers/current",
+                                "/api/auth/area-central/browser-transfers/receive",
+                                "/api/auth/area-central/browser-transfers/complete").permitAll()
                         .requestMatchers(request -> {
                             String path = request.getServletPath();
                             return !path.equals("/api")
@@ -70,6 +79,7 @@ public class SecurityConfiguration {
                 .securityContext(context -> context
                         .requireExplicitSave(true)
                         .securityContextRepository(securityContextRepository))
+                .addFilterBefore(new BrowserTransferBodyLimitFilter(), SecurityContextHolderFilter.class)
                 .addFilterAfter(
                         new AreaCentralSessionConsistencyFilter(areaCentralSessionStore),
                         SecurityContextHolderFilter.class)
@@ -81,6 +91,7 @@ public class SecurityConfiguration {
                         .addLogoutHandler((request, response, authentication) -> {
                             HttpSession session = request.getSession(false);
                             if (session != null) {
+                                transfers.ifAvailable(service -> service.cancel(session.getId()));
                                 areaCentralSessionStore.remove(session.getId());
                             }
                         })

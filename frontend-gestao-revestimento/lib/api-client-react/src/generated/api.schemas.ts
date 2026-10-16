@@ -47,6 +47,80 @@ export interface StartAreaCentralLoginRequest {
   password?: string;
 }
 
+export interface AreaCentralBrowserGrant {
+  /**
+     * Concessão curta e privada, somente no corpo HTTPS; não é um cookie externo.
+     * @pattern ^[A-Za-z0-9_-]{43}$
+     */
+  transferToken: string;
+  expiresAt: string;
+}
+
+export type AreaCentralBrowserTransferStateStatus = typeof AreaCentralBrowserTransferStateStatus[keyof typeof AreaCentralBrowserTransferStateStatus];
+
+
+export const AreaCentralBrowserTransferStateStatus = {
+  WAITING_FOR_BROWSER: 'WAITING_FOR_BROWSER',
+  VALIDATING: 'VALIDATING',
+  READY_TO_COMPLETE: 'READY_TO_COMPLETE',
+  REJECTED: 'REJECTED',
+} as const;
+
+export interface AreaCentralBrowserTransferState {
+  status: AreaCentralBrowserTransferStateStatus;
+  expiresAt: string;
+}
+
+export type AreaCentralTransferredCookieName = typeof AreaCentralTransferredCookieName[keyof typeof AreaCentralTransferredCookieName];
+
+
+export const AreaCentralTransferredCookieName = {
+  PHPSESSID: 'PHPSESSID',
+  cf_clearance: 'cf_clearance',
+  __cf_bm: '__cf_bm',
+} as const;
+
+export type AreaCentralTransferredCookiePath = typeof AreaCentralTransferredCookiePath[keyof typeof AreaCentralTransferredCookiePath];
+
+
+export const AreaCentralTransferredCookiePath = {
+  '/': '/',
+} as const;
+
+/**
+ * Entrada exclusiva do background da extensão; nunca retornar ao React, persistir em claro ou registrar.
+ */
+export interface AreaCentralTransferredCookie {
+  name: AreaCentralTransferredCookieName;
+  /**
+     * @minLength 1
+     * @maxLength 4096
+     */
+  value: string;
+  /** @maxLength 100 */
+  domain: string;
+  path: AreaCentralTransferredCookiePath;
+  secure: boolean;
+  httpOnly: boolean;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  sameSite?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+}
+
+export interface AreaCentralBrowserTransferInput {
+  /** @pattern ^[A-Za-z0-9_-]{43}$ */
+  transferToken: string;
+  /**
+     * @minItems 1
+     * @maxItems 6
+     */
+  cookies: AreaCentralTransferredCookie[];
+}
+
 /**
  * Forma usada para autenticar a identidade atual no RedeASSO.
  * @nullable

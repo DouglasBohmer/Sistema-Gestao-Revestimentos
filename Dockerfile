@@ -17,6 +17,8 @@ RUN --mount=type=cache,id=redeasso-pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter @workspace/redeasso...
 
 COPY frontend-gestao-revestimento ./frontend-gestao-revestimento
+COPY extensions/redeasso-area-central ./extensions/redeasso-area-central
+COPY scripts/package_area_central_extension.mjs ./scripts/package_area_central_extension.mjs
 
 RUN PORT=5000 BASE_PATH=/ pnpm --filter @workspace/redeasso run build
 

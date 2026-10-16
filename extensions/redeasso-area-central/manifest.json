@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "RedeASSO — conexão com a Área Central",
+  "description": "Conecta a sessão da Área Central ao RedeASSO após sua autorização. Não lê senhas.",
+  "version": "1.0.0",
+  "minimum_chrome_version": "120",
+  "permissions": ["cookies", "storage", "alarms"],
+  "host_permissions": [
+    "https://redeasso.areacentral.com.br/*",
+    "https://redeasso.assocom.workers.dev/*"
+  ],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "content_scripts": [
+    {"matches": ["https://redeasso.assocom.workers.dev/*"], "js": ["app-bridge.js"], "run_at": "document_idle"},
+    {"matches": ["https://redeasso.areacentral.com.br/401/*"], "js": ["portal.js"], "run_at": "document_idle"}
+  ],
+  "action": {"default_title": "RedeASSO: inicie a conexão na tela de login do sistema"}
+}

@@ -1,7 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react'
-import { AreaCentralLoginFlow } from '@/components/auth/AreaCentralLoginFlow'
+import { AreaCentralExtensionLogin } from '@/components/auth/AreaCentralExtensionLogin'
 
 export default function Login() {
   const { login } = useAuth()
@@ -35,7 +35,8 @@ export default function Login() {
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Entrar no sistema</h2>
           <p className="text-sm text-gray-500 mb-6">Área Central</p>
 
-          <AreaCentralLoginFlow />
+          <AreaCentralExtensionLogin />
+
 
           <details className="group mt-6 border-t border-zinc-200 pt-4">
             <summary className="cursor-pointer text-sm font-medium text-zinc-600 hover:text-black">
