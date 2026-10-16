@@ -109,17 +109,25 @@ uma dependência de produção. Neon e Cloudflare permanecem inalterados.
    real é preenchido; o gateway espera o próprio portal liberar o botão e
    produzir uma resposta válida do Turnstile. Só então submete uma vez. Não
    há clique automatizado no CAPTCHA, callback forçado ou token fabricado.
-   No modo de observação solicitado pelo usuário, o modal abre imediatamente
-   e mostra a página real assim que a sessão protegida estiver disponível.
-   Ele não fecha sozinho ao detectar o login: clique em **Concluir e entrar**
-   após analisar a página. Erros permanecem visíveis no modal; se a API falhar
-   antes de devolver a sessão, há diagnóstico, mas não é possível exibir o
-   navegador remoto. Nenhum HTML bruto de erro é reproduzido na interface.
+   No modo de observação atual, **Entrar abre uma nova guia**, sem modal/iframe.
+   Ela é reservada imediatamente no clique e mostra o andamento até receber
+   a URL protegida do viewer. Se o navegador bloquear pop-ups, permita-os
+   para o RedeASSO e tente novamente; nenhuma tentativa é iniciada sem guia.
+   Depois da verificação, volte à guia original e clique em **Concluir e entrar**.
+   O botão **Abrir guia do login** permite voltar/reabrir o viewer. **Fechar e
+   cancelar** encerra a tentativa e a guia aberta pelo app.
+   Se a API falhar antes de devolver a sessão, a guia mostra o diagnóstico,
+   mas não consegue exibir o navegador remoto. Nenhum HTML bruto de erro é
+   reproduzido e a mudança para nova guia não resolve o 503 de inicialização.
+   A guia externa não recebe acesso à origem por `window.opener`; URLs não
+   incluem as credenciais nem os cookies da Área Central. Não abrir apenas o
+   portal no Chrome pessoal para tentar capturar os cookies: o Spring não
+   pode ler essa sessão de outro domínio/navegador.
    Se o formulário não puder ser preenchido, o gateway mantém a página real
    disponível para inspeção/manual, sem criar uma autenticação fictícia.
 
 6. Homologue com conta autorizada: envio automático quando aprovado pelo
-   portal, modal sempre visível, conclusão explícita, senha incorreta, cancelamento, logout,
+   portal, abertura/reabertura da nova guia, bloqueio de pop-ups, conclusão explícita, senha incorreta, cancelamento, logout,
    primeira consulta ao catálogo, reabertura do navegador e novo deploy com
    a mesma chave. Monitore memória no Render durante o login. O processo
    enxuto e sob demanda reduz consumo, mas **não comprova** que Chromium +

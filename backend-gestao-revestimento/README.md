@@ -149,12 +149,13 @@ O usuário informa login e senha no RedeASSO. O Spring os encaminha somente
 para preencher o formulário real do portal no Chromium isolado. O gateway
 espera o próprio portal aprovar o Turnstile e liberar o botão, então envia uma
 única vez. O CAPTCHA não é clicado/resolvido por automação. No modo de observação
-atual, o modal noVNC sempre abre na mesma tela, sem nova guia. Ele permanece
-visível inclusive nos erros; após reconhecer o login, o app aguarda o botão
-“Concluir e entrar” para capturar a sessão e fechar o navegador.
+atual, o viewer noVNC abre em **nova guia**, sem iframe. Após a verificação,
+volte à guia original do RedeASSO e use “Concluir e entrar” para capturar a
+sessão e fechar o navegador. Permita a abertura de pop-ups se o Chrome bloquear
+a guia. Nenhum cookie do Chrome pessoal é coletado: a sessão continua no serviço.
 Se o preenchimento automático falhar após abrir a página, ela é preservada
 para inspeção/interação manual. Uma falha ao iniciar o serviço ainda pode
-impedir a exibição; nesse caso o modal apresenta diagnóstico sem HTML bruto.
+impedir a exibição; nesse caso a guia apresenta diagnóstico sem HTML bruto.
 A senha não é persistida, devolvida ou registrada em logs.
 
 Configure `AREA_CENTRAL_SESSION_ENCRYPTION_KEY` com 32 bytes aleatórios em
@@ -186,7 +187,7 @@ navegador remoto. Não há resolução ou contorno automático de CAPTCHA.
 
 Em produção, não crie outro serviço nem retome o antigo navegador suspenso.
 O entrypoint Render gera/compartilha as chaves internas entre Spring e gateway
-e usa `RENDER_EXTERNAL_URL` para o modal. Chromium, Xvfb, VNC e noVNC iniciam
+e usa `RENDER_EXTERNAL_URL` para a guia do viewer. Chromium, Xvfb, VNC e noVNC iniciam
 somente ao abrir a tentativa e encerram ao concluir, cancelar ou expirar. O
 health check `/api/healthz` não inicia navegador nem consulta o Neon. A memória
 durante o login e a aprovação real do Turnstile ainda exigem homologação.
