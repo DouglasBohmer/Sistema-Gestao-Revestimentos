@@ -40,6 +40,7 @@ jobs:
           node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-login-error.test.mjs
           node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-login-tab.test.mjs
           node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-extension.test.mjs
+          node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-retry.test.mjs
           pnpm run typecheck
           pnpm --filter @workspace/redeasso run build
           pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc --dry-run

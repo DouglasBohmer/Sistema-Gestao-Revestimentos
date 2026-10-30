@@ -47,6 +47,11 @@ mais ampla, publicar na Chrome Web Store é uma etapa separada, não realizada.
    não faz logout no portal do Chrome, e vice-versa. Após logout externo,
    revogação pode ser reconhecida somente na próxima consulta ao portal.
 
+Uma tentativa recusada já consumiu sua concessão e não pode ser reenviada.
+**Tentar novamente** revoga o estado anterior no servidor e na extensão antes
+de emitir outra concessão e reabrir a guia do portal. Não exige sair da conta
+da Área Central, reinstalar a extensão ou recarregar manualmente todo o app.
+
 O identificador exibido inicialmente é **Área Central**, extraído como identidade
 genérica após validação. Não aceitamos um nome arbitrário do cliente como
 identidade real. A extração confiável do identificador individual é pendente.
@@ -116,7 +121,8 @@ HTML, cabeçalhos, mensagens externas ou stack traces.
 | `HUMAN_VERIFICATION_REQUIRED`, `LOGIN_FORM_PRESENT` | HTML contém widget de verificação ou formulário de login; não há catálogo autenticado aceito. |
 | `CATALOG_FILTER_MISSING`, `CATALOG_PRODUCTS_MISSING` | O HTML não contém os marcadores esperados. Pode ser outro documento ou mudança no portal; não afrouxar a validação para liberar acesso. |
 | `TIMEOUT`, `TLS_ERROR`, `DNS_ERROR`, `CONNECTION_ERROR`, `NETWORK_ERROR` | A comunicação falhou; a categoria não revela mensagens da exceção. |
-| `RESPONSE_TOO_LARGE` | Download excedeu 4 MiB e foi cancelado. |
+| `RESPONSE_TOO_LARGE` | Download excedeu 16 MiB, ou HTML descompactado excedeu 32 MiB; a validação foi interrompida. |
+| `INVALID_RESPONSE_BODY`, `UNSUPPORTED_CONTENT_ENCODING` | Corpo compactado inválido/truncado ou codificação não suportada. |
 | `MISSING_SESSION_COOKIE`, `INTERRUPTED`, `UNEXPECTED_ERROR` | Cookie de sessão ausente, execução interrompida ou falha interna não classificada. |
 
 Um status pode aparecer mesmo se o download do corpo falhar depois. Os avisos
@@ -126,6 +132,17 @@ linha sanitizada e o horário da tentativa; não copie corpos de requisição,
 cookies ou credenciais. Não habilite logs HTTP de baixo nível para investigar.
 A mensagem mostrada ao usuário e as regras de autenticação permanecem iguais;
 instrumentação não significa que o login real foi homologado.
+
+Em 30/10/2026, duas tentativas reais no Render retornaram HTTP 200 e
+`RESPONSE_TOO_LARGE`: o limite antigo de 4 MiB interrompia a leitura antes
+de validar os marcadores. Isso comprova o ponto de falha, não que o HTML
+incompleto já estivesse autenticado. A correção solicita gzip e usa o
+[StreamParser do jsoup](https://jsoup.org/cookbook/input/streamparser-dom-sax)
+para descartar os elementos processados sem criar uma String/DOM completos.
+O download fica limitado a 16 MiB e a descompactação a 32 MiB, inclusive
+contra gzip expansivo. Os 30 segundos de validação e as duas validações
+simultâneas continuam limitados. O documento é consumido até o fim antes
+de aceitar o acesso: um formulário/desafio no final também o recusa.
 
 ## Homologação e limitações
 

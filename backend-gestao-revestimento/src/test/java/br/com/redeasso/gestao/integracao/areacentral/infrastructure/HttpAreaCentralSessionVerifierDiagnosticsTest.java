@@ -177,7 +177,7 @@ class HttpAreaCentralSessionVerifierDiagnosticsTest {
             Flow.Subscription subscription = mock(Flow.Subscription.class);
             subscriber.onSubscribe(subscription);
             if (oversized) {
-                subscriber.onNext(List.of(ByteBuffer.allocate(4 * 1024 * 1024 + 1)));
+                subscriber.onNext(List.of(ByteBuffer.allocate(HttpAreaCentralSessionVerifier.MAX_DOWNLOAD_BYTES + 1)));
                 verify(subscription).cancel();
             } else {
                 subscriber.onError(new SSLException("ERRO_PRIVADO_FICTICIO"));

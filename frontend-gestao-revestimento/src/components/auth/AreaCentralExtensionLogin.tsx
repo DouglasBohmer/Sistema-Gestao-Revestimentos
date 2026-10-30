@@ -6,6 +6,7 @@ import {
 } from '@workspace/api-client-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { areaCentralExtension } from './area-central-extension'
+import { resetAreaCentralTransfer } from './area-central-retry'
 
 const INSTALL_GUIDE = 'https://github.com/DouglasBohmer/Sistema-Gestao-Revestimentos/blob/main/docs/EXTENSAO_AREA_CENTRAL.md'
 function errorMessage(cause: unknown) {
@@ -29,7 +30,7 @@ export function AreaCentralExtensionLogin() {
       if (event.source !== window || event.origin !== location.origin
         || event.data?.source !== 'redeasso-extension' || event.data?.type !== 'TRANSFER_RESULT') return
       if (event.data.code === 'TRANSFER_FAILED') setError('A extensão não conseguiu enviar a sessão. Verifique a conexão, cancele e tente novamente.')
-      if (event.data.code === 'VALIDATION_FAILED') setError('O servidor não aceitou a sessão da Área Central. Nenhum acesso foi liberado; cancele para tentar novamente.')
+      if (event.data.code === 'VALIDATION_FAILED') setError('Não foi possível validar a sessão recebida da Área Central. Tente uma nova conexão.')
     }
     window.addEventListener('message', onTransfer)
     const controller = new AbortController()
@@ -59,7 +60,7 @@ export function AreaCentralExtensionLogin() {
     return () => { active = false; window.clearTimeout(timer); controller.abort() }
   }, [state?.expiresAt, state?.status === 'READY_TO_COMPLETE', state?.status === 'REJECTED', retry])
 
-  async function start() {
+  async function start(restart = false) {
     if (working.current) return
     working.current = true; setBusy(true); setError(''); setMissing(false)
     let created = false
@@ -69,6 +70,10 @@ export function AreaCentralExtensionLogin() {
         setMissing(true)
         setError('Instale ou atualize a extensão RedeASSO e recarregue esta página para conectar a Área Central.')
         return
+      }
+      if (restart) {
+        await resetAreaCentralTransfer(cancelAreaCentralBrowserTransfer, () => areaCentralExtension('CANCEL'))
+        if (mounted.current) setState(null)
       }
       const grant = await startAreaCentralBrowserTransfer({ signal: AbortSignal.timeout(30_000) })
       created = true
@@ -138,7 +143,7 @@ export function AreaCentralExtensionLogin() {
     {state && <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm">
       <p role="status">{state.status === 'READY_TO_COMPLETE' ? 'Sessão validada pelo servidor. Você já pode concluir.'
         : state.status === 'VALIDATING' ? 'Validando a sessão da Área Central no Render...'
-          : state.status === 'REJECTED' ? 'O servidor não conseguiu validar a sessão. Nenhum acesso foi liberado. Cancele e tente novamente; se persistir, o portal pode estar recusando consultas do Render.'
+          : state.status === 'REJECTED' ? 'A tentativa foi recusada e não pode ser reutilizada. Clique em “Tentar novamente” para iniciar outra conexão. Se persistir, consulte o diagnóstico no Render.'
             : 'Entre na guia da Área Central. Quando o portal validar o CAPTCHA e o login, volte aqui para concluir.'}</p>
       {state.status === 'READY_TO_COMPLETE' && <button type="button" onClick={() => void finish()} disabled={busy}
         className="w-full rounded-lg bg-black px-4 py-2 font-semibold text-white disabled:opacity-60">
@@ -146,7 +151,9 @@ export function AreaCentralExtensionLogin() {
       </button>}
       <div className="flex flex-wrap gap-4">
         {state.status === 'WAITING_FOR_BROWSER' && <button type="button" onClick={() => void areaCentralExtension('FOCUS')} className="underline">Ver guia da Área Central</button>}
-        {error && <button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }} className="underline">Verificar novamente</button>}
+        {state.status === 'REJECTED'
+          ? <button type="button" onClick={() => void start(true)} disabled={busy} className="underline disabled:opacity-60">Tentar novamente</button>
+          : error && <button type="button" onClick={() => { setError(''); setRetry(value => value + 1) }} disabled={busy} className="underline disabled:opacity-60">Verificar novamente</button>}
         <button type="button" onClick={() => void cancel()} disabled={busy} className="underline disabled:opacity-60">Cancelar conexão</button>
       </div>
     </div>}

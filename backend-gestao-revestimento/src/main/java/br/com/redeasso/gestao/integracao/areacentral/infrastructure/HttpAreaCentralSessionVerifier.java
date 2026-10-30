@@ -2,14 +2,15 @@ package br.com.redeasso.gestao.integracao.areacentral.infrastructure;
 
 import br.com.redeasso.gestao.integracao.areacentral.AreaCentralProperties;
 import br.com.redeasso.gestao.integracao.areacentral.application.*;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.parser.Parser;
+import org.jsoup.parser.StreamParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.net.ssl.SSLException;
-import java.io.ByteArrayOutputStream;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -24,13 +25,16 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 @Component
 public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpAreaCentralSessionVerifier.class);
     public static final URI CATALOG_URL = URI.create(
             "https://redeasso.areacentral.com.br/401/?pg=associado_catalogos_produtos&ordenacao=nome-asc");
-    private static final int MAX_HTML_BYTES = 4 * 1024 * 1024;
+    static final int MAX_DOWNLOAD_BYTES = 16 * 1024 * 1024;
+    static final int MAX_HTML_BYTES = 32 * 1024 * 1024;
+    private static final long MAX_VALIDATION_NANOS = Duration.ofSeconds(30).toNanos();
     private final HttpClient client;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -52,7 +56,8 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         String header = jar.cookies().stream().map(cookie -> cookie.name() + "=" + cookie.value())
                 .collect(Collectors.joining("; "));
         HttpRequest request = HttpRequest.newBuilder(CATALOG_URL).timeout(Duration.ofSeconds(25))
-                .header("Accept", "text/html").header("Cookie", header).GET().build();
+                .header("Accept", "text/html").header("Accept-Encoding", "gzip")
+                .header("Cookie", header).GET().build();
         CompletableFuture<HttpResponse<byte[]>> pending = null;
         try {
             pending = client.sendAsync(request, info -> {
@@ -70,7 +75,7 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
                     .orElse("").toLowerCase(java.util.Locale.ROOT).contains("text/html")) {
                 throw unavailable(FailureReason.UNEXPECTED_CONTENT_TYPE);
             }
-            return verifyDocument(new String(response.body(), StandardCharsets.UTF_8), jar);
+            return verifyBody(response, jar, started);
         } catch (VerificationFailure exception) {
             logFailure(exception.reason, upstreamStatus.get(), started);
             throw exception;
@@ -82,6 +87,9 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
             Thread.currentThread().interrupt();
             logFailure(FailureReason.INTERRUPTED, upstreamStatus.get(), started);
             throw unavailable(FailureReason.INTERRUPTED);
+        } catch (IOException | UncheckedIOException exception) {
+            logFailure(FailureReason.INVALID_RESPONSE_BODY, upstreamStatus.get(), started);
+            throw unavailable(FailureReason.INVALID_RESPONSE_BODY);
         } catch (RuntimeException exception) {
             logFailure(FailureReason.UNEXPECTED_ERROR, upstreamStatus.get(), started);
             throw unavailable(FailureReason.UNEXPECTED_ERROR);
@@ -91,20 +99,49 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
     }
 
     public static AreaCentralAuthenticatedLogin verifyDocument(String html, AreaCentralCookieJar jar) {
+        return verifyReader(new StringReader(html), jar, System.nanoTime());
+    }
+
+    private static AreaCentralAuthenticatedLogin verifyBody(HttpResponse<byte[]> response,
+                                                            AreaCentralCookieJar jar, long started) throws IOException {
+        byte[] bytes = response.body();
+        if (bytes.length > MAX_DOWNLOAD_BYTES) throw unavailable(FailureReason.RESPONSE_TOO_LARGE);
+        String encoding = response.headers().firstValue("Content-Encoding").orElse("identity").trim();
+        InputStream input = new ByteArrayInputStream(bytes);
+        if ("gzip".equalsIgnoreCase(encoding)) input = new GZIPInputStream(input);
+        else if (!"identity".equalsIgnoreCase(encoding) && !encoding.isEmpty()) {
+            throw unavailable(FailureReason.UNSUPPORTED_CONTENT_ENCODING);
+        }
+        try (Reader reader = new InputStreamReader(new LimitedHtmlInputStream(input, started), StandardCharsets.UTF_8)) {
+            return verifyReader(reader, jar, started);
+        }
+    }
+
+    private static AreaCentralAuthenticatedLogin verifyReader(Reader reader, AreaCentralCookieJar jar, long started) {
         if (!jar.hasAuthenticatedSessionCookie()) throw unavailable(FailureReason.MISSING_SESSION_COOKIE);
-        Document document = Jsoup.parse(html);
-        if (document.selectFirst(".cf-turnstile") != null) {
-            throw unavailable(FailureReason.HUMAN_VERIFICATION_REQUIRED);
+        boolean challenge = false, login = false, filter = false, product = false;
+        try (StreamParser parser = new StreamParser(Parser.htmlParser()).parse(reader, CATALOG_URL.toString())) {
+            var elements = parser.iterator();
+            while (elements.hasNext()) {
+                checkDeadline(started);
+                Element element = elements.next();
+                challenge |= element.hasClass("cf-turnstile");
+                login |= "form-login".equals(element.id()) || "USR_SENHA".equals(element.id())
+                        || ("input".equals(element.normalName()) && "password".equalsIgnoreCase(element.attr("type")));
+                filter |= "option".equals(element.normalName()) && "PF.REFERENCIA".equals(element.attr("value"))
+                        && element.closest("select[name=\"filtro[]\"]") != null;
+                product |= element.hasClass("product-name");
+                // Não acumular milhares de produtos nem construir uma cópia String de todo o HTML.
+                Element parent = element.parent();
+                element.remove();
+                if (parent != null) parent.textNodes().forEach(text -> text.remove());
+            }
         }
-        if (document.selectFirst("#form-login, #USR_SENHA, input[type=password]") != null) {
-            throw unavailable(FailureReason.LOGIN_FORM_PRESENT);
-        }
-        if (document.selectFirst("select[name=\"filtro[]\"] option[value=\"PF.REFERENCIA\"]") == null) {
-            throw unavailable(FailureReason.CATALOG_FILTER_MISSING);
-        }
-        if (document.selectFirst(".product-name") == null) {
-            throw unavailable(FailureReason.CATALOG_PRODUCTS_MISSING);
-        }
+        // Validar somente após consumir o documento inteiro: um formulário/desafio no final também recusa o acesso.
+        if (challenge) throw unavailable(FailureReason.HUMAN_VERIFICATION_REQUIRED);
+        if (login) throw unavailable(FailureReason.LOGIN_FORM_PRESENT);
+        if (!filter) throw unavailable(FailureReason.CATALOG_FILTER_MISSING);
+        if (!product) throw unavailable(FailureReason.CATALOG_PRODUCTS_MISSING);
         // O identificador real ainda não foi caracterizado. Não aceitar nome arbitrário do cliente.
         return new AreaCentralAuthenticatedLogin("Área Central", jar);
     }
@@ -131,6 +168,11 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         return FailureReason.NETWORK_ERROR;
     }
 
+    private static void checkDeadline(long started) {
+        if (Thread.currentThread().isInterrupted()) throw unavailable(FailureReason.INTERRUPTED);
+        if (System.nanoTime() - started > MAX_VALIDATION_NANOS) throw unavailable(FailureReason.TIMEOUT);
+    }
+
     private static void logFailure(FailureReason reason, int status, long started) {
         // Allowlist estrita: sem exceção/stack trace, cookie, HTML, cabeçalho, conta ou ID da tentativa.
         Object safeStatus = status >= 100 && status <= 599 ? status : "unavailable";
@@ -147,6 +189,7 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         MISSING_SESSION_COOKIE, HTTP_REDIRECT, HTTP_UNAUTHORIZED, HTTP_FORBIDDEN, HTTP_RATE_LIMITED, HTTP_ERROR,
         UNEXPECTED_CONTENT_TYPE, HUMAN_VERIFICATION_REQUIRED, LOGIN_FORM_PRESENT,
         CATALOG_FILTER_MISSING, CATALOG_PRODUCTS_MISSING, RESPONSE_TOO_LARGE,
+        INVALID_RESPONSE_BODY, UNSUPPORTED_CONTENT_ENCODING,
         TIMEOUT, TLS_ERROR, DNS_ERROR, CONNECTION_ERROR, NETWORK_ERROR, INTERRUPTED, UNEXPECTED_ERROR
     }
 
@@ -164,6 +207,29 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         private DownloadFailure(FailureReason reason) { this.reason = reason; }
     }
 
+    /** Limita também o HTML descompactado, para que gzip não retire a proteção de memória. */
+    private static final class LimitedHtmlInputStream extends FilterInputStream {
+        private final long started;
+        private int count;
+        private LimitedHtmlInputStream(InputStream input, long started) { super(input); this.started = started; }
+        @Override public int read() throws IOException {
+            checkDeadline(started);
+            int value = in.read();
+            if (value != -1) checkSize(1);
+            return value;
+        }
+        @Override public int read(byte[] bytes, int offset, int length) throws IOException {
+            checkDeadline(started);
+            int read = in.read(bytes, offset, Math.min(length, MAX_HTML_BYTES - count + 1));
+            if (read > 0) checkSize(read);
+            return read;
+        }
+        private void checkSize(int read) {
+            count += read;
+            if (count > MAX_HTML_BYTES) throw unavailable(FailureReason.RESPONSE_TOO_LARGE);
+        }
+    }
+
     /** Limite durante o download, não após alocar HTML ilimitado. */
     static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
         private final CompletableFuture<byte[]> body = new CompletableFuture<>();
@@ -174,7 +240,7 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         public void onNext(List<ByteBuffer> buffers) {
             if (body.isDone()) return;
             for (ByteBuffer buffer : buffers) {
-                if ((long) output.size() + buffer.remaining() > MAX_HTML_BYTES) {
+                if ((long) output.size() + buffer.remaining() > MAX_DOWNLOAD_BYTES) {
                     subscription.cancel();
                     body.completeExceptionally(new DownloadFailure(FailureReason.RESPONSE_TOO_LARGE));
                     return;
