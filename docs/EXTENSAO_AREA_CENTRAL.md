@@ -146,6 +146,16 @@ de aceitar o acesso: um formulário/desafio no final também o recusa.
 
 ## Homologação e limitações
 
+Em 30/10/2026, o commit `526383c` ficou Live no Render e Ready no Cloudflare,
+com ambos os workflows GitHub aprovados. No teste operacional autorizado,
+a extensão já instalada reutilizou uma conta aberta no Chrome, o Spring
+validou o catálogo e a tela exibiu **Sessão validada pelo servidor**.
+**Concluir e entrar** abriu o dashboard; recarregar preservou o acesso.
+Nenhuma senha foi extraída e não houve interação com CAPTCHA. Não foi
+necessário reinstalar a extensão. Essa confirmação é pontual: duração de
+12 horas, outras contas e consultas individuais de produtos ainda exigem
+validação própria; não presumir que toda sessão será aceita pelo portal.
+
 O teste manual anterior confirmou o login direto no Chrome com Turnstile
 aprovado espontaneamente. Isso **não** prova que os cookies serão aceitos em
 uma conexão feita pelo Render: Cloudflare/portal pode vincular sessão ao IP
