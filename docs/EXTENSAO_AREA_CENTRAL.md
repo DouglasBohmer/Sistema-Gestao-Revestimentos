@@ -93,6 +93,40 @@ transporta comandos e a concessão curta, **nunca cookies nem senha**. Cookies
 só existem transitoriamente no background e no backend. A extensão não vigia
 guias arbitrárias: apenas a guia que ela abriu para a tentativa atual.
 
+## Diagnosticar uma sessão recusada
+
+Depois do deploy da API, reproduza uma tentativa e, em **Render → redeasso-api
+→ Logs**, filtre por `area_central_session_validation_failed`. Esta alteração
+é somente no backend: não exige reinstalar a extensão ou configurar variáveis.
+Cada falha de validação do catálogo gera um único aviso, por exemplo fictício:
+
+```text
+area_central_session_validation_failed reason=HTTP_FORBIDDEN upstream_status=403 duration_ms=123
+```
+
+O aviso contém somente uma categoria predefinida, o status HTTP recebido e a
+duração em milissegundos. `upstream_status=unavailable` significa que nenhum
+status foi recebido. Nunca inclui cookies, senha, conta, concessão, sessão,
+HTML, cabeçalhos, mensagens externas ou stack traces.
+
+| Categoria | O que foi observado |
+| --- | --- |
+| `HTTP_REDIRECT`, `HTTP_UNAUTHORIZED`, `HTTP_FORBIDDEN`, `HTTP_RATE_LIMITED`, `HTTP_ERROR` | Resposta diferente de 200; consulte o status numérico. Redirects não são seguidos. Um 403 não prova, sozinho, bloqueio de IP ou Cloudflare. |
+| `UNEXPECTED_CONTENT_TYPE` | Resposta 200 sem tipo HTML. |
+| `HUMAN_VERIFICATION_REQUIRED`, `LOGIN_FORM_PRESENT` | HTML contém widget de verificação ou formulário de login; não há catálogo autenticado aceito. |
+| `CATALOG_FILTER_MISSING`, `CATALOG_PRODUCTS_MISSING` | O HTML não contém os marcadores esperados. Pode ser outro documento ou mudança no portal; não afrouxar a validação para liberar acesso. |
+| `TIMEOUT`, `TLS_ERROR`, `DNS_ERROR`, `CONNECTION_ERROR`, `NETWORK_ERROR` | A comunicação falhou; a categoria não revela mensagens da exceção. |
+| `RESPONSE_TOO_LARGE` | Download excedeu 4 MiB e foi cancelado. |
+| `MISSING_SESSION_COOKIE`, `INTERRUPTED`, `UNEXPECTED_ERROR` | Cookie de sessão ausente, execução interrompida ou falha interna não classificada. |
+
+Um status pode aparecer mesmo se o download do corpo falhar depois. Os avisos
+cobrem a consulta do catálogo pelo verificador, não todas as recusas anteriores
+(por exemplo, concessão expirada ou payload inválido). Compartilhe somente essa
+linha sanitizada e o horário da tentativa; não copie corpos de requisição,
+cookies ou credenciais. Não habilite logs HTTP de baixo nível para investigar.
+A mensagem mostrada ao usuário e as regras de autenticação permanecem iguais;
+instrumentação não significa que o login real foi homologado.
+
 ## Homologação e limitações
 
 O teste manual anterior confirmou o login direto no Chrome com Turnstile
