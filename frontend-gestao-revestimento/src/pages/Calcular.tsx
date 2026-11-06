@@ -804,14 +804,14 @@ export default function Calcular() {
                   icon={<Ruler className="size-5" />}
                   titulo="Niveladores"
                   valor={
-                    resumoCalculo.quantidadeNiveladores === null
+                    resumoCalculo.quantidadePacotesNiveladores === null
                       ? "Não calculado"
-                      : `${resumoCalculo.quantidadeNiveladores} peças`
+                      : `${resumoCalculo.quantidadePacotesNiveladores} ${resumoCalculo.quantidadePacotesNiveladores === 1 ? "pacote" : "pacotes"} de 100 pçs`
                   }
                   detalhe={
-                    resumoCalculo.quantidadePacotesNiveladores === null
+                    resumoCalculo.quantidadeNiveladores === null
                       ? "Cadastre largura e altura"
-                      : `${resumoCalculo.quantidadePacotesNiveladores} ${resumoCalculo.quantidadePacotesNiveladores === 1 ? "pacote" : "pacotes"} de 100 pçs`
+                      : `${resumoCalculo.quantidadeNiveladores} peças`
                   }
                 />
               </CardContent>

@@ -5,6 +5,20 @@
  * API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
  * OpenAPI spec version: 0.1.0
  */
+export interface ParametrosPreco {
+  /** @minimum 0 */
+  margemPercentual: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  descontoPercentual: number;
+  /** @minimum 0 */
+  versaoMargem: number;
+  /** @minimum 0 */
+  versaoDesconto: number;
+}
+
 export interface HealthStatus {
   status: string;
 }

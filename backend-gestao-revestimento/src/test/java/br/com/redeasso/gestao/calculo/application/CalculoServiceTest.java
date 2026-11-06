@@ -54,7 +54,8 @@ class CalculoServiceTest {
         assertThat(resultado.pesoRejunteKg()).isNull();
         assertThat(resultado.quantidadeNiveladores()).isNull();
         assertThat(resultado.quantidadePacotesNiveladores()).isNull();
-        assertThat(resultado.valorTotal()).isEqualByComparingTo("4530.96");
+        assertThat(resultado.piso().valor()).isEqualByComparingTo("90.00");
+        assertThat(resultado.valorTotal()).isEqualByComparingTo("4536.00");
         verify(atividadeService).registrar(
                 "calculo",
                 "Cálculo realizado para Piso de teste",

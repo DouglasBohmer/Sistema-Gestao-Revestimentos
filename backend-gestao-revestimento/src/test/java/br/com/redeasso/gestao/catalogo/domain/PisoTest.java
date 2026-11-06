@@ -35,7 +35,7 @@ class PisoTest {
         piso.atualizarPelaAreaCentral(false, null, null, "PRODUTO_NAO_ENCONTRADO", segundaConsulta);
 
         assertThat(piso.isAtivo()).isFalse();
-        assertThat(piso.getValor()).isEqualByComparingTo("89.90");
+        assertThat(piso.getValor()).isEqualByComparingTo("90.00");
         assertThat(piso.getEstoqueM2()).isEqualByComparingTo("18.50");
         assertThat(piso.getUltimaConsultaAreaCentralEm()).isEqualTo(segundaConsulta);
     }

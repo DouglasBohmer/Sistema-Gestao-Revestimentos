@@ -39,6 +39,12 @@ public class ParametroSistema {
     protected ParametroSistema() {
     }
 
+    public void atualizarValor(BigDecimal novoValor) {
+        if (novoValor == null || novoValor.signum() < 0) throw new IllegalArgumentException("Parâmetro inválido");
+        valor = novoValor;
+        atualizadoEm = Instant.now();
+    }
+
     public String getChave() {
         return chave;
     }

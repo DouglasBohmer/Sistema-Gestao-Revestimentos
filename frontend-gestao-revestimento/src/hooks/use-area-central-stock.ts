@@ -8,6 +8,7 @@ import {
 } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createAreaCentralRefreshQueue } from "@/lib/area-central-refresh-queue";
+import { stockCellState, type StockRowState } from "@/lib/piso-list-state";
 
 export function useAreaCentralStock(
   pisos: Piso[] | undefined,
@@ -18,6 +19,10 @@ export function useAreaCentralStock(
   const client = useQueryClient();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rowStates, setRowStates] = useState(new Map<number, StockRowState>());
+  const generation = useRef(0);
+  const currentIds = useRef(new Set<number>());
+  currentIds.current = new Set(pisos?.map((piso) => piso.id));
   const nodes = useRef(new Map<number, HTMLTableRowElement>());
   const observer = useRef<IntersectionObserver | null>(null);
   const alive = useRef(true);
@@ -31,13 +36,15 @@ export function useAreaCentralStock(
   if (!queue.current)
     queue.current = createAreaCentralRefreshQueue(
       async (ids) => {
+        const currentGeneration = generation.current;
         if (alive.current) setBusy(true);
         try {
           const results = await atualizarPisosAreaCentral(
             { ids },
             { signal: AbortSignal.timeout(65_000) },
           );
-          if (!alive.current) return;
+          if (!alive.current || currentGeneration !== generation.current)
+            return;
           const updates = new Map(
             results
               .filter((item) => item.piso)
@@ -47,6 +54,20 @@ export function useAreaCentralStock(
             { queryKey: getListPisosQueryKey() },
             (current) => current?.map((piso) => updates.get(piso.id) ?? piso),
           );
+          setRowStates((previous) => {
+            const next = new Map(previous);
+            results.forEach((item) =>
+              next.set(
+                item.id,
+                item.status === "FAILED"
+                  ? "FAILED"
+                  : item.status === "NOT_FOUND"
+                    ? "NOT_FOUND"
+                    : "READY",
+              ),
+            );
+            return next;
+          });
           const failed = results.find((item) => item.status === "FAILED");
           if (failed) {
             if (
@@ -60,6 +81,16 @@ export function useAreaCentralStock(
                 : "Algumas consultas falharam. Os últimos valores foram mantidos; use “Atualizar visíveis” para tentar novamente.",
             );
           }
+        } catch (cause) {
+          if (currentGeneration !== generation.current) return;
+          if (alive.current && currentGeneration === generation.current) {
+            setRowStates((previous) => {
+              const next = new Map(previous);
+              ids.forEach((id) => next.set(id, "FAILED"));
+              return next;
+            });
+          }
+          throw cause;
         } finally {
           if (alive.current) setBusy(false);
         }
@@ -70,6 +101,20 @@ export function useAreaCentralStock(
           setError(
             "Não foi possível consultar a Área Central. Os últimos valores foram mantidos.",
           );
+      },
+      (id) => {
+        if (alive.current)
+          setRowStates((previous) => new Map(previous).set(id, "UPDATING"));
+      },
+      (id) => {
+        const rect = nodes.current.get(id)?.getBoundingClientRect();
+        return (
+          currentIds.current.has(id) &&
+          !!rect &&
+          rect.width > 0 &&
+          rect.top < window.innerHeight + 80 &&
+          rect.bottom > -80
+        );
       },
     );
 
@@ -119,6 +164,7 @@ export function useAreaCentralStock(
   }, [connected, editing, location, idsKey]);
   function refreshVisible() {
     setError("");
+    generation.current++;
     queue.current!.reset();
     const ids = new Set(
       pisos?.filter((piso) => piso.codigoRede).map((piso) => piso.id),
@@ -134,5 +180,7 @@ export function useAreaCentralStock(
         queue.current!.enqueue(id);
     });
   }
-  return { registerRow, refreshVisible, busy, error, connected };
+  const cellState = (piso: Piso) =>
+    stockCellState(piso, connected, rowStates.get(piso.id));
+  return { registerRow, refreshVisible, busy, error, connected, cellState };
 }

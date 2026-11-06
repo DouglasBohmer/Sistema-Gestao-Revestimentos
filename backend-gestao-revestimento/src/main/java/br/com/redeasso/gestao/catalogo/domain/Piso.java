@@ -116,7 +116,7 @@ public class Piso {
 
     private Piso(DadosPiso dados) {
         aplicarDadosCadastrais(dados);
-        valor = numeroNaoNegativoOuZero(dados.valor(), "valor");
+        valor = br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(numeroNaoNegativoOuZero(dados.valor(), "valor"));
         estoqueM2 = numeroNaoNegativoOuZero(dados.estoqueM2(), "estoqueM2");
         origemValor = dados.valor() == null
                 ? OrigemDadoProduto.NAO_INFORMADO
@@ -133,8 +133,8 @@ public class Piso {
 
     public void atualizar(DadosPiso dados) {
         aplicarDadosCadastrais(dados);
-        if (dados.valor() != null && valor.compareTo(dados.valor()) != 0) {
-            valor = numeroNaoNegativoOuZero(dados.valor(), "valor");
+        if (dados.valor() != null && getValor().compareTo(br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(dados.valor())) != 0) {
+            valor = br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(numeroNaoNegativoOuZero(dados.valor(), "valor"));
             origemValor = OrigemDadoProduto.MANUAL;
         }
         if (dados.estoqueM2() != null && estoqueM2.compareTo(dados.estoqueM2()) != 0) {
@@ -161,7 +161,7 @@ public class Piso {
 
         ativo = true;
         if (novoValor != null) {
-            valor = numeroNaoNegativoOuZero(novoValor, "valor");
+            valor = br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(numeroNaoNegativoOuZero(novoValor, "valor"));
             origemValor = OrigemDadoProduto.AREA_CENTRAL;
         }
         if (novoEstoqueM2 != null) {
@@ -324,7 +324,8 @@ public class Piso {
     }
 
     public BigDecimal getValor() {
-        return valor;
+        // Também normaliza preços anteriores à regra, sem regravar o cadastro numa leitura.
+        return br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(valor);
     }
 
     public BigDecimal getEstoqueM2() {

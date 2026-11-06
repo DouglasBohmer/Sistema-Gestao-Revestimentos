@@ -49,6 +49,23 @@ class CatalogoPersistenceIT {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private br.com.redeasso.gestao.configuracao.application.ParametrosPrecoService parametrosPreco;
+
+    @Test
+    @Transactional
+    void salvaParDeParametrosComVersaoAuditoriaERecusaEdicaoAntiga() {
+        var antes = parametrosPreco.consultar();
+        var salvo = parametrosPreco.salvar(new BigDecimal("95.5"), BigDecimal.TEN, antes.versaoMargem(), antes.versaoDesconto());
+        assertThat(salvo.versaoMargem()).isGreaterThan(antes.versaoMargem());
+        assertThat(salvo.versaoDesconto()).isGreaterThan(antes.versaoDesconto());
+        assertThat(jdbcTemplate.queryForObject("SELECT valor FROM parametros_sistema WHERE chave='PRECO_LUCRO_PERCENTUAL'",BigDecimal.class)).isEqualByComparingTo("95.5");
+        assertThat(jdbcTemplate.queryForObject("SELECT valor FROM parametros_sistema WHERE chave='PRECO_DESCONTO_PERCENTUAL'",BigDecimal.class)).isEqualByComparingTo("10");
+        assertThat(atividadeService.listarRecentes()).first().satisfies(atividade -> assertThat(atividade.getTipo()).isEqualTo("configuracao"));
+        assertThatThrownBy(() -> parametrosPreco.salvar(BigDecimal.ZERO,BigDecimal.ZERO,antes.versaoMargem(),antes.versaoDesconto()))
+                .isInstanceOf(org.springframework.orm.ObjectOptimisticLockingFailureException.class);
+    }
+
     @Test
     @Transactional
     void migraCatalogoLegadoFiltraPersisteEAuditaSemApagarHistorico() {

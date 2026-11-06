@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> conflitoDeEdicao(Exception exception, HttpServletRequest request) {
+        return response(HttpStatus.CONFLICT, "EDIT_CONFLICT", "Os dados foram alterados por outra sessão. Recarregue as informações antes de salvar.", request);
+    }
+
     @ExceptionHandler(br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProductException.class)
     public ResponseEntity<ApiError> areaCentralProduct(
             br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProductException exception, HttpServletRequest request) {

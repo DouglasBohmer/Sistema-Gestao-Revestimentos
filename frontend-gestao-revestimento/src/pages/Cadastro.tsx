@@ -47,6 +47,8 @@ import {
 } from "@/components/catalogo/PisoImage";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaCentralStock } from "@/hooks/use-area-central-stock";
+import { PisoListToolbar } from "@/components/catalogo/PisoListToolbar";
+import { filterPisos, EMPTY_PISO_FILTERS } from "@/lib/piso-list-state";
 import {
   Save,
   Edit,
@@ -164,6 +166,7 @@ export default function Cadastro() {
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState(EMPTY_PISO_FILTERS);
 
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -192,9 +195,10 @@ export default function Cadastro() {
     });
   };
 
-  const { data: pisos, isLoading } = useListPisos({
+  const { data: catalogo, isLoading } = useListPisos({
     search: search || undefined,
   });
+  const pisos = filterPisos(catalogo, filters);
   const stock = useAreaCentralStock(pisos, isEditing);
 
   const createPiso = useCreatePiso();
@@ -1573,6 +1577,7 @@ export default function Cadastro() {
         )}
 
         <div className="mt-8">
+          <PisoListToolbar search={search} onSearch={setSearch} filters={filters} onFilters={setFilters} onParametersSaved={stock.refreshVisible}/>
           {stock.connected && <div className="mb-3 flex items-center gap-3 text-sm">
             <Button type="button" variant="outline" size="sm" onClick={stock.refreshVisible} disabled={stock.busy || isEditing}>
               {stock.busy ? "Consultando Área Central..." : "Atualizar visíveis"}
@@ -1580,16 +1585,6 @@ export default function Cadastro() {
             <span className="text-muted-foreground">Estoque e preço atualizados conforme os pisos aparecem na tela.</span>
           </div>}
           {stock.error && <p role="alert" className="mb-3 text-sm text-amber-700">{stock.error}</p>}
-          <div className="relative mb-6 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="search-input"
-              placeholder="Buscar por nome ou código..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
 
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
             <Table>
@@ -1680,12 +1675,18 @@ export default function Cadastro() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">
-                          {piso.estoqueM2.toFixed(2)} m²
+                          {stock.cellState(piso) === "UPDATING" ? <span role="status" className="text-muted-foreground">Atualizando...</span>
+                            : stock.cellState(piso) === "UNAVAILABLE" ? "Indisponível"
+                            : stock.cellState(piso) === "NOT_FOUND" ? "Não encontrado"
+                            : `${piso.estoqueM2.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} m²`}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">
-                          R$ {piso.valor.toFixed(2)}
+                          {stock.cellState(piso) === "UPDATING" ? <span role="status" className="text-muted-foreground">Atualizando...</span>
+                            : stock.cellState(piso) === "UNAVAILABLE" ? "Indisponível"
+                            : stock.cellState(piso) === "NOT_FOUND" ? "Não encontrado"
+                            : piso.valor.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -42,6 +42,7 @@ export * from './mapaLabels';
 export * from './mapaLabelsInput';
 export * from './mapaUpdateRequest';
 export * from './origemDadoProduto';
+export * from './parametrosPreco';
 export * from './piso';
 export * from './pisoInput';
 export * from './sessionResponse';

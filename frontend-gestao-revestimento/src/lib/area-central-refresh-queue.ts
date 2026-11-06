@@ -3,6 +3,8 @@ export function createAreaCentralRefreshQueue(
   refresh: (ids: number[]) => Promise<void>,
   allowed: () => boolean,
   onError: () => void,
+  onQueued: (id: number) => void = () => {},
+  relevant: (id: number) => boolean = () => true,
 ) {
   const pending = new Set<number>();
   const seen = new Set<number>();
@@ -12,7 +14,13 @@ export function createAreaCentralRefreshQueue(
     running = true;
     try {
       while (pending.size && allowed()) {
+        for (const id of pending)
+          if (!relevant(id)) {
+            pending.delete(id);
+            seen.delete(id);
+          }
         const ids = [...pending].slice(0, 4);
+        if (!ids.length) break;
         ids.forEach((id) => pending.delete(id));
         try {
           await refresh(ids);
@@ -33,13 +41,12 @@ export function createAreaCentralRefreshQueue(
       if (!allowed() || seen.has(id)) return;
       seen.add(id);
       pending.add(id);
+      onQueued(id);
       queueMicrotask(() => void run());
     },
     reset() {
-      if (!running) {
-        seen.clear();
-        pending.clear();
-      }
+      seen.clear();
+      pending.clear();
     },
   };
 }

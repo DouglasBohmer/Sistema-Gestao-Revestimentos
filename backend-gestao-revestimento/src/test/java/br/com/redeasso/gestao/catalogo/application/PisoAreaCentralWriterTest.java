@@ -18,9 +18,10 @@ class PisoAreaCentralWriterTest {
     @Test void transformaBrutoEmVendaComParametrosPersistidosPreservandoDadosTecnicos() {
         var piso = PisoAreaCentralServiceTest.piso("1234567");
         when(pisos.findById(1L)).thenReturn(Optional.of(piso));
-        parameter("PRECO_LUCRO_PERCENTUAL","90"); parameter("PRECO_DESCONTO_PERCENTUAL","12");
+        var valores = java.util.List.of(parameter("PRECO_LUCRO_PERCENTUAL","90"),parameter("PRECO_DESCONTO_PERCENTUAL","12"));
+        when(parametros.findAllById(any())).thenReturn(valores);
         writer.atualizar(1L,"1234567",new AreaCentralProductClient.Product(true,BigDecimal.TEN,BigDecimal.ZERO,"ACABAR"));
-        assertThat(piso.getValor()).isEqualByComparingTo("16.72");
+        assertThat(piso.getValor()).isEqualByComparingTo("16.75");
         assertThat(piso.getEstoqueM2()).isZero();
         assertThat(piso.isAtivo()).isTrue();
         assertThat(piso.getOrigemValor()).isEqualTo(OrigemDadoProduto.AREA_CENTRAL);
@@ -43,9 +44,10 @@ class PisoAreaCentralWriterTest {
                 .isInstanceOf(AreaCentralProductException.class);
         verify(pisos,never()).save(any());
     }
-    void parameter(String key,String value) {
+    ParametroSistema parameter(String key,String value) {
         ParametroSistema parameter = mock(ParametroSistema.class);
         when(parameter.getValor()).thenReturn(new BigDecimal(value));
-        when(parametros.findById(key)).thenReturn(Optional.of(parameter));
+        when(parameter.getChave()).thenReturn(key);
+        return parameter;
     }
 }

@@ -89,11 +89,27 @@ desativa o produto; os últimos valores continuam preservados.
 
 O valor retornado pelo portal é bruto por m². O preço de venda usa os parâmetros
 persistidos `PRECO_LUCRO_PERCENTUAL` e `PRECO_DESCONTO_PERCENTUAL` (padrões 90%
-e 12%), com BigDecimal e arredondamento HALF_UP para centavos. Estoque continua
+e 12%), com BigDecimal. Após precisão monetária HALF_UP, aplica as faixas comerciais
+de centavos: 00–20 → 00, 21–50 → 50, 51–75 → 75 e 76–99 → próximo inteiro.
+Isso vale para o preço unitário por m²; o total não recebe as faixas novamente.
+O exemplo bruto de 44,52 gera 74,50/m² com os padrões e a nova regra.
+Estoque continua
 em m²; m²/caixa, nome e outros dados técnicos não são alterados pela consulta.
 Antes de calcular com uma conta externa conectada, o backend atualiza o piso
 consultável fora da transação do cálculo, evitando valor novo com estoque velho
 ou conexão Neon aberta enquanto espera o portal.
+
+No cadastro, **Parâmetros** oferece somente margem sobre o bruto e desconto,
+mais Salvar. `GET/PUT /api/parametros/preco` lê/persiste o par no Neon, com
+versões de edição, transação única, CSRF e atividade de auditoria dos valores
+anteriores/novos. Desconto aceita 0–100; margem não negativa. Versão antiga
+retorna 409 em vez de sobrescrever outra sessão. Salvar reconsulta apenas os
+visíveis, sem carga global ou alteração dos outros parâmetros do cálculo.
+
+**Filtros** combina tipo, classificação de uso e acabamento de bordas; o
+switch Todos/Ativos inicia em Todos e não muda o cadastro. Durante uma consulta,
+as células mostram **Atualizando...**; falha sem dado conhecido mostra
+**Indisponível**, não um falso zero. Uma consulta válida pode confirmar zero.
 
 Downloads filtrados têm limite de 2 MiB e HTML descompactado de 4 MiB, timeout
 HTTP de 10 segundos e espera máxima de 12 segundos por produto. Falhas geram

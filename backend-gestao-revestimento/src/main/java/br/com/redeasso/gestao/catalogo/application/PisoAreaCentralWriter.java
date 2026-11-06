@@ -8,7 +8,6 @@ import br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProd
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import static br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProductException.Code.*;
 
@@ -26,19 +25,22 @@ public class PisoAreaCentralWriter {
         if (!codigoConsultado.equals(piso.getCodigoRede())) throw new AreaCentralProductException(PRODUCT_CHANGED);
         BigDecimal valorVenda = null;
         if (product.encontrado()) {
-            BigDecimal lucro = parametro("PRECO_LUCRO_PERCENTUAL");
-            BigDecimal desconto = parametro("PRECO_DESCONTO_PERCENTUAL");
+            var valores = parametros.findAllById(java.util.List.of("PRECO_LUCRO_PERCENTUAL", "PRECO_DESCONTO_PERCENTUAL"));
+            BigDecimal lucro = parametro(valores, "PRECO_LUCRO_PERCENTUAL");
+            BigDecimal desconto = parametro(valores, "PRECO_DESCONTO_PERCENTUAL");
             if (lucro.signum() < 0 || desconto.signum() < 0 || desconto.compareTo(BigDecimal.valueOf(100)) > 0) {
                 throw new AreaCentralProductException(INVALID_RESPONSE);
             }
-            valorVenda = product.valorBrutoM2().multiply(BigDecimal.ONE.add(lucro.movePointLeft(2)))
-                    .multiply(BigDecimal.ONE.subtract(desconto.movePointLeft(2))).setScale(2, RoundingMode.HALF_UP);
+            valorVenda = br.com.redeasso.gestao.shared.domain.PrecoVenda.arredondar(
+                    product.valorBrutoM2().multiply(BigDecimal.ONE.add(lucro.movePointLeft(2)))
+                    .multiply(BigDecimal.ONE.subtract(desconto.movePointLeft(2))));
             if (valorVenda.precision() - valorVenda.scale() > 12) throw new AreaCentralProductException(INVALID_RESPONSE);
         }
         piso.atualizarPelaAreaCentral(product.encontrado(), valorVenda, product.estoqueM2(), product.status(), Instant.now());
         return pisos.save(piso);
     }
-    private BigDecimal parametro(String key) {
-        return parametros.findById(key).orElseThrow(() -> new AreaCentralProductException(INVALID_RESPONSE)).getValor();
+    private BigDecimal parametro(java.util.List<br.com.redeasso.gestao.configuracao.domain.ParametroSistema> valores, String key) {
+        return valores.stream().filter(item -> key.equals(item.getChave())).findFirst()
+                .orElseThrow(() -> new AreaCentralProductException(INVALID_RESPONSE)).getValor();
     }
 }

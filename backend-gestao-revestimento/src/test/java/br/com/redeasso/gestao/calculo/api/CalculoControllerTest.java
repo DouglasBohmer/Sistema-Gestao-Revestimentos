@@ -52,7 +52,7 @@ class CalculoControllerTest {
                 .andExpect(jsonPath("$.metragemComMargem").value(50.05))
                 .andExpect(jsonPath("$.quantidadeCaixas").value(35))
                 .andExpect(jsonPath("$.quantidadeNiveladores").isEmpty())
-                .andExpect(jsonPath("$.valorTotal").value(4530.96));
+                .andExpect(jsonPath("$.valorTotal").value(4536.00));
 
         verify(calculoService).calcular(
                 null,
@@ -180,6 +180,6 @@ class CalculoControllerTest {
                 null,
                 null,
                 null,
-                new BigDecimal("4530.96"));
+                new BigDecimal("4536.00"));
     }
 }

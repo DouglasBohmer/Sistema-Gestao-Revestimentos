@@ -41,6 +41,7 @@ import type {
   MapaCellUpdateRequest,
   MapaCreateRequest,
   MapaUpdateRequest,
+  ParametrosPreco,
   Piso,
   PisoInput,
   SessionResponse,
@@ -73,6 +74,154 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetParametrosPrecoUrl = () => {
+
+
+
+
+  return `/api/parametros/preco`
+}
+
+/**
+ * @summary Consultar margem e desconto de venda por m²
+ */
+export const getParametrosPreco = async ( options?: Parameters<typeof customFetch>[1]): Promise<ParametrosPreco> => {
+
+  return customFetch<ParametrosPreco>(getGetParametrosPrecoUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetParametrosPrecoQueryKey = () => {
+    return [
+    `/api/parametros/preco`
+    ] as const;
+    }
+
+
+export const getGetParametrosPrecoQueryOptions = <TData = Awaited<ReturnType<typeof getParametrosPreco>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getParametrosPreco>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetParametrosPrecoQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getParametrosPreco>>> = ({ signal }) => getParametrosPreco({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getParametrosPreco>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetParametrosPrecoQueryResult = NonNullable<Awaited<ReturnType<typeof getParametrosPreco>>>
+export type GetParametrosPrecoQueryError = ErrorType<void>
+
+
+/**
+ * @summary Consultar margem e desconto de venda por m²
+ */
+
+export function useGetParametrosPreco<TData = Awaited<ReturnType<typeof getParametrosPreco>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getParametrosPreco>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetParametrosPrecoQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSalvarParametrosPrecoUrl = () => {
+
+
+
+
+  return `/api/parametros/preco`
+}
+
+/**
+ * @summary Salvar os dois percentuais atomicamente, com auditoria e CSRF
+ */
+export const salvarParametrosPreco = async (parametrosPreco: ParametrosPreco, options?: Parameters<typeof customFetch>[1]): Promise<ParametrosPreco> => {
+
+  return customFetch<ParametrosPreco>(getSalvarParametrosPrecoUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(parametrosPreco)
+  }
+);}
+
+
+
+
+
+export const getSalvarParametrosPrecoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salvarParametrosPreco>>, TError,{data: BodyType<ParametrosPreco>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof salvarParametrosPreco>>, TError,{data: BodyType<ParametrosPreco>}, TContext> => {
+
+const mutationKey = ['salvarParametrosPreco'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salvarParametrosPreco>>, {data: BodyType<ParametrosPreco>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salvarParametrosPreco(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalvarParametrosPrecoMutationResult = NonNullable<Awaited<ReturnType<typeof salvarParametrosPreco>>>
+    export type SalvarParametrosPrecoMutationBody = BodyType<ParametrosPreco>
+    export type SalvarParametrosPrecoMutationError = ErrorType<void>
+
+    /**
+ * @summary Salvar os dois percentuais atomicamente, com auditoria e CSRF
+ */
+export const useSalvarParametrosPreco = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salvarParametrosPreco>>, TError,{data: BodyType<ParametrosPreco>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof salvarParametrosPreco>>,
+        TError,
+        {data: BodyType<ParametrosPreco>},
+        TContext
+      > => {
+      return useMutation(getSalvarParametrosPrecoMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

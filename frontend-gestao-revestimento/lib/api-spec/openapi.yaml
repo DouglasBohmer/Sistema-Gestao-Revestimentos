@@ -18,8 +18,49 @@ tags:
     description: Dashboard e métricas
   - name: mapas
     description: Mapas de localização dos pisos no estoque
+  - name: parametros
+    description: Parâmetros persistidos do sistema
 
 paths:
+  /parametros/preco:
+    get:
+      operationId: getParametrosPreco
+      tags: [parametros]
+      summary: Consultar margem e desconto de venda por m²
+      responses:
+        "200":
+          description: Percentuais e versões para edição concorrente segura
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParametrosPreco"
+        "401":
+          description: Sessão ausente
+    put:
+      operationId: salvarParametrosPreco
+      tags: [parametros]
+      summary: Salvar os dois percentuais atomicamente, com auditoria e CSRF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParametrosPreco"
+      responses:
+        "200":
+          description: Valores persistidos e novas versões
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParametrosPreco"
+        "400":
+          description: Margem negativa, desconto fora de 0–100 ou precisão inválida
+        "401":
+          description: Sessão ausente
+        "403":
+          description: CSRF inválido
+        "409":
+          description: Parâmetros alterados por outra sessão; reabrir antes de salvar
   /healthz:
     get:
       operationId: healthCheck
@@ -786,6 +827,25 @@ components:
         minimum: 1
 
   schemas:
+    ParametrosPreco:
+      type: object
+      required: [margemPercentual, descontoPercentual, versaoMargem, versaoDesconto]
+      properties:
+        margemPercentual:
+          type: number
+          minimum: 0
+        descontoPercentual:
+          type: number
+          minimum: 0
+          maximum: 100
+        versaoMargem:
+          type: integer
+          format: int64
+          minimum: 0
+        versaoDesconto:
+          type: integer
+          format: int64
+          minimum: 0
     HealthStatus:
       type: object
       properties:

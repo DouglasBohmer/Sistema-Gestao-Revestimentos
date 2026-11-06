@@ -18,3 +18,13 @@ test('não consulta tela inativa e não faz loop de retry em caso de falha', asy
   active=true;queue.enqueue(1);await flush();queue.enqueue(1);await flush()
   assert.equal(calls,1);assert.equal(errors,1)
 })
+
+test('trocar filtro descarta pendências fora da tela e salvar parâmetros permite nova consulta',async()=>{
+  const batches=[], queued=[]; let release; let relevant=new Set([1,2,3,4,5,6]);
+  const queue=createAreaCentralRefreshQueue(async ids=>{batches.push(ids);if(batches.length===1) await new Promise(resolve=>{release=resolve})},()=>true,()=>assert.fail(),id=>queued.push(id),id=>relevant.has(id));
+  [1,2,3,4,5,6].forEach(id=>queue.enqueue(id)); await flush();
+  relevant=new Set([7]);queue.enqueue(7);release();await flush();
+  assert.deepEqual(batches,[[1,2,3,4],[7]]);
+  queue.reset();queue.enqueue(7);await flush();assert.deepEqual(batches[2],[7]);
+  assert.deepEqual(queued,[1,2,3,4,5,6,7,7]);
+});

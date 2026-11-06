@@ -9,6 +9,68 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Consultar margem e desconto de venda por m²
+ */
+export const getParametrosPrecoResponseMargemPercentualMin = 0;
+
+export const getParametrosPrecoResponseDescontoPercentualMin = 0;
+export const getParametrosPrecoResponseDescontoPercentualMax = 100;
+
+export const getParametrosPrecoResponseVersaoMargemMin = 0;
+
+export const getParametrosPrecoResponseVersaoDescontoMin = 0;
+
+
+
+export const GetParametrosPrecoResponse = zod.object({
+  "margemPercentual": zod.number().min(getParametrosPrecoResponseMargemPercentualMin),
+  "descontoPercentual": zod.number().min(getParametrosPrecoResponseDescontoPercentualMin).max(getParametrosPrecoResponseDescontoPercentualMax),
+  "versaoMargem": zod.number().int().min(getParametrosPrecoResponseVersaoMargemMin),
+  "versaoDesconto": zod.number().int().min(getParametrosPrecoResponseVersaoDescontoMin)
+})
+
+
+/**
+ * @summary Salvar os dois percentuais atomicamente, com auditoria e CSRF
+ */
+export const salvarParametrosPrecoBodyMargemPercentualMin = 0;
+
+export const salvarParametrosPrecoBodyDescontoPercentualMin = 0;
+export const salvarParametrosPrecoBodyDescontoPercentualMax = 100;
+
+export const salvarParametrosPrecoBodyVersaoMargemMin = 0;
+
+export const salvarParametrosPrecoBodyVersaoDescontoMin = 0;
+
+
+
+export const SalvarParametrosPrecoBody = zod.object({
+  "margemPercentual": zod.number().min(salvarParametrosPrecoBodyMargemPercentualMin),
+  "descontoPercentual": zod.number().min(salvarParametrosPrecoBodyDescontoPercentualMin).max(salvarParametrosPrecoBodyDescontoPercentualMax),
+  "versaoMargem": zod.number().int().min(salvarParametrosPrecoBodyVersaoMargemMin),
+  "versaoDesconto": zod.number().int().min(salvarParametrosPrecoBodyVersaoDescontoMin)
+})
+
+export const salvarParametrosPrecoResponseMargemPercentualMin = 0;
+
+export const salvarParametrosPrecoResponseDescontoPercentualMin = 0;
+export const salvarParametrosPrecoResponseDescontoPercentualMax = 100;
+
+export const salvarParametrosPrecoResponseVersaoMargemMin = 0;
+
+export const salvarParametrosPrecoResponseVersaoDescontoMin = 0;
+
+
+
+export const SalvarParametrosPrecoResponse = zod.object({
+  "margemPercentual": zod.number().min(salvarParametrosPrecoResponseMargemPercentualMin),
+  "descontoPercentual": zod.number().min(salvarParametrosPrecoResponseDescontoPercentualMin).max(salvarParametrosPrecoResponseDescontoPercentualMax),
+  "versaoMargem": zod.number().int().min(salvarParametrosPrecoResponseVersaoMargemMin),
+  "versaoDesconto": zod.number().int().min(salvarParametrosPrecoResponseVersaoDescontoMin)
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */
