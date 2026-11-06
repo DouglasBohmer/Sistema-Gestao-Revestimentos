@@ -46,6 +46,7 @@ import {
   legacyProductImageFallback,
 } from "@/components/catalogo/PisoImage";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaCentralStock } from "@/hooks/use-area-central-stock";
 import {
   Save,
   Edit,
@@ -194,6 +195,7 @@ export default function Cadastro() {
   const { data: pisos, isLoading } = useListPisos({
     search: search || undefined,
   });
+  const stock = useAreaCentralStock(pisos, isEditing);
 
   const createPiso = useCreatePiso();
   const updatePiso = useUpdatePiso();
@@ -229,6 +231,16 @@ export default function Cadastro() {
   const linkFotoOrigemValue = form.watch("linkFotoOrigem");
   const linkPaginacaoValue = form.watch("linkPaginacao");
   const linkSiteValue = form.watch("linkSite");
+  useEffect(() => {
+    if (isEditing || !selectedPiso) return;
+    const fresh = pisos?.find(piso => piso.id === selectedPiso.id);
+    if (fresh && fresh !== selectedPiso) {
+      setSelectedPiso(fresh);
+      form.setValue("valor", fresh.valor, { shouldDirty: false });
+      form.setValue("estoqueM2", fresh.estoqueM2, { shouldDirty: false });
+      form.setValue("ativo", fresh.ativo, { shouldDirty: false });
+    }
+  }, [pisos, selectedPiso?.id, isEditing, form]);
   const larguraValue = form.watch("largura");
   const alturaValue = form.watch("altura");
   const m2PorCaixaValue = form.watch("m2PorCaixa");
@@ -1561,6 +1573,13 @@ export default function Cadastro() {
         )}
 
         <div className="mt-8">
+          {stock.connected && <div className="mb-3 flex items-center gap-3 text-sm">
+            <Button type="button" variant="outline" size="sm" onClick={stock.refreshVisible} disabled={stock.busy || isEditing}>
+              {stock.busy ? "Consultando Área Central..." : "Atualizar visíveis"}
+            </Button>
+            <span className="text-muted-foreground">Estoque e preço atualizados conforme os pisos aparecem na tela.</span>
+          </div>}
+          {stock.error && <p role="alert" className="mb-3 text-sm text-amber-700">{stock.error}</p>}
           <div className="relative mb-6 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -1600,6 +1619,8 @@ export default function Cadastro() {
                   pisos.map((piso) => (
                     <TableRow
                       key={piso.id}
+                      data-piso-id={piso.id}
+                      ref={node => stock.registerRow(piso.id, node)}
                       onClick={() => handleSelectPiso(piso)}
                       className={`cursor-pointer transition-colors ${editingId === piso.id ? "bg-primary/5" : "hover:bg-muted/50"}`}
                     >
@@ -1624,6 +1645,7 @@ export default function Cadastro() {
                             >
                               {piso.ativo ? "Ativo" : "Inativo"}
                             </span>
+                            {piso.statusAreaCentral === "NAO_ENCONTRADO" && <span className="ml-2 text-[10px] text-muted-foreground">Não encontrado na Área Central</span>}
                           </div>
                         </div>
                       </TableCell>

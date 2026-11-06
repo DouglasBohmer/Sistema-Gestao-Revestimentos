@@ -232,6 +232,9 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
 
     /** Limite durante o download, não após alocar HTML ilimitado. */
     static final class LimitedBodySubscriber implements HttpResponse.BodySubscriber<byte[]> {
+        private final int limit;
+        LimitedBodySubscriber() { this(MAX_DOWNLOAD_BYTES); }
+        LimitedBodySubscriber(int limit) { this.limit = limit; }
         private final CompletableFuture<byte[]> body = new CompletableFuture<>();
         private final ByteArrayOutputStream output = new ByteArrayOutputStream();
         private Flow.Subscription subscription;
@@ -240,7 +243,7 @@ public class HttpAreaCentralSessionVerifier implements AreaCentralSessionVerifie
         public void onNext(List<ByteBuffer> buffers) {
             if (body.isDone()) return;
             for (ByteBuffer buffer : buffers) {
-                if ((long) output.size() + buffer.remaining() > MAX_DOWNLOAD_BYTES) {
+                if ((long) output.size() + buffer.remaining() > limit) {
                     subscription.cancel();
                     body.completeExceptionally(new DownloadFailure(FailureReason.RESPONSE_TOO_LARGE));
                     return;

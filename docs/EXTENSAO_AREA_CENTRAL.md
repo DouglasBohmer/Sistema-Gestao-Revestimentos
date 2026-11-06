@@ -40,7 +40,10 @@ mais ampla, publicar na Chrome Web Store é uma etapa separada, não realizada.
    backend, via domínio Cloudflare fixo. O React recebe apenas estado.
 5. O Spring consulta o catálogo por conta própria e exige marcadores reais de
    produto/referência e ausência de formulário/desafio. Só então a guia
-   RedeASSO oferece **Concluir e entrar**, com proteção CSRF e rotação de sessão.
+   RedeASSO conclui o acesso automaticamente, com proteção CSRF e rotação de
+   sessão. Após essa confirmação, a extensão fecha somente a guia que abriu
+   para a tentativa e retorna o foco ao app. Uma guia preexistente ou navegada
+   para outra origem nunca é fechada. Em falha, a guia permanece disponível.
 6. O jar fica no envelope AES-GCM da sessão JDBC/Neon por no máximo 12 horas,
    respeitando expiração/revogação externa. A senha nunca passa pela extensão
    nem por esse novo fluxo Spring. Logout do RedeASSO remove o envelope, mas
@@ -55,6 +58,47 @@ da Área Central, reinstalar a extensão ou recarregar manualmente todo o app.
 O identificador exibido inicialmente é **Área Central**, extraído como identidade
 genérica após validação. Não aceitamos um nome arbitrário do cliente como
 identidade real. A extração confiável do identificador individual é pendente.
+
+### Atualização da extensão para o retorno automático
+
+A versão **1.1.0** usa o protocolo 2, sem permissões novas. Atualize os arquivos
+da pasta carregada sem compactação (ou baixe novamente o ZIP publicado), clique
+**Recarregar** em `chrome://extensions` e recarregue a guia do RedeASSO. Uma
+instalação antiga é detectada antes de abrir a tentativa e orienta atualizar;
+Git/Cloudflare não atualizam automaticamente uma pasta em Downloads.
+
+## Preço e estoque em tempo real
+
+O Spring consulta a mesma busca filtrada do EstoqueScraper legado: POST na URL
+fixa do catálogo, `filtro[]=PF.REFERENCIA`, `operador[]=IGUAL` e o código ASSO.
+Não usa cookie global, senha salva ou navegador remoto. A referência retornada
+precisa coincidir com a solicitada; não escolher silenciosamente outro produto.
+
+Na lista, somente as linhas visíveis (com pequena margem de pré-carregamento)
+entram na fila, em lotes de até quatro e no máximo duas consultas HTTP externas
+simultâneas. A fila não roda em tela oculta ou durante a edição do formulário.
+**Atualizar visíveis** permite nova tentativa. Nenhuma busca é iniciada pelo
+health check, por cron do banco ou para importar todo o catálogo no login.
+
+`POST /api/pisos/area-central/atualizar` exige autenticação do app e CSRF. Cada
+resultado é `UPDATED`, `NOT_FOUND`, `MANUAL` ou `FAILED`. A sessão externa é a
+do usuário atual. Pisos sem código ASSO permanecem manuais. Falhas, timeouts,
+HTML incompatível e sessão expirada não apagam nem zeram dados. Apenas uma
+mensagem explícita de ausência, com filtro/código/operador conferidos no HTML,
+desativa o produto; os últimos valores continuam preservados.
+
+O valor retornado pelo portal é bruto por m². O preço de venda usa os parâmetros
+persistidos `PRECO_LUCRO_PERCENTUAL` e `PRECO_DESCONTO_PERCENTUAL` (padrões 90%
+e 12%), com BigDecimal e arredondamento HALF_UP para centavos. Estoque continua
+em m²; m²/caixa, nome e outros dados técnicos não são alterados pela consulta.
+Antes de calcular com uma conta externa conectada, o backend atualiza o piso
+consultável fora da transação do cálculo, evitando valor novo com estoque velho
+ou conexão Neon aberta enquanto espera o portal.
+
+Downloads filtrados têm limite de 2 MiB e HTML descompactado de 4 MiB, timeout
+HTTP de 10 segundos e espera máxima de 12 segundos por produto. Falhas geram
+apenas `area_central_product_query_failed`, categoria, status HTTP e duração;
+nenhum cookie, código do produto, conta, HTML ou mensagem externa vai ao log.
 
 ## Configurar produção
 

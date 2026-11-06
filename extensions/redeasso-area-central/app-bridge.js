@@ -8,7 +8,7 @@
   window.addEventListener('message', async event => {
     const input = event.data
     if (event.source !== window || event.origin !== ORIGIN || input?.source !== 'redeasso-web'
-      || !['PING', 'START', 'CANCEL', 'FOCUS'].includes(input.type)
+      || !['PING', 'START', 'CANCEL', 'FOCUS', 'COMPLETE'].includes(input.type)
       || typeof input.id !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(input.id)) return
     let result
     try {

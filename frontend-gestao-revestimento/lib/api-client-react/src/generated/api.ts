@@ -26,6 +26,8 @@ import type {
   AreaCentralBrowserTransferState,
   AreaCentralLoginAttempt,
   Atividade,
+  AtualizacaoAreaCentral,
+  AtualizacaoAreaCentralInput,
   CalculoInput,
   CalculoResult,
   CsrfTokenResponse,
@@ -1262,6 +1264,78 @@ export const useCreatePiso = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreatePisoMutationOptions(options));
+    }
+
+export const getAtualizarPisosAreaCentralUrl = () => {
+
+
+
+
+  return `/api/pisos/area-central/atualizar`
+}
+
+/**
+ * Lote de até quatro pisos. Exige sessão autenticada e CSRF. Falhas preservam os últimos valores; somente produto explicitamente não encontrado é desativado. Pisos sem ASSO permanecem manuais.
+ * @summary Consultar preço e estoque por código ASSO usando a sessão externa do usuário
+ */
+export const atualizarPisosAreaCentral = async (atualizacaoAreaCentralInput: AtualizacaoAreaCentralInput, options?: Parameters<typeof customFetch>[1]): Promise<AtualizacaoAreaCentral[]> => {
+
+  return customFetch<AtualizacaoAreaCentral[]>(getAtualizarPisosAreaCentralUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(atualizacaoAreaCentralInput)
+  }
+);}
+
+
+
+
+
+export const getAtualizarPisosAreaCentralMutationOptions = <TError = ErrorType<void | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof atualizarPisosAreaCentral>>, TError,{data: BodyType<AtualizacaoAreaCentralInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof atualizarPisosAreaCentral>>, TError,{data: BodyType<AtualizacaoAreaCentralInput>}, TContext> => {
+
+const mutationKey = ['atualizarPisosAreaCentral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof atualizarPisosAreaCentral>>, {data: BodyType<AtualizacaoAreaCentralInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  atualizarPisosAreaCentral(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AtualizarPisosAreaCentralMutationResult = NonNullable<Awaited<ReturnType<typeof atualizarPisosAreaCentral>>>
+    export type AtualizarPisosAreaCentralMutationBody = BodyType<AtualizacaoAreaCentralInput>
+    export type AtualizarPisosAreaCentralMutationError = ErrorType<void | ErrorResponse>
+
+    /**
+ * @summary Consultar preço e estoque por código ASSO usando a sessão externa do usuário
+ */
+export const useAtualizarPisosAreaCentral = <TError = ErrorType<void | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof atualizarPisosAreaCentral>>, TError,{data: BodyType<AtualizacaoAreaCentralInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof atualizarPisosAreaCentral>>,
+        TError,
+        {data: BodyType<AtualizacaoAreaCentralInput>},
+        TContext
+      > => {
+      return useMutation(getAtualizarPisosAreaCentralMutationOptions(options));
     }
 
 export const getGetPisoUrl = (id: number,) => {

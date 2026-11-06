@@ -387,6 +387,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /pisos/area-central/atualizar:
+    post:
+      operationId: atualizarPisosAreaCentral
+      tags: [pisos]
+      summary: Consultar preço e estoque por código ASSO usando a sessão externa do usuário
+      description: Lote de até quatro pisos. Exige sessão autenticada e CSRF. Falhas preservam os últimos valores; somente produto explicitamente não encontrado é desativado. Pisos sem ASSO permanecem manuais.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AtualizacaoAreaCentralInput"
+      responses:
+        "200":
+          description: Resultado individual da atualização; preço de venda por m² calculado com os parâmetros persistidos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AtualizacaoAreaCentral"
+        "400":
+          description: Lote inválido
+        "401":
+          description: Sessão do app ausente
+        "403":
+          description: CSRF inválido
+        "409":
+          description: Sessão externa ausente ou expirada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Integração indisponível
   /pisos/{id}:
     get:
       operationId: getPiso
@@ -940,6 +975,36 @@ components:
         path:
           type: string
 
+    AtualizacaoAreaCentralInput:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: integer
+            format: int64
+            minimum: 1
+    AtualizacaoAreaCentral:
+      type: object
+      required: [id, status, piso, code]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [UPDATED, NOT_FOUND, MANUAL, FAILED]
+        piso:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Piso"
+        code:
+          type: string
+          nullable: true
+          enum: [SESSION_REQUIRED, SESSION_EXPIRED, BUSY, UPSTREAM_UNAVAILABLE, INVALID_RESPONSE, PRODUCT_CHANGED, PISO_NOT_FOUND]
     Piso:
       type: object
       required:

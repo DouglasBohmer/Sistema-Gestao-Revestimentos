@@ -165,6 +165,38 @@ export interface ApiError {
   path: string;
 }
 
+export interface AtualizacaoAreaCentralInput {
+  /**
+     * @minItems 1
+     * @maxItems 4
+     * @items.minimum 1
+     */
+  ids: number[];
+}
+
+export type AtualizacaoAreaCentralStatus = typeof AtualizacaoAreaCentralStatus[keyof typeof AtualizacaoAreaCentralStatus];
+
+
+export const AtualizacaoAreaCentralStatus = {
+  UPDATED: 'UPDATED',
+  NOT_FOUND: 'NOT_FOUND',
+  MANUAL: 'MANUAL',
+  FAILED: 'FAILED',
+} as const;
+
+export type AtualizacaoAreaCentralCode = typeof AtualizacaoAreaCentralCode[keyof typeof AtualizacaoAreaCentralCode] | null;
+
+
+export const AtualizacaoAreaCentralCode = {
+  SESSION_REQUIRED: 'SESSION_REQUIRED',
+  SESSION_EXPIRED: 'SESSION_EXPIRED',
+  BUSY: 'BUSY',
+  UPSTREAM_UNAVAILABLE: 'UPSTREAM_UNAVAILABLE',
+  INVALID_RESPONSE: 'INVALID_RESPONSE',
+  PRODUCT_CHANGED: 'PRODUCT_CHANGED',
+  PISO_NOT_FOUND: 'PISO_NOT_FOUND',
+} as const;
+
 export type ClassificacaoUso = typeof ClassificacaoUso[keyof typeof ClassificacaoUso];
 
 
@@ -266,6 +298,13 @@ export interface Piso {
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
+}
+
+export interface AtualizacaoAreaCentral {
+  id: number;
+  status: AtualizacaoAreaCentralStatus;
+  piso: Piso | null;
+  code: AtualizacaoAreaCentralCode;
 }
 
 export interface PisoInput {

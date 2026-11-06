@@ -48,10 +48,10 @@ test('não clica CAPTCHA, não envia com botão bloqueado e não lê campos manu
     assert.equal(portal.result().claims, 0)
   }
 })
-test('catálogo autenticado envia apenas sinal e mostra orientação para concluir', async () => {
+test('catálogo autenticado envia apenas sinal e informa retorno automático', async () => {
   const portal = page({ authenticated: true })
   await portal.tick()
   assert.equal(portal.result().received, 1)
   assert.equal(portal.result().cleared, true)
-  assert.match(portal.result().notice[0], /Concluir e entrar/)
+  assert.match(portal.result().notice[0], /automaticamente/)
 })

@@ -62,7 +62,8 @@ public class SecurityConfiguration {
                                 "/api/auth/area-central/browser-transfers/receive",
                                 "/api/auth/area-central/browser-transfers/complete").permitAll()
                         .requestMatchers(request -> {
-                            String path = request.getServletPath();
+                            // A URI não depende do mapeamento do DispatcherServlet (nem fica vazia em dispatches/testes).
+                            String path = request.getRequestURI().substring(request.getContextPath().length());
                             return !path.equals("/api")
                                     && !path.startsWith("/api/")
                                     && !path.equals("/actuator")

@@ -31,7 +31,7 @@
         clearInterval(timer)
         if (authenticated && state?.ok) {
           const notice = document.createElement('aside')
-          notice.textContent = 'Sessão enviada ao RedeASSO. Volte à guia do sistema e clique em “Concluir e entrar”.'
+          notice.textContent = 'Sessão validada. O RedeASSO está concluindo o acesso e retornará automaticamente à guia do sistema.'
           notice.style.cssText = 'position:fixed;bottom:20px;left:20px;right:20px;z-index:2147483647;background:#18181b;color:white;padding:16px;border-radius:12px;font:15px system-ui;box-shadow:0 4px 20px #0004'
           document.body.append(notice)
         }

@@ -1,6 +1,6 @@
 import type { AreaCentralBrowserGrant } from '@workspace/api-client-react'
 
-export type ExtensionCommand = 'PING' | 'START' | 'CANCEL' | 'FOCUS'
+export type ExtensionCommand = 'PING' | 'START' | 'CANCEL' | 'FOCUS' | 'COMPLETE'
 export interface ExtensionReply { ok: boolean; code?: string; version?: number }
 
 /** A ponte pública transporta apenas comandos/concessão curta. Nunca cookies ou senha. */

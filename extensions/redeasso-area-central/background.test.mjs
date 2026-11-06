@@ -4,7 +4,8 @@ import { APP_ORIGIN, PORTAL_ORIGIN, LOGIN_URL } from './protocol.js'
 
 test('background pareia guias e envia cookies só à API fixa, sem devolver à página', async () => {
   let listener, removed, alarmListener, stored = {}, cookieReads = 0
-  const created = [], network = [], replies = []
+  const created = [], network = [], replies = [], closed = [], focused = []
+  let portalUrl = LOGIN_URL
   const chromeBefore = globalThis.chrome, fetchBefore = globalThis.fetch
   globalThis.chrome = {
     runtime: { onMessage: { addListener: fn => { listener = fn } } },
@@ -13,7 +14,9 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
       remove: async key => { delete stored[key] },
     } },
     alarms: { create: async () => {}, clear: async () => {}, onAlarm: { addListener: fn => { alarmListener = fn } } },
-    tabs: { create: async data => { created.push(data); return { id: 20 } }, update: async () => {}, sendMessage: async () => {},
+    windows: { update: async () => {} },
+    tabs: { create: async data => { created.push(data); return { id: 20 } }, update: async id => { focused.push(id) },
+      get: async id => ({id,url:portalUrl}), remove: async id => { closed.push(id) }, sendMessage: async () => {},
       onRemoved: { addListener: fn => { removed = fn } } },
     action: { onClicked: { addListener: () => {} } },
     cookies: { getAll: async filter => {
@@ -35,6 +38,8 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
     assert.equal(cookieReads, 0)
     const grant = { transferToken: 'a'.repeat(43), expiresAt: new Date(Date.now() + 60_000).toISOString() }
     assert.equal((await send({ type: 'START', grant }, app)).ok, true)
+    assert.equal((await send({ type: 'COMPLETE' }, app)).ok, false)
+    assert.deepEqual(closed, [])
     assert.equal(created[0].url, LOGIN_URL)
     assert.equal(created[0].url.includes(grant.transferToken), false)
     assert.equal((await send({ type: 'START', grant }, app)).code, 'BUSY')
@@ -51,9 +56,21 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
     assert.equal(network[0].options.redirect, 'error')
     assert.equal(JSON.parse(network[0].options.body).cookies[0].httpOnly, true)
     assert.equal(JSON.stringify(replies).includes('cookie-ficticio-privado'), false)
-    assert.deepEqual(stored, {})
-    assert.equal((await send({ type: 'PORTAL_STATE', authenticated: true }, portal)).ok, false)
+    assert.equal(stored['redeasso.activeTransfer'].validated, true)
+    assert.equal((await send({ type: 'PORTAL_STATE', authenticated: true }, portal)).code, 'RECEIVED')
     assert.equal(network.length, 1)
+    assert.equal((await send({ type: 'COMPLETE' }, {...app, tab:{...app.tab,id:11}})).ok, false)
+    assert.deepEqual(closed, [])
+    assert.equal((await send({ type: 'COMPLETE' }, app)).ok, true)
+    assert.deepEqual(closed, [20])
+    assert.deepEqual(focused, [10])
+    assert.deepEqual(stored, {})
+    await send({ type: 'START', grant }, app)
+    await send({ type: 'PORTAL_STATE', authenticated: true }, portal)
+    portalUrl = 'https://outro.example/'
+    await send({ type: 'COMPLETE' }, app)
+    assert.deepEqual(closed, [20]) // Não fecha guia navegada pelo usuário para outra origem.
+    portalUrl = LOGIN_URL
     await send({ type: 'START', grant }, app)
     await removed(10)
     assert.deepEqual(stored, {})

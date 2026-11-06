@@ -32,7 +32,8 @@ class CalculoControllerTest {
     @BeforeEach
     void setUp() {
         calculoService = mock(CalculoService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new CalculoController(calculoService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new CalculoController(calculoService,
+                        mock(br.com.redeasso.gestao.catalogo.application.PisoAreaCentralService.class)))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }

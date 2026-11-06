@@ -20,6 +20,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProductException.class)
+    public ResponseEntity<ApiError> areaCentralProduct(
+            br.com.redeasso.gestao.integracao.areacentral.application.AreaCentralProductException exception, HttpServletRequest request) {
+        var status = switch (exception.code()) {
+            case SESSION_REQUIRED, SESSION_EXPIRED, PRODUCT_CHANGED -> HttpStatus.CONFLICT;
+            default -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        return response(status, "AREA_CENTRAL_" + exception.code().name(), exception.getMessage(), request);
+    }
+
     @ExceptionHandler(PisoNaoEncontradoException.class)
     public ResponseEntity<ApiError> pisoNotFound(
             PisoNaoEncontradoException exception,
