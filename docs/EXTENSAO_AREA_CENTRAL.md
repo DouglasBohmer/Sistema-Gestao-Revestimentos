@@ -190,6 +190,22 @@ de aceitar o acesso: um formulário/desafio no final também o recusa.
 
 ## Homologação e limitações
 
+Em 06/11/2026, o commit `48e69ff` foi publicado no Cloudflare e ficou Live no
+Render, com os dois workflows aprovados. Após atualizar a extensão para 1.1.0,
+o teste autorizado no Chrome reutilizou a sessão legítima do portal: a SPA
+entrou sem botão de confirmação e a guia criada pela extensão foi fechada.
+A outra guia do catálogo, aberta para comparação, permaneceu intacta. Não
+houve leitura de senha ou interação com CAPTCHA pelo agente.
+
+A busca visível pelo ASSO `2183343` atualizou automaticamente o produto para
+estoque de **104,88 m²** e venda de **R$ 74,44/m²**, conferidos com **R$ 44,52/m²**
+bruto no portal e os parâmetros 90%/12%. O m²/caixa cadastrado permaneceu 2,28.
+Recarregar o app após o login na API nova preservou autenticação e dados,
+sem alertas de falha. A primeira tentativa ocorreu durante o deploy e exigiu
+reconectar após a troca da instância; não considerar sobrevivência a restart
+homologada com esse teste. O limite de 12 horas, contas distintas e demais
+cenários abaixo continuam exigindo verificação própria.
+
 Em 30/10/2026, o commit `526383c` ficou Live no Render e Ready no Cloudflare,
 com ambos os workflows GitHub aprovados. No teste operacional autorizado,
 a extensão já instalada reutilizou uma conta aberta no Chrome, o Spring
