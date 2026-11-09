@@ -35,6 +35,7 @@ jobs:
 
       - name: Validate frontend and Cloudflare Worker assets
         run: |
+          pnpm run verify:migrations
           node --test infra/area-central-browser/portal-login.test.mjs
           node --test extensions/redeasso-area-central/*.test.mjs
           node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-login-error.test.mjs
@@ -44,6 +45,7 @@ jobs:
           node --experimental-strip-types --test frontend-gestao-revestimento/src/components/auth/area-central-auto-complete.test.mjs
           node --experimental-strip-types --test frontend-gestao-revestimento/src/lib/area-central-refresh-queue.test.mjs
           node --experimental-strip-types --test frontend-gestao-revestimento/src/lib/piso-list-state.test.mjs
+          node --experimental-strip-types --test frontend-gestao-revestimento/src/lib/piso-status.test.mjs
           pnpm run typecheck
           pnpm --filter @workspace/redeasso run build
           pnpm --filter @workspace/redeasso exec wrangler deploy --config wrangler.jsonc --dry-run
@@ -57,4 +59,4 @@ jobs:
 
       - name: Test Spring API
         working-directory: backend-gestao-revestimento
-        run: ./mvnw -B -ntp test
+        run: ./mvnw -B -ntp verify -Pintegration

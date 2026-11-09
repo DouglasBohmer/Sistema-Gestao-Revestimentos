@@ -54,8 +54,8 @@ try {
 
   assert.deepEqual(
     migrations.map(migrationVersion),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    "A sequência de migrations deve ser contínua de V1 a V10",
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "A sequência de migrations deve ser contínua de V1 a V11",
   );
 
   for (const migration of migrations) {
@@ -318,8 +318,12 @@ try {
     "Códigos repetidos devem continuar permitidos para seleção explícita na interface",
   );
 
+  assert.equal(Number(await scalar(database,"SELECT COUNT(*)::integer AS value FROM status_cores")),5);
+  await expectConstraintViolation(database,"UPDATE status_cores SET cor = 'red' WHERE codigo = 'PADRAO'","23514","cor sem formato hexadecimal");
+  await database.exec(`INSERT INTO calculos_historico (piso_nome,criado_em,resultado,parametros) VALUES ('Fixture',NOW(),'{"quantidadeCaixas":3}','{"MARGEM_QUEBRA":0}');`);
+  assert.equal(Number(await scalar(database,"SELECT (resultado->>'quantidadeCaixas')::integer AS value FROM calculos_historico")),3);
   console.log(
-    "\nVerificação concluída: V1–V10 aplicadas, 261 produtos e 131 imagens válidas direcionadas ao R2.",
+    "\nVerificação concluída: V1–V11 aplicadas, 261 produtos, histórico JSONB e cinco cores de status.",
   );
 } finally {
   await database.close();

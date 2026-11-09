@@ -29,6 +29,7 @@ import type {
   AtualizacaoAreaCentral,
   AtualizacaoAreaCentralInput,
   CalculoInput,
+  CalculoRecente,
   CalculoResult,
   CsrfTokenResponse,
   DashboardStats,
@@ -45,7 +46,9 @@ import type {
   Piso,
   PisoInput,
   SessionResponse,
-  StartAreaCentralLoginRequest
+  StartAreaCentralLoginRequest,
+  StatusCor,
+  StatusCoresInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -74,6 +77,385 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListCalculosRecentesUrl = () => {
+
+
+
+
+  return `/api/calculos/historico`
+}
+
+/**
+ * @summary Últimos 15 cálculos de todo o sistema, sem recalcular
+ */
+export const listCalculosRecentes = async ( options?: Parameters<typeof customFetch>[1]): Promise<CalculoRecente[]> => {
+
+  return customFetch<CalculoRecente[]>(getListCalculosRecentesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCalculosRecentesQueryKey = () => {
+    return [
+    `/api/calculos/historico`
+    ] as const;
+    }
+
+
+export const getListCalculosRecentesQueryOptions = <TData = Awaited<ReturnType<typeof listCalculosRecentes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculosRecentes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCalculosRecentesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalculosRecentes>>> = ({ signal }) => listCalculosRecentes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCalculosRecentes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCalculosRecentesQueryResult = NonNullable<Awaited<ReturnType<typeof listCalculosRecentes>>>
+export type ListCalculosRecentesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Últimos 15 cálculos de todo o sistema, sem recalcular
+ */
+
+export function useListCalculosRecentes<TData = Awaited<ReturnType<typeof listCalculosRecentes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalculosRecentes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCalculosRecentesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReabrirCalculoUrl = (id: number,) => {
+
+
+
+
+  return `/api/calculos/historico/${id}`
+}
+
+/**
+ * @summary Reabrir resultado original, sem consulta externa ou mutação
+ */
+export const reabrirCalculo = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<CalculoResult> => {
+
+  return customFetch<CalculoResult>(getReabrirCalculoUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getReabrirCalculoQueryKey = (id: number,) => {
+    return [
+    `/api/calculos/historico/${id}`
+    ] as const;
+    }
+
+
+export const getReabrirCalculoQueryOptions = <TData = Awaited<ReturnType<typeof reabrirCalculo>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof reabrirCalculo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReabrirCalculoQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof reabrirCalculo>>> = ({ signal }) => reabrirCalculo(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof reabrirCalculo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ReabrirCalculoQueryResult = NonNullable<Awaited<ReturnType<typeof reabrirCalculo>>>
+export type ReabrirCalculoQueryError = ErrorType<void>
+
+
+/**
+ * @summary Reabrir resultado original, sem consulta externa ou mutação
+ */
+
+export function useReabrirCalculo<TData = Awaited<ReturnType<typeof reabrirCalculo>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof reabrirCalculo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getReabrirCalculoQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPisosRecentesUrl = () => {
+
+
+
+
+  return `/api/pisos/recentes`
+}
+
+/**
+ * @summary Últimos 15 pisos por data de cadastro e ID, não data de atualização
+ */
+export const listPisosRecentes = async ( options?: Parameters<typeof customFetch>[1]): Promise<Piso[]> => {
+
+  return customFetch<Piso[]>(getListPisosRecentesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPisosRecentesQueryKey = () => {
+    return [
+    `/api/pisos/recentes`
+    ] as const;
+    }
+
+
+export const getListPisosRecentesQueryOptions = <TData = Awaited<ReturnType<typeof listPisosRecentes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPisosRecentes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPisosRecentesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPisosRecentes>>> = ({ signal }) => listPisosRecentes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPisosRecentes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPisosRecentesQueryResult = NonNullable<Awaited<ReturnType<typeof listPisosRecentes>>>
+export type ListPisosRecentesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Últimos 15 pisos por data de cadastro e ID, não data de atualização
+ */
+
+export function useListPisosRecentes<TData = Awaited<ReturnType<typeof listPisosRecentes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPisosRecentes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPisosRecentesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetStatusCoresUrl = () => {
+
+
+
+
+  return `/api/configuracoes/status`
+}
+
+/**
+ * @summary Cores por status do piso
+ */
+export const getStatusCores = async ( options?: Parameters<typeof customFetch>[1]): Promise<StatusCor[]> => {
+
+  return customFetch<StatusCor[]>(getGetStatusCoresUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStatusCoresQueryKey = () => {
+    return [
+    `/api/configuracoes/status`
+    ] as const;
+    }
+
+
+export const getGetStatusCoresQueryOptions = <TData = Awaited<ReturnType<typeof getStatusCores>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStatusCores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStatusCoresQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStatusCores>>> = ({ signal }) => getStatusCores({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStatusCores>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStatusCoresQueryResult = NonNullable<Awaited<ReturnType<typeof getStatusCores>>>
+export type GetStatusCoresQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Cores por status do piso
+ */
+
+export function useGetStatusCores<TData = Awaited<ReturnType<typeof getStatusCores>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStatusCores>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStatusCoresQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSalvarStatusCoresUrl = () => {
+
+
+
+
+  return `/api/configuracoes/status`
+}
+
+/**
+ * @summary Salvar a paleta com CSRF, auditoria e versões
+ */
+export const salvarStatusCores = async (statusCoresInput: StatusCoresInput, options?: Parameters<typeof customFetch>[1]): Promise<StatusCor[]> => {
+
+  return customFetch<StatusCor[]>(getSalvarStatusCoresUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(statusCoresInput)
+  }
+);}
+
+
+
+
+
+export const getSalvarStatusCoresMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salvarStatusCores>>, TError,{data: BodyType<StatusCoresInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof salvarStatusCores>>, TError,{data: BodyType<StatusCoresInput>}, TContext> => {
+
+const mutationKey = ['salvarStatusCores'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salvarStatusCores>>, {data: BodyType<StatusCoresInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  salvarStatusCores(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalvarStatusCoresMutationResult = NonNullable<Awaited<ReturnType<typeof salvarStatusCores>>>
+    export type SalvarStatusCoresMutationBody = BodyType<StatusCoresInput>
+    export type SalvarStatusCoresMutationError = ErrorType<void>
+
+    /**
+ * @summary Salvar a paleta com CSRF, auditoria e versões
+ */
+export const useSalvarStatusCores = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salvarStatusCores>>, TError,{data: BodyType<StatusCoresInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof salvarStatusCores>>,
+        TError,
+        {data: BodyType<StatusCoresInput>},
+        TContext
+      > => {
+      return useMutation(getSalvarStatusCoresMutationOptions(options));
+    }
 
 export const getGetParametrosPrecoUrl = () => {
 

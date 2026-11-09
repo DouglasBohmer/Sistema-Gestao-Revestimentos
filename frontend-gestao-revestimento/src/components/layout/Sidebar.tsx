@@ -138,19 +138,16 @@ export function Sidebar() {
             <span className={menuLabelClass}>Notificações</span>
           </button>
 
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="Disponível em breve"
+          <Link
+            href="/configuracoes"
             className={cn(
               menuItemClass,
-              "cursor-not-allowed border-transparent py-3.5 text-white/35",
+              "border-transparent py-3.5 text-white/70 hover:bg-white/10 hover:text-white",
             )}
           >
             <Settings className="h-5 w-5 shrink-0" aria-hidden="true" />
             <span className={menuLabelClass}>Configurações</span>
-          </button>
+          </Link>
 
           <button
             type="button"

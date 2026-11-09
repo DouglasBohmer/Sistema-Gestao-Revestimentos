@@ -6,7 +6,7 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
   let listener, removed, alarmListener, stored = {}, cookieReads = 0
   const created = [], network = [], replies = [], closed = [], focused = []
   let portalUrl = LOGIN_URL
-  const chromeBefore = globalThis.chrome, fetchBefore = globalThis.fetch
+  const chromeBefore = globalThis.chrome, fetchBefore = globalThis.fetch, idbBefore = globalThis.indexedDB
   globalThis.chrome = {
     runtime: { onMessage: { addListener: fn => { listener = fn } } },
     storage: { session: {
@@ -37,6 +37,8 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
     assert.equal((await send({ type: 'PORTAL_STATE', authenticated: true }, portal)).ok, false)
     assert.equal(cookieReads, 0)
     const grant = { transferToken: 'a'.repeat(43), expiresAt: new Date(Date.now() + 60_000).toISOString() }
+    assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_UNAVAILABLE')
+    assert.equal(created.length,0);assert.equal(network.length,0)
     assert.equal((await send({ type: 'START', grant }, app)).ok, true)
     assert.equal((await send({ type: 'COMPLETE' }, app)).ok, false)
     assert.deepEqual(closed, [])
@@ -94,5 +96,28 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
     assert.equal((await send({ type: 'START', grant }, app)).ok, true)
     await send({ type: 'CANCEL' }, app)
     assert.deepEqual(stored, {})
-  } finally { globalThis.chrome = chromeBefore; globalThis.fetch = fetchBefore }
+    // Handle fictício: a SPA não recebe conteúdo/caminho nem precisamos ler cookies do navegador.
+    globalThis.indexedDB = {open() {
+      const request = {};
+      request.result = {close() {}, transaction() {
+        const tx = {objectStore:()=>({get() {
+          const get = {result:{queryPermission:async()=>'granted',getFile:async()=>({size:10,text:async()=>'sessao-do-arquivo'})}};
+          queueMicrotask(()=>{get.onsuccess();tx.oncomplete()});return get;
+        }})};return tx;
+      }};
+      queueMicrotask(()=>request.onsuccess());return request;
+    }};
+    globalThis.fetch = async (url, options) => {network.push({url,options});return {ok:true}};
+    const beforeTabs=created.length, beforeCookieReads=cookieReads;
+    assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_RECEIVED');
+    assert.equal(created.length,beforeTabs);assert.equal(cookieReads,beforeCookieReads);
+    assert.equal(JSON.parse(network.at(-1).options.body).cookies[0].value,'sessao-do-arquivo');
+    assert.equal(JSON.stringify(replies).includes('sessao-do-arquivo'),false);
+    assert.equal((await send({type:'COMPLETE'},app)).ok,true);
+    assert.deepEqual(stored,{});
+    globalThis.fetch=async()=>({ok:false});
+    assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_REJECTED');
+    assert.deepEqual(stored,{});
+    assert.equal((await send({type:'COMPLETE'},app)).ok,false);
+  } finally { globalThis.chrome = chromeBefore; globalThis.fetch = fetchBefore; globalThis.indexedDB = idbBefore }
 })

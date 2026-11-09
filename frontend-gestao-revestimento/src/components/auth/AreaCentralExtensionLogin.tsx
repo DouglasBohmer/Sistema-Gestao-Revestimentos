@@ -155,7 +155,7 @@ export function AreaCentralExtensionLogin() {
     let created = false;
     try {
       const extension = await areaCentralExtension("PING");
-      if (!extension.ok || extension.version !== 2) {
+      if (!extension.ok || !extension.version || extension.version < 2) {
         setMissing(true);
         setError(
           "Instale ou atualize a extensão RedeASSO e recarregue esta página para conectar a Área Central.",
@@ -168,10 +168,27 @@ export function AreaCentralExtensionLogin() {
         );
         if (mounted.current) setState(null);
       }
-      const grant = await startAreaCentralBrowserTransfer({
+      let grant = await startAreaCentralBrowserTransfer({
         signal: AbortSignal.timeout(30_000),
       });
       created = true;
+      if (extension.version >= 3) {
+        const file = await areaCentralExtension("START_FILE", grant);
+        if (file.ok) {
+          const current = await getCurrentAreaCentralBrowserTransfer();
+          if (mounted.current) setState(current);
+          return;
+        }
+        if (file.code !== "FILE_UNAVAILABLE") {
+          // Uma concessão enviada já foi consumida: revogar e emitir outra para o portal.
+          await resetAreaCentralTransfer(cancelAreaCentralBrowserTransfer, () =>
+            areaCentralExtension("CANCEL"),
+          );
+          grant = await startAreaCentralBrowserTransfer({
+            signal: AbortSignal.timeout(30000),
+          });
+        }
+      }
       const opened = await areaCentralExtension("START", grant);
       if (!opened.ok) {
         await cancelAreaCentralBrowserTransfer();
@@ -235,7 +252,7 @@ export function AreaCentralExtensionLogin() {
           ) : (
             <ShieldCheck className="h-4 w-4" />
           )}
-          {busy ? "Preparando conexão..." : "Entrar com Área Central"}
+          {busy ? "Verificando sessão..." : "Entrar com Área Central"}
         </button>
       )}
       <details open={missing || undefined} className="text-sm text-zinc-600">
@@ -276,6 +293,21 @@ export function AreaCentralExtensionLogin() {
           atualização
         </a>
       </details>
+      <button
+        type="button"
+        className="text-sm underline"
+        disabled={busy}
+        onClick={() =>
+          void areaCentralExtension("OPEN_OPTIONS").then((reply) => {
+            if (!reply.ok)
+              setError(
+                "Atualize a extensão para 1.2.0 para configurar o arquivo .txt.",
+              );
+          })
+        }
+      >
+        Configurar arquivo .txt da loja (opcional)
+      </button>
       {error && (
         <p
           role="alert"

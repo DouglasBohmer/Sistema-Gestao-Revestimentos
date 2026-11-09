@@ -2,7 +2,8 @@
   "manifest_version": 3,
   "name": "RedeASSO — conexão com a Área Central",
   "description": "Conecta a sessão da Área Central ao RedeASSO após sua autorização. Não lê senhas.",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "options_page": "options.html",
   "minimum_chrome_version": "120",
   "permissions": ["cookies", "storage", "alarms"],
   "host_permissions": [

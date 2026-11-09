@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface PisoRepository extends JpaRepository<Piso, Long>, JpaSpecificationExecutor<Piso> {
+    List<Piso> findTop15ByOrderByCreatedAtDescIdDesc();
 
     List<Piso> findAllByCodigoLojaOrCodigoRedeOrderByIdAsc(String codigoLoja, String codigoRede);
 

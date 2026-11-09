@@ -43,14 +43,16 @@ public class CalculoService {
     private final PisoService pisoService;
     private final AtividadeService atividadeService;
     private final ParametroSistemaRepository parametroSistemaRepository;
+    private final CalculoHistoricoService historico;
 
     public CalculoService(
             PisoService pisoService,
             AtividadeService atividadeService,
-            ParametroSistemaRepository parametroSistemaRepository) {
+            ParametroSistemaRepository parametroSistemaRepository, CalculoHistoricoService historico) {
         this.pisoService = pisoService;
         this.atividadeService = atividadeService;
         this.parametroSistemaRepository = parametroSistemaRepository;
+        this.historico = historico;
     }
 
     @Transactional
@@ -108,7 +110,7 @@ public class CalculoService {
                 "Cálculo realizado para %s".formatted(piso.getNome()),
                 piso.getNome());
 
-        return new CalculoResponse(
+        CalculoResponse resultado = new CalculoResponse(
                 PisoResponse.from(piso),
                 metragemCalculada,
                 margemAplicada,
@@ -124,6 +126,20 @@ public class CalculoService {
                 niveladores.quantidade(),
                 niveladores.quantidadePacotes(),
                 valorTotal);
+        Map<String,BigDecimal> usados = new java.util.HashMap<>();
+        usados.put("ARGAMASSA_PESO_SACO_KG",parametros.pesoSacoArgamassaKg());
+        usados.put("ARGAMASSA_COBERTURA_SACO_M2",parametros.coberturaSacoArgamassaM2());
+        usados.put("REJUNTE_PROFUNDIDADE_MM",parametros.profundidadeRejunteMm());
+        usados.put("REJUNTE_COEFICIENTE",parametros.coeficienteRejunte());
+        usados.put("REJUNTE_PESO_EMBALAGEM_KG",parametros.pesoEmbalagemRejunteKg());
+        usados.put("NIVELADOR_INTERVALO_CM",parametros.intervaloNiveladoresCm());
+        usados.put("NIVELADOR_PECAS_PACOTE",parametros.pecasNiveladoresPorPacote());
+        usados.put("MARGEM_QUEBRA",margemAplicada);
+        if (piso.getValor() != null) {
+            usados.put("PRECO_VENDA_M2", resultado.piso().valor());
+        }
+        historico.registrar(resultado,usados);
+        return resultado;
     }
 
     private ParametrosMateriais carregarParametrosMateriais() {

@@ -6,6 +6,7 @@ import {
   senderAt,
   selectCookies,
 } from "./protocol.js";
+import { readSelectedSession, saveSelectedSession } from "./shared-file.js";
 
 const STORAGE_KEY = "redeasso.activeTransfer";
 const ALARM = "redeasso.transferExpiry";
@@ -28,7 +29,58 @@ async function clearTransfer() {
 
 async function handle(message, sender) {
   if (senderAt(sender, APP_ORIGIN)) {
-    if (message?.type === "PING") return { ok: true, version: 2 };
+    if (message?.type === "PING") return { ok: true, version: 3 };
+    if (message?.type === "OPEN_OPTIONS") {
+      await chrome.runtime.openOptionsPage();
+      return { ok: true };
+    }
+    if (message?.type === "START_FILE") {
+      if (!validGrant(message.grant))
+        return { ok: false, code: "INVALID_GRANT" };
+      if (starting || receiving || claimingSubmit || finishing)
+        return { ok: false, code: "BUSY" };
+      starting = true;
+      try {
+        if (await activeTransfer()) return { ok: false, code: "BUSY" };
+        let timeout;
+        const cookies = await Promise.race([
+          readSelectedSession(),
+          new Promise((resolve) => {
+            timeout = setTimeout(() => resolve(null), 3000);
+          }),
+        ]).finally(() => clearTimeout(timeout));
+        if (!cookies) return { ok: false, code: "FILE_UNAVAILABLE" };
+        const transfer = {
+          ...message.grant,
+          appTabId: sender.tab.id,
+          appWindowId: sender.tab.windowId,
+          portalTabId: null,
+        };
+        await chrome.storage.session.set({ [STORAGE_KEY]: transfer });
+        await chrome.alarms.create(ALARM, {
+          when: Date.parse(transfer.expiresAt),
+        });
+        try {
+          const response = await submitCookies(transfer, cookies);
+          const current = await activeTransfer();
+          if (
+            !response.ok ||
+            current?.transferToken !== transfer.transferToken
+          ) {
+            await clearTransfer();
+            return { ok: false, code: "FILE_REJECTED" };
+          }
+          transfer.validated = true;
+          await chrome.storage.session.set({ [STORAGE_KEY]: transfer });
+          return { ok: true, code: "FILE_RECEIVED" };
+        } catch {
+          await clearTransfer();
+          return { ok: false, code: "FILE_REJECTED" };
+        }
+      } finally {
+        starting = false;
+      }
+    }
     if (message?.type === "START") {
       if (!validGrant(message.grant))
         return { ok: false, code: "INVALID_GRANT" };
@@ -72,6 +124,8 @@ async function handle(message, sender) {
         if (Number.isInteger(transfer.appWindowId))
           await chrome.windows.update(transfer.appWindowId, { focused: true });
         try {
+          if (!Number.isInteger(transfer.portalTabId))
+            throw new Error("NO_PORTAL_TAB");
           const tab = await chrome.tabs.get(transfer.portalTabId);
           if (new URL(tab.url).origin === PORTAL_ORIGIN)
             await chrome.tabs.remove(transfer.portalTabId);
@@ -123,26 +177,20 @@ async function handle(message, sender) {
     const cookies = selectCookies(
       await chrome.cookies.getAll({ url: `${PORTAL_ORIGIN}/401/` }),
     );
-    const response = await fetch(
-      `${APP_ORIGIN}/api/auth/area-central/browser-transfers/receive`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "omit",
-        cache: "no-store",
-        redirect: "error",
-        signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({
-          transferToken: transfer.transferToken,
-          cookies,
-        }),
-      },
-    );
+    const response = await submitCookies(transfer, cookies);
     // Nunca encaminhar corpo/erro bruto nem o cookie jar para qualquer página.
     const current = await activeTransfer();
     if (response.ok && current?.transferToken === transfer.transferToken) {
       transfer.validated = true;
       await chrome.storage.session.set({ [STORAGE_KEY]: transfer });
+      // Destino local escolhido explicitamente pelo usuário; nunca enviar cookies à SPA.
+      let saveTimeout;
+      await Promise.race([
+        saveSelectedSession(cookies),
+        new Promise((resolve) => {
+          saveTimeout = setTimeout(() => resolve(false), 3000);
+        }),
+      ]).finally(() => clearTimeout(saveTimeout));
     } else {
       await clearTransfer();
     }
@@ -161,6 +209,21 @@ async function handle(message, sender) {
   } finally {
     receiving = false;
   }
+}
+
+function submitCookies(transfer, cookies) {
+  return fetch(
+    `${APP_ORIGIN}/api/auth/area-central/browser-transfers/receive`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(45000),
+      body: JSON.stringify({ transferToken: transfer.transferToken, cookies }),
+    },
+  );
 }
 
 async function notify(tabId, code) {

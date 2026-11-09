@@ -25,10 +25,11 @@ class CalculoServiceTest {
     private final PisoService pisoService = mock(PisoService.class);
     private final AtividadeService atividadeService = mock(AtividadeService.class);
     private final ParametroSistemaRepository parametroSistemaRepository = mock(ParametroSistemaRepository.class);
+    private final CalculoHistoricoService historico = mock(CalculoHistoricoService.class);
     private final CalculoService calculoService = new CalculoService(
             pisoService,
             atividadeService,
-            parametroSistemaRepository);
+            parametroSistemaRepository, historico);
 
     @BeforeEach
     void setUp() {
@@ -60,6 +61,10 @@ class CalculoServiceTest {
                 "calculo",
                 "Cálculo realizado para Piso de teste",
                 "Piso de teste");
+        var parametros = org.mockito.ArgumentCaptor.forClass(java.util.Map.class);
+        verify(historico).registrar(org.mockito.ArgumentMatchers.eq(resultado), parametros.capture());
+        assertThat(parametros.getValue()).containsEntry("PRECO_VENDA_M2", resultado.piso().valor())
+                .containsEntry("MARGEM_QUEBRA", resultado.margemQuebra());
     }
 
     @Test
@@ -75,6 +80,9 @@ class CalculoServiceTest {
         assertThat(resultado.margemQuebra()).isEqualByComparingTo("10");
         assertThat(resultado.quantidadeCaixas()).isEqualTo(6);
         assertThat(resultado.valorTotal()).isNull();
+        verify(historico).registrar(org.mockito.ArgumentMatchers.eq(resultado),
+                org.mockito.ArgumentMatchers.argThat(valores -> valores.get("PRECO_VENDA_M2").signum() == 0
+                        && valores.values().stream().noneMatch(java.util.Objects::isNull)));
     }
 
     @Test

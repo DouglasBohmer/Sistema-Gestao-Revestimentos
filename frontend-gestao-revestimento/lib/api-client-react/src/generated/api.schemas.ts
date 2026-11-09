@@ -5,6 +5,41 @@
  * API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
  * OpenAPI spec version: 0.1.0
  */
+export interface CalculoRecente {
+  id: number;
+  pisoNome: string;
+  criadoEm: string;
+  quantidadeCaixas: number;
+  metragemVendidaM2: number;
+}
+
+export type StatusCorCodigo = typeof StatusCorCodigo[keyof typeof StatusCorCodigo];
+
+
+export const StatusCorCodigo = {
+  PADRAO: 'PADRAO',
+  ACABAR: 'ACABAR',
+  NEGOCIACAO: 'NEGOCIACAO',
+  FORA_DE_LINHA: 'FORA_DE_LINHA',
+  PRODUTO_LOCAL: 'PRODUTO_LOCAL',
+} as const;
+
+export interface StatusCor {
+  codigo: StatusCorCodigo;
+  /** @pattern ^#[0-9A-Fa-f]{6}$ */
+  cor: string;
+  /** @minimum 0 */
+  versao: number;
+}
+
+export interface StatusCoresInput {
+  /**
+     * @minItems 5
+     * @maxItems 5
+     */
+  status: StatusCor[];
+}
+
 export interface ParametrosPreco {
   /** @minimum 0 */
   margemPercentual: number;

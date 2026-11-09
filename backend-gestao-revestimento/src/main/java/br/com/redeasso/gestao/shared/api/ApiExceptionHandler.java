@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(br.com.redeasso.gestao.configuracao.application.StatusConfiguracaoInvalidaException.class)
+    public ResponseEntity<ApiError> invalidStatus(Exception exception,HttpServletRequest request){
+        return response(HttpStatus.BAD_REQUEST,"VALIDATION_ERROR","Informe uma cor válida para cada um dos cinco status, sem repetir status",request);
+    }
 
     @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiError> conflitoDeEdicao(Exception exception, HttpServletRequest request) {

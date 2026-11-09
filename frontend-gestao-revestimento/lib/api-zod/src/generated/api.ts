@@ -9,6 +9,156 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Últimos 15 cálculos de todo o sistema, sem recalcular
+ */
+export const ListCalculosRecentesResponseItem = zod.object({
+  "id": zod.number().int(),
+  "pisoNome": zod.string(),
+  "criadoEm": zod.coerce.date(),
+  "quantidadeCaixas": zod.number().int(),
+  "metragemVendidaM2": zod.number()
+})
+export const ListCalculosRecentesResponse = zod.array(ListCalculosRecentesResponseItem)
+
+
+/**
+ * @summary Reabrir resultado original, sem consulta externa ou mutação
+ */
+export const ReabrirCalculoParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const ReabrirCalculoResponse = zod.object({
+  "piso": zod.object({
+  "id": zod.number(),
+  "nome": zod.string(),
+  "codigoRede": zod.string().nullish(),
+  "codigoLoja": zod.string().nullish(),
+  "largura": zod.number().nullish().describe('Largura em cm'),
+  "altura": zod.number().nullish().describe('Altura em cm'),
+  "rejunte": zod.number().nullish().describe('Rejunte em mm'),
+  "pecasPorCaixa": zod.number().nullish().describe('Calculado por m² por caixa dividido pela área da peça, com arredondamento comum'),
+  "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
+  "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
+  "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
+  "linkSite": zod.string().nullish(),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkPaginacao": zod.string().nullish().describe('URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente'),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+}),
+  "metragemM2": zod.number().describe('Área solicitada no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade'),
+  "margemQuebra": zod.number().describe('Margem aplicada; sempre zero quando a entrada é quantidade de caixas'),
+  "metragemComMargem": zod.number().describe('Área com margem no cálculo por metragem ou cobertura exata das caixas no cálculo por quantidade'),
+  "quantidadeCaixas": zod.number().int().describe('Quantidade de caixas inteiras arredondada para cima ou quantidade exata solicitada'),
+  "metragemVendidaM2": zod.number().describe('Cobertura efetivamente vendida, calculada por caixas x m² por caixa'),
+  "quantidadeSacosArgamassa": zod.number().int().describe('Quantidade inteira de sacos de argamassa, arredondada para cima'),
+  "pesoArgamassaKg": zod.number().describe('Consumo teórico de argamassa em quilogramas'),
+  "quantidadeEmbalagensRejunte": zod.number().int().nullable().describe('Quantidade inteira de embalagens de rejunte, ou nulo sem largura, altura ou junta válidas'),
+  "pesoRejunteKg": zod.number().nullable().describe('Consumo teórico de rejunte em quilogramas, ou nulo sem largura, altura ou junta válidas'),
+  "niveladoresLadoX": zod.number().int().nullable().describe('Niveladores recomendados no lado X da peça, seguindo o intervalo configurado da calculadora Cortag'),
+  "niveladoresLadoY": zod.number().int().nullable().describe('Niveladores recomendados no lado Y da peça, seguindo o intervalo configurado da calculadora Cortag'),
+  "quantidadeNiveladores": zod.number().int().nullable().describe('Total de niveladores para a metragem efetivamente vendida, ou nulo sem dimensões válidas'),
+  "quantidadePacotesNiveladores": zod.number().int().nullable().describe('Pacotes inteiros de niveladores, conforme a quantidade de peças configurada por pacote'),
+  "valorTotal": zod.number().nullable().describe('M² efetivamente vendidos (caixas x m²\/caixa) multiplicados pelo preço em R$\/m²')
+})
+
+
+/**
+ * @summary Últimos 15 pisos por data de cadastro e ID, não data de atualização
+ */
+export const ListPisosRecentesResponseItem = zod.object({
+  "id": zod.number(),
+  "nome": zod.string(),
+  "codigoRede": zod.string().nullish(),
+  "codigoLoja": zod.string().nullish(),
+  "largura": zod.number().nullish().describe('Largura em cm'),
+  "altura": zod.number().nullish().describe('Altura em cm'),
+  "rejunte": zod.number().nullish().describe('Rejunte em mm'),
+  "pecasPorCaixa": zod.number().nullish().describe('Calculado por m² por caixa dividido pela área da peça, com arredondamento comum'),
+  "m2PorCaixa": zod.number().describe('Metros quadrados por caixa'),
+  "localDeUso": zod.string().nullish().describe('Interno, Externo ou Ambos'),
+  "tipoPiso": zod.string().nullish().describe('Porcelanato, Cerâmica, etc.'),
+  "classificacaoUso": zod.union([zod.enum(['LA', 'LB', 'LC', 'LD', 'LE', 'LF']),zod.null()]).optional().describe('Maior classe de uso aplicável ao produto'),
+  "acabamentoBordas": zod.enum(['RETIFICADO', 'BOLD']),
+  "linkSite": zod.string().nullish(),
+  "linkFoto": zod.string().nullish().describe('URL efetiva da imagem, no R2 ou no endereço original como fallback'),
+  "linkFotoOrigem": zod.string().nullish(),
+  "linkPaginacao": zod.string().nullish().describe('URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente'),
+  "linkAreaCentral": zod.string().nullish(),
+  "valor": zod.number().describe('Preço de venda em reais por metro quadrado (R$\/m²)'),
+  "estoqueM2": zod.number().describe('Estoque em metros quadrados'),
+  "statusAreaCentral": zod.string().nullish(),
+  "ultimaConsultaAreaCentralEm": zod.coerce.date().nullish(),
+  "ativo": zod.boolean(),
+  "origemValor": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "origemEstoque": zod.enum(['NAO_INFORMADO', 'MANUAL', 'AREA_CENTRAL']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+})
+export const ListPisosRecentesResponse = zod.array(ListPisosRecentesResponseItem)
+
+
+/**
+ * @summary Cores por status do piso
+ */
+export const getStatusCoresResponseCorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const getStatusCoresResponseVersaoMin = 0;
+
+
+
+export const GetStatusCoresResponseItem = zod.object({
+  "codigo": zod.enum(['PADRAO', 'ACABAR', 'NEGOCIACAO', 'FORA_DE_LINHA', 'PRODUTO_LOCAL']),
+  "cor": zod.string().regex(getStatusCoresResponseCorRegExp),
+  "versao": zod.number().int().min(getStatusCoresResponseVersaoMin)
+})
+export const GetStatusCoresResponse = zod.array(GetStatusCoresResponseItem)
+
+
+/**
+ * @summary Salvar a paleta com CSRF, auditoria e versões
+ */
+export const salvarStatusCoresBodyStatusItemCorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const salvarStatusCoresBodyStatusItemVersaoMin = 0;
+
+export const salvarStatusCoresBodyStatusMin = 5;
+export const salvarStatusCoresBodyStatusMax = 5;
+
+
+
+export const SalvarStatusCoresBody = zod.object({
+  "status": zod.array(zod.object({
+  "codigo": zod.enum(['PADRAO', 'ACABAR', 'NEGOCIACAO', 'FORA_DE_LINHA', 'PRODUTO_LOCAL']),
+  "cor": zod.string().regex(salvarStatusCoresBodyStatusItemCorRegExp),
+  "versao": zod.number().int().min(salvarStatusCoresBodyStatusItemVersaoMin)
+})).min(salvarStatusCoresBodyStatusMin).max(salvarStatusCoresBodyStatusMax)
+})
+
+export const salvarStatusCoresResponseCorRegExp = new RegExp('^#[0-9A-Fa-f]{6}$');
+export const salvarStatusCoresResponseVersaoMin = 0;
+
+
+
+export const SalvarStatusCoresResponseItem = zod.object({
+  "codigo": zod.enum(['PADRAO', 'ACABAR', 'NEGOCIACAO', 'FORA_DE_LINHA', 'PRODUTO_LOCAL']),
+  "cor": zod.string().regex(salvarStatusCoresResponseCorRegExp),
+  "versao": zod.number().int().min(salvarStatusCoresResponseVersaoMin)
+})
+export const SalvarStatusCoresResponse = zod.array(SalvarStatusCoresResponseItem)
+
+
+/**
  * @summary Consultar margem e desconto de venda por m²
  */
 export const getParametrosPrecoResponseMargemPercentualMin = 0;

@@ -1,172 +1,135 @@
-import { 
-  useGetDashboardStats, 
-  useGetAtividadeRecente, 
-} from "@workspace/api-client-react"
-import { Link } from "wouter"
-import { Layout } from "@/components/layout/Layout"
-import { Card, CardContent } from "@/components/ui/card"
-import { FileText, Calculator, Package, Box, TrendingUp } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { ptBR } from "date-fns/locale"
-
+import {
+  useListCalculosRecentes,
+  useListPisosRecentes,
+} from "@workspace/api-client-react";
+import { Link, useLocation } from "wouter";
+import { Layout } from "@/components/layout/Layout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calculator, Package, ArrowUpRight } from "lucide-react";
+import { PisoStatus } from "@/components/catalogo/PisoStatus";
+const data = (value: string) => new Date(value).toLocaleString("pt-BR");
 export default function Dashboard() {
-  const { data: stats, isLoading: loadingStats } = useGetDashboardStats()
-  const { data: atividades, isLoading: loadingAtividades } = useGetAtividadeRecente()
-
+  const [location] = useLocation();
+  const calculos = useListCalculosRecentes({
+    query: { queryKey: ["/api/calculos/historico"], enabled: location === "/" },
+  });
+  const pisos = useListPisosRecentes({
+    query: { queryKey: ["/api/pisos/recentes"], enabled: location === "/" },
+  });
   return (
     <Layout>
-      <div className="flex-1 space-y-6 p-8">
-        <div className="text-center mb-12 mt-6">
-          <h1 className="text-4xl font-bold text-gray-800 mb-3 tracking-tight">
-            Bem-vindo ao RedeASSO
-          </h1>
-          <p className="text-xl text-gray-600">
-            Sistema Completo de Gestão de Pisos Cerâmicos e Porcelanatos
-          </p>
-        </div>
-        
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
-          <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-black p-3 rounded-lg text-white">
-                  <Package className="h-6 w-6" />
-                </div>
-              </div>
-              <h3 className="text-gray-600 text-sm mb-1">Pisos Cadastrados</h3>
-              {loadingStats ? (
-                <div className="h-9 w-16 animate-pulse bg-muted rounded mb-2"></div>
+      <div className="space-y-6 p-6 lg:p-8">
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Início</h1>
+            <p className="mt-1 text-muted-foreground">
+              Retome um cálculo ou consulte os últimos pisos do sistema.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/calcular">
+              <Calculator className="mr-2 size-4" />
+              Novo cálculo
+            </Link>
+          </Button>
+        </header>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="size-5" />
+                Últimos cálculos
+              </CardTitle>
+              <CardDescription>
+                15 resultados mais recentes de todo o sistema. Reabrir preserva
+                os dados originais.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {calculos.isLoading ? (
+                <p role="status">Carregando cálculos...</p>
+              ) : calculos.isError ? (
+                <p role="alert">Não foi possível carregar o histórico.</p>
+              ) : !calculos.data?.length ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum cálculo salvo ainda. Os novos cálculos aparecerão aqui.
+                </p>
               ) : (
-                <p className="text-3xl font-bold text-gray-800 mb-2">{stats?.totalPisos || 0}</p>
+                calculos.data.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/calcular?historico=${item.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {item.pisoNome}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {data(item.criadoEm)} · {item.quantidadeCaixas} caixas ·{" "}
+                        {item.metragemVendidaM2.toLocaleString("pt-BR")} m²
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-sm">
+                      Reabrir
+                      <ArrowUpRight className="size-4" />
+                    </span>
+                  </Link>
+                ))
               )}
-              <p className="text-sm text-gray-500">No sistema</p>
             </CardContent>
           </Card>
-
-          <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-zinc-800 p-3 rounded-lg text-white">
-                  <FileText className="h-6 w-6" />
-                </div>
-              </div>
-              <h3 className="text-gray-600 text-sm mb-1">Impressões Realizadas</h3>
-              {loadingStats ? (
-                <div className="h-9 w-16 animate-pulse bg-muted rounded mb-2"></div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="size-5" />
+                Pisos recém-cadastrados
+              </CardTitle>
+              <CardDescription>
+                Os 15 cadastros mais recentes, sem confundir cadastro com
+                atualização de estoque.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {pisos.isLoading ? (
+                <p role="status">Carregando pisos...</p>
+              ) : pisos.isError ? (
+                <p role="alert">Não foi possível carregar os pisos.</p>
+              ) : !pisos.data?.length ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum piso cadastrado.
+                </p>
               ) : (
-                <p className="text-3xl font-bold text-gray-800 mb-2">{stats?.totalImpressoes || 0}</p>
+                pisos.data.map((piso) => (
+                  <Link
+                    key={piso.id}
+                    href={`/cadastro?piso=${piso.id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border p-3 hover:bg-muted/50"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {piso.nome}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {data(piso.createdAt)} · ASSO {piso.codigoRede || "—"} ·
+                        CTC {piso.codigoLoja || "—"}
+                      </p>
+                    </div>
+                    <PisoStatus piso={piso} />
+                  </Link>
+                ))
               )}
-              <p className="text-sm text-gray-500">Esta semana</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-zinc-700 p-3 rounded-lg text-white">
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-              </div>
-              <h3 className="text-gray-600 text-sm mb-1">Cálculos Feitos</h3>
-              {loadingStats ? (
-                <div className="h-9 w-16 animate-pulse bg-muted rounded mb-2"></div>
-              ) : (
-                <p className="text-3xl font-bold text-gray-800 mb-2">{stats?.calculosRealizados || 0}</p>
-              )}
-              <p className="text-sm text-gray-500">Este mês</p>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-xl transition-shadow border-none shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="bg-zinc-600 p-3 rounded-lg text-white">
-                  <Box className="h-6 w-6" />
-                </div>
-              </div>
-              <h3 className="text-gray-600 text-sm mb-1">Tipos no Catálogo</h3>
-              {loadingStats ? (
-                <div className="h-9 w-16 animate-pulse bg-muted rounded mb-2"></div>
-              ) : (
-                <p className="text-3xl font-bold text-gray-800 mb-2">{stats?.estoqueDisponivel || 0}</p>
-              )}
-              <p className="text-sm text-gray-500">Categorias ativas</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-none shadow-lg">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Atalhos Rápidos</h3>
-              <div className="space-y-3">
-                <Link href="/cadastro" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <Package size={20} className="text-black" />
-                  <div>
-                    <p className="font-medium text-gray-800">Novo Cadastro</p>
-                    <p className="text-sm text-gray-600">Adicionar novo piso ao sistema</p>
-                  </div>
-                </Link>
-                <Link href="/calcular" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <TrendingUp size={20} className="text-black" />
-                  <div>
-                    <p className="font-medium text-gray-800">Calcular Piso</p>
-                    <p className="text-sm text-gray-600">Calcular quantidade necessária</p>
-                  </div>
-                </Link>
-                <Link href="/calcular" className="w-full p-4 bg-[#D9D9D9] hover:bg-gray-300 rounded-lg text-left transition-all flex items-center gap-3">
-                  <FileText size={20} className="text-black" />
-                  <div>
-                    <p className="font-medium text-gray-800">Imprimir Etiqueta</p>
-                    <p className="text-sm text-gray-600">Gerar etiqueta de produto</p>
-                  </div>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-lg">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Atividades Recentes</h3>
-              <div className="space-y-4">
-                {loadingAtividades ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg animate-pulse">
-                        <div className="w-2 h-2 bg-gray-300 rounded-full mt-2"></div>
-                        <div className="space-y-2 flex-1">
-                          <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-                          <div className="h-3 w-1/4 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : atividades && atividades.length > 0 ? (
-                  atividades.slice(0, 5).map((atividade) => {
-                    const colorClass = 
-                      atividade.tipo === 'calculo' ? 'bg-black' :
-                      atividade.tipo === 'cadastro' ? 'bg-zinc-700' : 'bg-zinc-500';
-                    
-                    return (
-                      <div key={atividade.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${colorClass}`}></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{atividade.descricao}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {formatDistanceToNow(new Date(atividade.createdAt), { addSuffix: true, locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-gray-500 text-sm py-4">Nenhuma atividade recente encontrada.</p>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
       </div>
     </Layout>
-  )
+  );
 }

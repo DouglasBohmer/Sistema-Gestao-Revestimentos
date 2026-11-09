@@ -87,7 +87,7 @@ Regras obrigatórias:
 - Cookies da Área Central, incluindo `PHPSESSID`, jamais podem ser devolvidos ao navegador, incluídos em JSON, expostos em erros ou gravados em logs.
 - A Área Central entrega `PHPSESSID` também a visitantes anônimos; sua mera presença não prova autenticação. A conclusão exige cookie, origem correta, documento de catálogo carregado com marcadores de produto/filtro e ausência do formulário de senha. A primeira consulta autorizada ao catálogo continuará sendo a validação definitiva da sessão. Os marcadores precisam de homologação no HTML real autenticado; falhar de forma fechada se o portal mudar.
 - O navegador recebe apenas uma sessão própria do RedeASSO, preferencialmente em cookie `HttpOnly`, `Secure` e `SameSite`, com proteção CSRF adequada.
-- As sessões externas devem ser isoladas por usuário/sessão. É proibido restaurar o arquivo global e compartilhado de cookies do legado.
+- As sessões de aplicação e os envelopes externos permanecem isolados por usuário/sessão. Decisão posterior de 09/11/2026: o usuário autorizou reutilização opcional de uma sessão externa via arquivo .txt compartilhado na rede da própria loja, selecionado explicitamente em cada Chrome/Edge na extensão. Não criar sessão global de loja no Neon nem distribuir cookies ao React. Sem arquivo configurado, acesso, permissão, conteúdo válido ou aceitação pelo Spring, seguir para login individual normal. O arquivo é um segredo de acesso à conta e deve ficar restrito aos PCs/pessoas autorizados; nunca publicá-lo, versioná-lo ou lê-lo por URL arbitrária.
 - Logout, expiração ou revogação devem eliminar o cookie jar correspondente.
 - Consultas de produto/estoque devem ocorrer no backend e usar a sessão externa correta em tempo real.
 - Decisão de 06/11/2026: atualizar preço e estoque automaticamente apenas nos pisos visíveis da lista, por consultas filtradas por código ASSO, em lotes de até quatro e concorrência global limitada. Não disparar atualização de todos os 261 produtos ao entrar no app. Pisos apenas com CTC continuam manuais; o botão de atualização dos visíveis permite nova tentativa. Antes de calcular um piso com ASSO e sessão externa conectada, o backend também consulta os dados atuais fora da transação do cálculo. O preço de venda por m² usa o bruto e os parâmetros persistidos `PRECO_LUCRO_PERCENTUAL`/`PRECO_DESCONTO_PERCENTUAL`; não alterar automaticamente m²/caixa ou dados técnicos (Q21 continua aberta).
@@ -154,7 +154,16 @@ Regras obrigatórias:
 - Esses valores não serão constantes fixas no código. Serão configurações persistidas do sistema, editáveis pela área “Configurações” já prevista no menu.
 - Mudanças de parâmetro devem ser validadas e auditáveis; cálculos históricos devem guardar os parâmetros efetivamente usados.
 
-### 3.6 Mapa de estoque
+### 3.6 Ajustes confirmados em 09/11/2026
+
+- Trabalhar na branch `feat/configuracoes-historico-resumo-venda`, sem merge/deploy em main nesta tarefa.
+- Nova tela inicial sem cards de contadores, com 15 cálculos recentes e 15 pisos recém-cadastrados do sistema em geral. Histórico persistido guarda o resultado original e os parâmetros de materiais usados; reabrir é somente leitura, não altera preços nem cria novo cálculo. Dados anteriores à implantação não podem ser reconstruídos a partir da simples atividade antiga.
+- Manter PADRAO, ACABAR, NEGOCIACAO, Fora de linha e Produto local. Os três primeiros vêm do portal; Fora de linha é exibido para ausência confirmada e Produto local para piso sem ASSO. Cores globais editáveis nas configurações, sem alterar saldo/ativação nem copiar as fronteiras antigas de estoque (<1/>1), cuja decisão segue aberta.
+- Olho para esconder/mostrar preço somente na tela de cálculo (preferência visual, não autorização); demais telas permanecem iguais. Resumo da venda abre automaticamente em cálculo bem-sucedido e pode ser reaberto pelo botão: “M² Digitar no Cupom”, caixas, sacos de argamassa, embalagens de rejunte e pacotes/peças de niveladores. Não incluir valores no resumo solicitado.
+- O .txt fica no computador/rede selecionados, não no Render. A seleção e autorização exigem ação do usuário na página privativa da extensão. Permissão pode precisar ser renovada pelo Chrome; falha deve liberar login normal. Arquivos novos usam formato versionado limitado, expiração e cookies de allowlist; ler também o último PHPSESSID simples do arquivo legado, sempre sujeito à validação real do Spring. Nunca inserir o cookie no navegador de outro PC ou aceitar arquivo como prova suficiente de autenticação.
+- Extensão 1.2.0 (protocolo 3): seleção em página própria, handle privativo em IndexedDB, sem nova permissão de manifest. Salvar atualiza para formato novo, incompatível com o desktop antigo; usar arquivo separado se ainda houver desktop. Guia e implantação aditiva/rollback em `docs/CONFIGURACOES_HISTORICO_RESUMO.md`.
+
+### 3.7 Mapa de estoque
 
 - Uma posição do mapa aceita de um a quatro pisos.
 - O estado atual impede repetir o mesmo piso dentro da mesma posição; manter essa regra até o usuário decidir diferente.

@@ -35,7 +35,7 @@ export function zip(entries) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const files = ['manifest.json', 'background.js', 'protocol.js', 'app-bridge.js', 'portal.js']
+  const files = ['manifest.json', 'background.js', 'protocol.js', 'app-bridge.js', 'portal.js', 'shared-file.js', 'options.html', 'options.js', 'options.css']
   const entries = await Promise.all(files.map(async name => [name, await readFile(new URL(`../extensions/redeasso-area-central/${name}`, import.meta.url))]))
   const directory = new URL('../frontend-gestao-revestimento/public/extensions/', import.meta.url)
   await mkdir(directory, { recursive: true })

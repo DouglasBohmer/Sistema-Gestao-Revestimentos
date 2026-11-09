@@ -16,6 +16,7 @@ import Calcular from "@/pages/Calcular";
 import MapaEstoque from "@/pages/MapaEstoque";
 import ConexaoAreaCentral from "@/pages/ConexaoAreaCentral";
 import NotFound from "@/pages/not-found";
+import Configuracoes from '@/pages/Configuracoes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,12 +37,13 @@ const authenticatedRoutes: Array<{
   { path: "/calcular", component: Calcular },
   { path: "/mapa-estoque", component: MapaEstoque },
   { path: "/conexao-area-central", component: ConexaoAreaCentral },
+  { path: "/configuracoes", component: Configuracoes },
 ];
 
 const refreshQueryKeysByRoute: Record<string, ReadonlyArray<readonly unknown[]>> = {
   "/": [
-    ["/api/dashboard/stats"],
-    ["/api/dashboard/atividade-recente"],
+    ["/api/calculos/historico"],
+    ["/api/pisos/recentes"],
   ],
   "/cadastro": [["/api/pisos"]],
   "/mapa-estoque": [["mapas"], ["/api/pisos"]],

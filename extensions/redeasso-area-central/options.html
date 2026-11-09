@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>RedeASSO — arquivo de sessão</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Arquivo de sessão da loja</h1>
+      <p>
+        Opcional. Selecione um .txt em uma pasta da rede acessível neste PC.
+        Cada computador deve selecionar o mesmo arquivo da própria loja.
+      </p>
+      <p class="warning">
+        Esse arquivo permite acessar a conta da Área Central. Proteja a pasta
+        com permissões do Windows. Não envie por WhatsApp, não publique e não
+        misture arquivos de lojas diferentes. O conteúdo nunca será mostrado
+        aqui.
+      </p>
+      <p>
+        A sessão continua sendo validada pelo Spring. Sem arquivo ou permissão,
+        arquivo inválido ou sessão recusada, o login normal será aberto. O
+        Chrome pode pedir autorização novamente após reiniciar.
+      </p>
+      <div class="buttons">
+        <button id="select">Selecionar .txt existente</button
+        ><button id="create">Criar .txt novo</button
+        ><button id="permission">Renovar permissão</button
+        ><button id="forget">Desvincular arquivo</button>
+      </div>
+      <p id="status" role="status"></p>
+      <p id="selection"></p>
+      <p>
+        Depois de vincular, o próximo login válido no portal atualizará
+        automaticamente este arquivo com uma sessão versionada, por até 12
+        horas. Arquivos legados (um PHPSESSID por linha) podem ser lidos; ao
+        salvar, o arquivo passa ao formato novo, que não é compatível com o
+        aplicativo desktop antigo. Se ainda usa o desktop, escolha um arquivo
+        separado para o web.
+      </p>
+      <p>
+        Desvincular não apaga o .txt nem faz logout de outros computadores. Para
+        revogar o acesso compartilhado, revogue a sessão na Área Central e
+        remova o arquivo com o administrador da loja.
+      </p>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

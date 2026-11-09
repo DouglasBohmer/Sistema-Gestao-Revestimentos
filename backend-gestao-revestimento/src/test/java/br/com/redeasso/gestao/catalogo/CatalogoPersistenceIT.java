@@ -52,6 +52,53 @@ class CatalogoPersistenceIT {
     @Autowired
     private br.com.redeasso.gestao.configuracao.application.ParametrosPrecoService parametrosPreco;
 
+    @Autowired private br.com.redeasso.gestao.calculo.application.CalculoService calculos;
+    @Autowired private br.com.redeasso.gestao.calculo.application.CalculoHistoricoService historico;
+    @Autowired private br.com.redeasso.gestao.configuracao.application.StatusCorService cores;
+    @Autowired private jakarta.persistence.EntityManager entityManager;
+
+    @Test
+    @Transactional
+    void historicoReabreSnapshotJsonbSemRecalcularMesmoAposExcluirPiso() {
+        Piso piso = pisoService.cadastrar(novoPiso());
+        var resultado = calculos.calcular(piso.getId(), null, null, 3L, null);
+        entityManager.flush();
+        entityManager.clear();
+        long id = historico.recentes().getFirst().id();
+        assertThat(jdbcTemplate.queryForObject("SELECT parametros->>'MARGEM_QUEBRA' FROM calculos_historico WHERE id=?", String.class, id)).isEqualTo("0");
+        pisoService.excluir(piso.getId());
+        int atividades = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM atividades", Integer.class);
+        var reaberto = historico.reabrir(id);
+        assertThat(reaberto).usingRecursiveComparison().withComparatorForType(BigDecimal::compareTo, BigDecimal.class).isEqualTo(resultado);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM atividades", Integer.class)).isEqualTo(atividades);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM calculos_historico", Integer.class)).isEqualTo(1);
+        for (int i = 0; i < 16; i++) jdbcTemplate.update("INSERT INTO calculos_historico (piso_nome,criado_em,resultado,parametros) SELECT piso_nome,criado_em+INTERVAL '1 day',resultado,parametros FROM calculos_historico WHERE id=?", id);
+        entityManager.clear();
+        assertThat(historico.recentes()).hasSize(15).noneMatch(item -> item.id() == id);
+    }
+
+    @Test
+    @Transactional
+    void coresPersistemComVersaoEAuditoriaSemAlterarProdutos() {
+        var antes = cores.consultar();
+        var alteradas = antes.stream().map(item -> new br.com.redeasso.gestao.configuracao.application.StatusCorService.Valor(item.codigo(), "#123456", item.versao())).toList();
+        var salvas = cores.salvar(alteradas);
+        entityManager.clear();
+        assertThat(cores.consultar()).containsExactlyElementsOf(salvas);
+        assertThat(salvas).allSatisfy(item -> {assertThat(item.cor()).isEqualTo("#123456"); assertThat(item.versao()).isEqualTo(1);});
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pisos WHERE ativo", Integer.class)).isZero();
+        assertThatThrownBy(() -> cores.salvar(antes)).isInstanceOf(org.springframework.orm.ObjectOptimisticLockingFailureException.class);
+    }
+
+    @Test
+    @Transactional
+    void pisosRecentesOrdenamPorCadastroEIdNaoPelaAtualizacaoDeEstoque() {
+        Piso novo = pisoService.cadastrar(novoPiso());
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE pisos SET atualizado_em=NOW()+INTERVAL '1 day' WHERE id=(SELECT MIN(id) FROM pisos)");
+        assertThat(pisoRepository.findTop15ByOrderByCreatedAtDescIdDesc()).hasSize(15).first().satisfies(item -> assertThat(item.getId()).isEqualTo(novo.getId()));
+    }
+
     @Test
     @Transactional
     void salvaParDeParametrosComVersaoAuditoriaERecusaEdicaoAntiga() {

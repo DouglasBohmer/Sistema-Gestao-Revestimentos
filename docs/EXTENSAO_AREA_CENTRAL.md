@@ -59,13 +59,56 @@ O identificador exibido inicialmente é **Área Central**, extraído como identi
 genérica após validação. Não aceitamos um nome arbitrário do cliente como
 identidade real. A extração confiável do identificador individual é pendente.
 
-### Atualização da extensão para o retorno automático
+### Atualização da extensão
 
-A versão **1.1.0** usa o protocolo 2, sem permissões novas. Atualize os arquivos
+A versão **1.2.0** usa o protocolo 3 e adiciona a seleção opcional do arquivo
+de sessão, sem ampliar as permissões do manifest. Atualize os arquivos
 da pasta carregada sem compactação (ou baixe novamente o ZIP publicado), clique
 **Recarregar** em `chrome://extensions` e recarregue a guia do RedeASSO. Uma
 instalação antiga é detectada antes de abrir a tentativa e orienta atualizar;
 Git/Cloudflare não atualizam automaticamente uma pasta em Downloads.
+
+## Arquivo .txt compartilhado da loja (opcional)
+
+1. Depois de atualizar a extensão, abra **Configurações → Escolher arquivo .txt
+   na extensão**. O seletor fica numa página privativa da extensão, não no React.
+2. Crie `redeasso-sessao.txt` ou selecione um arquivo existente na pasta da rede
+   da sua loja. Autorize leitura/escrita no Chrome/Edge. Cada PC deve escolher
+   explicitamente o mesmo arquivo; não existe um caminho global salvo no Neon.
+3. Faça um login válido normal no portal. Após a validação pelo Spring, a
+   extensão tenta atualizar o arquivo autorizado. O arquivo contém somente os
+   cookies permitidos, sem senha, com expiração absoluta de até 12 horas.
+4. No próximo **Entrar com Área Central**, a extensão tenta o arquivo antes de
+   abrir o portal. O Spring precisa validar a sessão novamente. Se aceita, a
+   conclusão é automática sem guia extra. Arquivo ausente/inacessível, permissão
+   perdida, conteúdo inválido ou recusa da sessão levam ao login individual.
+5. Após reiniciar o navegador, o Chrome pode exigir **Renovar permissão** ou
+   selecionar o arquivo novamente. **Desvincular** esquece a seleção apenas
+   neste navegador, sem apagar o arquivo ou desconectar outros PCs.
+
+O `.txt` é um segredo de acesso **em texto simples**, conforme a opção do usuário.
+Restrinja a pasta/compartilhamento a pessoas e PCs autorizados da própria loja;
+nunca coloque o arquivo no Git, Cloudflare, diretório público ou mensagens.
+Não há upload ao React, cookies em URLs nem importação de cookies no navegador
+de outro PC. A API continua guardando o envelope individual criptografado no
+Spring Session JDBC; não foi criada uma sessão compartilhada global no Neon.
+
+São aceitos arquivos de até 64 KiB, no formato JSON de uma linha
+`redeasso-session-v1`. Para migração, também é aceita **somente a última linha
+não vazia** de um arquivo legado com PHPSESSID simples. O legado não possui
+data de validade verificável: sua validade depende inteiramente da consulta
+autenticada no Spring. Não são aceitos URLs, cabeçalhos Cookie ou comandos.
+Ao salvar, o arquivo é substituído pelo formato novo, que **não é compatível
+com o aplicativo desktop antigo**. Se ainda usa o desktop, escolha outro `.txt`.
+
+Limitações: cookies não garantem aceitação em outro PC/IP pelo portal. Não há
+contorno de CAPTCHA ou de vinculação de sessão. Uma pasta de rede indisponível
+não deve impedir o login individual. Escrita negada não impede o login, mas
+não renova o arquivo; confira a permissão na extensão. O teste real em duas
+máquinas e no compartilhamento da loja ainda precisa ser feito após atualizar
+a extensão nesta branch. O navegador exige seleção explícita do usuário;
+o Render não acessa caminhos Windows/UNC. Consulte a documentação oficial da
+[File System Access API](https://developer.chrome.com/docs/capabilities/web-apis/file-system-access).
 
 ## Preço e estoque em tempo real
 

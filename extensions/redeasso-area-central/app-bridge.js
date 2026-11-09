@@ -8,12 +8,12 @@
   window.addEventListener('message', async event => {
     const input = event.data
     if (event.source !== window || event.origin !== ORIGIN || input?.source !== 'redeasso-web'
-      || !['PING', 'START', 'CANCEL', 'FOCUS', 'COMPLETE'].includes(input.type)
+      || !['PING', 'START', 'START_FILE', 'OPEN_OPTIONS', 'CANCEL', 'FOCUS', 'COMPLETE'].includes(input.type)
       || typeof input.id !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(input.id)) return
     let result
     try {
       result = await chrome.runtime.sendMessage({ type: input.type,
-        ...(input.type === 'START' ? { grant: input.grant } : {}) })
+        ...(['START','START_FILE'].includes(input.type) ? { grant: input.grant } : {}) })
     } catch { result = { ok: false, code: 'EXTENSION_RELOAD' } }
     // Somente flags de estado; nunca transportar cookies nesta ponte pública.
     window.postMessage({ source: 'redeasso-extension', id: input.id,

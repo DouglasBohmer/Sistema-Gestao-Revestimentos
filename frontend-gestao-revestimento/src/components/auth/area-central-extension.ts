@@ -1,6 +1,6 @@
 import type { AreaCentralBrowserGrant } from '@workspace/api-client-react'
 
-export type ExtensionCommand = 'PING' | 'START' | 'CANCEL' | 'FOCUS' | 'COMPLETE'
+export type ExtensionCommand = 'PING' | 'START' | 'START_FILE' | 'OPEN_OPTIONS' | 'CANCEL' | 'FOCUS' | 'COMPLETE'
 export interface ExtensionReply { ok: boolean; code?: string; version?: number }
 
 /** A ponte pública transporta apenas comandos/concessão curta. Nunca cookies ou senha. */
@@ -19,7 +19,7 @@ export function areaCentralExtension(
     const timeout = window.setTimeout(() => {
       window.removeEventListener('message', listener)
       resolve({ ok: false, code: 'NOT_INSTALLED' })
-    }, type === 'START' ? 8_000 : 2_000)
+    }, type === 'START_FILE' ? 55_000 : type === 'START' ? 8_000 : 2_000)
     window.addEventListener('message', listener)
     window.postMessage({ source: 'redeasso-web', id, type, ...(grant ? { grant } : {}) }, window.location.origin)
   })

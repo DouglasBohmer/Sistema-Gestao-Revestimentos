@@ -49,6 +49,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAreaCentralStock } from "@/hooks/use-area-central-stock";
 import { PisoListToolbar } from "@/components/catalogo/PisoListToolbar";
 import { filterPisos, EMPTY_PISO_FILTERS } from "@/lib/piso-list-state";
+import { PisoStatus } from "@/components/catalogo/PisoStatus";
+import { getPiso } from "@workspace/api-client-react";
+import { useSearch, useLocation } from "wouter";
 import {
   Save,
   Edit,
@@ -162,6 +165,8 @@ const pisoSchema = z
 type PisoFormValues = z.infer<typeof pisoSchema>;
 
 export default function Cadastro() {
+  const searchParams = useSearch();
+  const [location] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -237,7 +242,7 @@ export default function Cadastro() {
   const linkSiteValue = form.watch("linkSite");
   useEffect(() => {
     if (isEditing || !selectedPiso) return;
-    const fresh = pisos?.find(piso => piso.id === selectedPiso.id);
+    const fresh = pisos?.find((piso) => piso.id === selectedPiso.id);
     if (fresh && fresh !== selectedPiso) {
       setSelectedPiso(fresh);
       form.setValue("valor", fresh.valor, { shouldDirty: false });
@@ -735,6 +740,25 @@ export default function Cadastro() {
     }
   };
 
+  useEffect(() => {
+    const id = new URLSearchParams(searchParams).get("piso");
+    if (location !== "/cadastro" || !id || !/^\d+$/.test(id)) return;
+    const controller = new AbortController();
+    getPiso(Number(id), { signal: controller.signal })
+      .then((piso) => {
+        handleSelectPiso(piso);
+        setIsViewing(true);
+        setIsEditing(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          toast({
+            title: "Não foi possível abrir o piso",
+            variant: "destructive",
+          });
+      });
+    return () => controller.abort();
+  }, [location, searchParams]);
   return (
     <Layout>
       <div ref={pageTopRef} className="flex-1 space-y-6 p-8">
@@ -1577,14 +1601,36 @@ export default function Cadastro() {
         )}
 
         <div className="mt-8">
-          <PisoListToolbar search={search} onSearch={setSearch} filters={filters} onFilters={setFilters} onParametersSaved={stock.refreshVisible}/>
-          {stock.connected && <div className="mb-3 flex items-center gap-3 text-sm">
-            <Button type="button" variant="outline" size="sm" onClick={stock.refreshVisible} disabled={stock.busy || isEditing}>
-              {stock.busy ? "Consultando Área Central..." : "Atualizar visíveis"}
-            </Button>
-            <span className="text-muted-foreground">Estoque e preço atualizados conforme os pisos aparecem na tela.</span>
-          </div>}
-          {stock.error && <p role="alert" className="mb-3 text-sm text-amber-700">{stock.error}</p>}
+          <PisoListToolbar
+            search={search}
+            onSearch={setSearch}
+            filters={filters}
+            onFilters={setFilters}
+            onParametersSaved={stock.refreshVisible}
+          />
+          {stock.connected && (
+            <div className="mb-3 flex items-center gap-3 text-sm">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={stock.refreshVisible}
+                disabled={stock.busy || isEditing}
+              >
+                {stock.busy
+                  ? "Consultando Área Central..."
+                  : "Atualizar visíveis"}
+              </Button>
+              <span className="text-muted-foreground">
+                Estoque e preço atualizados conforme os pisos aparecem na tela.
+              </span>
+            </div>
+          )}
+          {stock.error && (
+            <p role="alert" className="mb-3 text-sm text-amber-700">
+              {stock.error}
+            </p>
+          )}
 
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
             <Table>
@@ -1615,7 +1661,7 @@ export default function Cadastro() {
                     <TableRow
                       key={piso.id}
                       data-piso-id={piso.id}
-                      ref={node => stock.registerRow(piso.id, node)}
+                      ref={(node) => stock.registerRow(piso.id, node)}
                       onClick={() => handleSelectPiso(piso)}
                       className={`cursor-pointer transition-colors ${editingId === piso.id ? "bg-primary/5" : "hover:bg-muted/50"}`}
                     >
@@ -1640,7 +1686,14 @@ export default function Cadastro() {
                             >
                               {piso.ativo ? "Ativo" : "Inativo"}
                             </span>
-                            {piso.statusAreaCentral === "NAO_ENCONTRADO" && <span className="ml-2 text-[10px] text-muted-foreground">Não encontrado na Área Central</span>}
+                            {piso.statusAreaCentral === "NAO_ENCONTRADO" && (
+                              <span className="ml-2 text-[10px] text-muted-foreground">
+                                Não encontrado na Área Central
+                              </span>
+                            )}
+                            <span className="ml-2">
+                              <PisoStatus piso={piso} />
+                            </span>
                           </div>
                         </div>
                       </TableCell>
@@ -1675,18 +1728,41 @@ export default function Cadastro() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">
-                          {stock.cellState(piso) === "UPDATING" ? <span role="status" className="text-muted-foreground">Atualizando...</span>
-                            : stock.cellState(piso) === "UNAVAILABLE" ? "Indisponível"
-                            : stock.cellState(piso) === "NOT_FOUND" ? "Não encontrado"
-                            : `${piso.estoqueM2.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})} m²`}
+                          {stock.cellState(piso) === "UPDATING" ? (
+                            <span
+                              role="status"
+                              className="text-muted-foreground"
+                            >
+                              Atualizando...
+                            </span>
+                          ) : stock.cellState(piso) === "UNAVAILABLE" ? (
+                            "Indisponível"
+                          ) : stock.cellState(piso) === "NOT_FOUND" ? (
+                            "Não encontrado"
+                          ) : (
+                            `${piso.estoqueM2.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">
-                          {stock.cellState(piso) === "UPDATING" ? <span role="status" className="text-muted-foreground">Atualizando...</span>
-                            : stock.cellState(piso) === "UNAVAILABLE" ? "Indisponível"
-                            : stock.cellState(piso) === "NOT_FOUND" ? "Não encontrado"
-                            : piso.valor.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+                          {stock.cellState(piso) === "UPDATING" ? (
+                            <span
+                              role="status"
+                              className="text-muted-foreground"
+                            >
+                              Atualizando...
+                            </span>
+                          ) : stock.cellState(piso) === "UNAVAILABLE" ? (
+                            "Indisponível"
+                          ) : stock.cellState(piso) === "NOT_FOUND" ? (
+                            "Não encontrado"
+                          ) : (
+                            piso.valor.toLocaleString("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            })
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

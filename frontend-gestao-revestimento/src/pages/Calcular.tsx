@@ -18,7 +18,13 @@ import {
   Ruler,
   Search,
   ShoppingCart,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
+import { reabrirCalculo } from "@workspace/api-client-react";
+import { ResumoVenda } from "@/components/calculo/ResumoVenda";
+import { PisoStatus } from "@/components/catalogo/PisoStatus";
 
 import {
   listPisosByCodigo,
@@ -302,6 +308,12 @@ function DadoTecnico({ rotulo, valor }: { rotulo: string; valor: ReactNode }) {
 }
 
 export default function Calcular() {
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
+  const [mostrarPreco, setMostrarPreco] = useState(true);
+  const [resumoAberto, setResumoAberto] = useState(false);
+  const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
   const { toast } = useToast();
   const calcularMutation = useCalcularPiso();
 
@@ -322,6 +334,38 @@ export default function Calcular() {
   const [paginacaoIndisponivel, setPaginacaoIndisponivel] = useState(false);
 
   const piso = resultado?.piso ?? null;
+  useEffect(() => {
+    const id = new URLSearchParams(search).get("historico");
+    if (location !== "/calcular" || !id || !/^\d+$/.test(id)) return;
+    const controller = new AbortController();
+    setCarregandoHistorico(true);
+    setResultado(null);
+    setResumoAberto(false);
+    reabrirCalculo(Number(id), { signal: controller.signal })
+      .then((data) => {
+        setResultado(data);
+        setHistoricoAberto(true);
+        setResumoAberto(true);
+        setCodigoBusca(data.piso.codigoRede || data.piso.codigoLoja || "");
+        setModoEntrada("CAIXAS");
+        setQuantidadeCaixas(String(data.quantidadeCaixas));
+        setEntradaCalculada({ modo: "CAIXAS", valor: data.quantidadeCaixas });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          toast({
+            title: "Não foi possível reabrir o cálculo",
+            variant: "destructive",
+          });
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCarregandoHistorico(false);
+      });
+    return () => {
+      controller.abort();
+      setCarregandoHistorico(false);
+    };
+  }, [location, search, toast]);
   const telefoneWhatsApp = useMemo(
     () => normalizarTelefone(telefone),
     [telefone],
@@ -372,6 +416,9 @@ export default function Calcular() {
       });
       setResultado(data);
       setEntradaCalculada(quantidade);
+      setHistoricoAberto(false);
+      setResumoAberto(true);
+      if (search) setLocation("/calcular");
     } catch {
       toast({
         title: "Não foi possível calcular",
@@ -472,9 +519,11 @@ export default function Calcular() {
       resumoCalculo.quantidadeNiveladores === null
         ? "Niveladores: não calculados"
         : `Niveladores: ${resumoCalculo.quantidadeNiveladores} peças (${resumoCalculo.quantidadePacotesNiveladores} pacotes)`,
-      numeroFinito(resultado.valorTotal)
+      mostrarPreco && numeroFinito(resultado.valorTotal)
         ? `Valor do piso: ${formatadorMoeda.format(resultado.valorTotal)}`
-        : "Valor do piso: preço não informado",
+        : mostrarPreco
+          ? "Valor do piso: preço não informado"
+          : "",
     ];
 
     window.open(
@@ -484,12 +533,20 @@ export default function Calcular() {
     );
   };
 
-  const calculando = buscandoCodigo || calcularMutation.isPending;
+  const calculando =
+    carregandoHistorico || buscandoCodigo || calcularMutation.isPending;
   const quantidadeAtual =
     modoEntrada === "METRAGEM" ? metragem : quantidadeCaixas;
 
   return (
     <Layout>
+      {resultado && (
+        <ResumoVenda
+          resultado={resultado}
+          open={resumoAberto && location === "/calcular"}
+          onOpenChange={setResumoAberto}
+        />
+      )}
       <div className="mx-auto w-full max-w-[1560px] space-y-4 p-4 sm:p-6 lg:p-8">
         <header>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -677,6 +734,7 @@ export default function Calcular() {
                         />
                         {piso.ativo ? "Ativo" : "Inativo"}
                       </Badge>
+                      <PisoStatus piso={piso} />
                     </div>
                     <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
                       <span>
@@ -711,13 +769,48 @@ export default function Calcular() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Valor/m²</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">Valor/m²</p>
+                      <button
+                        type="button"
+                        aria-label={
+                          mostrarPreco ? "Ocultar preço" : "Mostrar preço"
+                        }
+                        aria-pressed={!mostrarPreco}
+                        onClick={() => setMostrarPreco((value) => !value)}
+                        className="rounded p-1 hover:bg-muted"
+                      >
+                        {mostrarPreco ? (
+                          <Eye className="size-4" />
+                        ) : (
+                          <EyeOff className="size-4" />
+                        )}
+                      </button>
+                    </div>
                     <p className="font-semibold">
-                      {piso.valor > 0
-                        ? formatadorMoeda.format(piso.valor)
-                        : "Não informado"}
+                      {!mostrarPreco
+                        ? "••••"
+                        : piso.valor > 0
+                          ? formatadorMoeda.format(piso.valor)
+                          : "Não informado"}
                     </p>
                   </div>
+                </div>
+                <div className="flex flex-col items-start gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setResumoAberto(true)}
+                  >
+                    Resumo da venda
+                  </Button>
+                  {historicoAberto && (
+                    <p className="max-w-xs text-xs text-muted-foreground">
+                      Histórico: resultado original, não é uma consulta atual.
+                      Calcular novamente usa as caixas indicadas e os dados
+                      atuais.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
