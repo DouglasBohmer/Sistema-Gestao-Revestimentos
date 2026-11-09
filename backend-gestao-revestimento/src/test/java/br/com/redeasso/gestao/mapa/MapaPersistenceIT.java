@@ -43,7 +43,9 @@ class MapaPersistenceIT {
 
     @Test
     void persisteMapaPosicoesEOrdemNoPostgresql() {
-        List<Long> pisoIds = jdbcTemplate.queryForList("SELECT id FROM pisos ORDER BY id", Long.class);
+        // Não depender da ordem nem das medidas dos produtos importados pela V6.
+        List<Long> pisoIds = List.of(pisoDeTeste("Mapa fixture A", "MAPA-A", "1.44"),
+                pisoDeTeste("Mapa fixture B", "MAPA-B", "1.215"));
         var mapa = service.criar(new CriarMapaRequest(
                 "Galpão principal",
                 3,
@@ -66,5 +68,13 @@ class MapaPersistenceIT {
                 "SELECT COUNT(*) FROM mapa_celulas WHERE mapa_id = ?",
                 Integer.class,
                 mapa.id())).isEqualTo(2);
+    }
+
+    private Long pisoDeTeste(String nome, String codigo, String m2PorCaixa) {
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO pisos (nome, codigo_loja, m2_por_caixa, acabamento_bordas,
+                                   valor, estoque_m2, ativo, origem_valor, origem_estoque)
+                VALUES (?, ?, ?, 'BOLD', 0, 0, FALSE, 'MANUAL', 'MANUAL') RETURNING id
+                """, Long.class, nome, codigo, new BigDecimal(m2PorCaixa));
     }
 }
