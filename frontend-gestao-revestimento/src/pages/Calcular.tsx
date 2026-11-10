@@ -763,13 +763,15 @@ export default function Calcular() {
 
                 <div className="grid grid-cols-2 gap-x-8 gap-y-3 xl:shrink-0">
                   <div>
-                    <p className="text-xs text-muted-foreground">Estoque</p>
+                    <div className="flex h-6 items-center">
+                      <p className="text-xs text-muted-foreground">Estoque</p>
+                    </div>
                     <p className="font-semibold">
                       {formatarMetragem(piso.estoqueM2)}
                     </p>
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex h-6 items-center gap-2">
                       <p className="text-xs text-muted-foreground">Valor/m²</p>
                       <button
                         type="button"
