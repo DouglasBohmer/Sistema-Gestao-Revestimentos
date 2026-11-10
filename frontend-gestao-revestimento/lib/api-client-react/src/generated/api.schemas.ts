@@ -5,6 +5,154 @@
  * API specification for RedeASSO - Sistema de Gestão e Dimensionamento de Revestimentos Cerâmicos
  * OpenAPI spec version: 0.1.0
  */
+export interface PisoConsultaAreaCentralInput {
+  /** @pattern ^[A-Za-z0-9._/-]{1,100}$ */
+  codigoRede: string;
+}
+
+/**
+ * @nullable
+ */
+export type PisoConsultaAreaCentralAcabamentoBordas = typeof PisoConsultaAreaCentralAcabamentoBordas[keyof typeof PisoConsultaAreaCentralAcabamentoBordas] | null;
+
+
+export const PisoConsultaAreaCentralAcabamentoBordas = {
+  RETIFICADO: 'RETIFICADO',
+  BOLD: 'BOLD',
+} as const;
+
+export type ClassificacaoUso = typeof ClassificacaoUso[keyof typeof ClassificacaoUso];
+
+
+export const ClassificacaoUso = {
+  LA: 'LA',
+  LB: 'LB',
+  LC: 'LC',
+  LD: 'LD',
+  LE: 'LE',
+  LF: 'LF',
+} as const;
+
+export type AcabamentoBordas = typeof AcabamentoBordas[keyof typeof AcabamentoBordas];
+
+
+export const AcabamentoBordas = {
+  RETIFICADO: 'RETIFICADO',
+  BOLD: 'BOLD',
+} as const;
+
+export type OrigemDadoProduto = typeof OrigemDadoProduto[keyof typeof OrigemDadoProduto];
+
+
+export const OrigemDadoProduto = {
+  NAO_INFORMADO: 'NAO_INFORMADO',
+  MANUAL: 'MANUAL',
+  AREA_CENTRAL: 'AREA_CENTRAL',
+} as const;
+
+export interface Piso {
+  id: number;
+  nome: string;
+  /** @nullable */
+  codigoRede?: string | null;
+  /** @nullable */
+  codigoLoja?: string | null;
+  /**
+     * Largura em cm
+     * @nullable
+     */
+  largura?: number | null;
+  /**
+     * Altura em cm
+     * @nullable
+     */
+  altura?: number | null;
+  /**
+     * Rejunte em mm
+     * @nullable
+     */
+  rejunte?: number | null;
+  /**
+     * Calculado por m² por caixa dividido pela área da peça, com arredondamento comum
+     * @nullable
+     */
+  pecasPorCaixa?: number | null;
+  /** Metros quadrados por caixa */
+  m2PorCaixa: number;
+  /**
+     * Interno, Externo ou Ambos
+     * @nullable
+     */
+  localDeUso?: string | null;
+  /**
+     * Porcelanato, Cerâmica, etc.
+     * @nullable
+     */
+  tipoPiso?: string | null;
+  /** Maior classe de uso aplicável ao produto */
+  classificacaoUso?: ClassificacaoUso | null;
+  acabamentoBordas: AcabamentoBordas;
+  /** @nullable */
+  linkSite?: string | null;
+  /**
+     * URL efetiva da imagem, no R2 ou no endereço original como fallback
+     * @nullable
+     */
+  linkFoto?: string | null;
+  /** @nullable */
+  linkFotoOrigem?: string | null;
+  /**
+     * URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente
+     * @nullable
+     */
+  linkPaginacao?: string | null;
+  /** @nullable */
+  linkAreaCentral?: string | null;
+  /** Preço de venda em reais por metro quadrado (R$/m²) */
+  valor: number;
+  /** Estoque em metros quadrados */
+  estoqueM2: number;
+  /** @nullable */
+  statusAreaCentral?: string | null;
+  /** @nullable */
+  ultimaConsultaAreaCentralEm?: string | null;
+  ativo: boolean;
+  origemValor: OrigemDadoProduto;
+  origemEstoque: OrigemDadoProduto;
+  createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export interface PisoConsultaAreaCentral {
+  codigoRede: string;
+  encontrado: boolean;
+  /** @nullable */
+  nome: string | null;
+  /** @nullable */
+  valorBrutoM2: number | null;
+  /** @nullable */
+  valorVendaM2: number | null;
+  /** @nullable */
+  estoqueM2: number | null;
+  /** @nullable */
+  statusAreaCentral: string | null;
+  /** @nullable */
+  m2PorCaixa: number | null;
+  /** @nullable */
+  linkFoto: string | null;
+  /**
+     * Medida explícita e não ambígua no nome, usada apenas no rascunho
+     * @nullable
+     */
+  largura: number | null;
+  /** @nullable */
+  altura: number | null;
+  /** @nullable */
+  acabamentoBordas: PisoConsultaAreaCentralAcabamentoBordas;
+  cadastros: Piso[];
+}
+
 export interface CalculoRecente {
   id: number;
   pisoNome: string;
@@ -245,109 +393,6 @@ export const AtualizacaoAreaCentralCode = {
   PRODUCT_CHANGED: 'PRODUCT_CHANGED',
   PISO_NOT_FOUND: 'PISO_NOT_FOUND',
 } as const;
-
-export type ClassificacaoUso = typeof ClassificacaoUso[keyof typeof ClassificacaoUso];
-
-
-export const ClassificacaoUso = {
-  LA: 'LA',
-  LB: 'LB',
-  LC: 'LC',
-  LD: 'LD',
-  LE: 'LE',
-  LF: 'LF',
-} as const;
-
-export type AcabamentoBordas = typeof AcabamentoBordas[keyof typeof AcabamentoBordas];
-
-
-export const AcabamentoBordas = {
-  RETIFICADO: 'RETIFICADO',
-  BOLD: 'BOLD',
-} as const;
-
-export type OrigemDadoProduto = typeof OrigemDadoProduto[keyof typeof OrigemDadoProduto];
-
-
-export const OrigemDadoProduto = {
-  NAO_INFORMADO: 'NAO_INFORMADO',
-  MANUAL: 'MANUAL',
-  AREA_CENTRAL: 'AREA_CENTRAL',
-} as const;
-
-export interface Piso {
-  id: number;
-  nome: string;
-  /** @nullable */
-  codigoRede?: string | null;
-  /** @nullable */
-  codigoLoja?: string | null;
-  /**
-     * Largura em cm
-     * @nullable
-     */
-  largura?: number | null;
-  /**
-     * Altura em cm
-     * @nullable
-     */
-  altura?: number | null;
-  /**
-     * Rejunte em mm
-     * @nullable
-     */
-  rejunte?: number | null;
-  /**
-     * Calculado por m² por caixa dividido pela área da peça, com arredondamento comum
-     * @nullable
-     */
-  pecasPorCaixa?: number | null;
-  /** Metros quadrados por caixa */
-  m2PorCaixa: number;
-  /**
-     * Interno, Externo ou Ambos
-     * @nullable
-     */
-  localDeUso?: string | null;
-  /**
-     * Porcelanato, Cerâmica, etc.
-     * @nullable
-     */
-  tipoPiso?: string | null;
-  /** Maior classe de uso aplicável ao produto */
-  classificacaoUso?: ClassificacaoUso | null;
-  acabamentoBordas: AcabamentoBordas;
-  /** @nullable */
-  linkSite?: string | null;
-  /**
-     * URL efetiva da imagem, no R2 ou no endereço original como fallback
-     * @nullable
-     */
-  linkFoto?: string | null;
-  /** @nullable */
-  linkFotoOrigem?: string | null;
-  /**
-     * URL da imagem de paginação ou do ambiente, armazenada no R2 ou informada externamente
-     * @nullable
-     */
-  linkPaginacao?: string | null;
-  /** @nullable */
-  linkAreaCentral?: string | null;
-  /** Preço de venda em reais por metro quadrado (R$/m²) */
-  valor: number;
-  /** Estoque em metros quadrados */
-  estoqueM2: number;
-  /** @nullable */
-  statusAreaCentral?: string | null;
-  /** @nullable */
-  ultimaConsultaAreaCentralEm?: string | null;
-  ativo: boolean;
-  origemValor: OrigemDadoProduto;
-  origemEstoque: OrigemDadoProduto;
-  createdAt: string;
-  /** @nullable */
-  updatedAt?: string | null;
-}
 
 export interface AtualizacaoAreaCentral {
   id: number;

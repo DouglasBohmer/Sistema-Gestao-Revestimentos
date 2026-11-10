@@ -88,7 +88,7 @@ public final class HttpAreaCentralProductClient implements AreaCentralProductCli
     }
 
     static Product parse(String html, String codigo) {
-        var document = Jsoup.parse(html);
+        var document = Jsoup.parse(html, HttpAreaCentralSessionVerifier.CATALOG_URL.toString());
         if (document.selectFirst("#form-login,#USR_SENHA,input[type=password],.cf-turnstile") != null) {
             throw new AreaCentralProductException(SESSION_EXPIRED);
         }
@@ -123,7 +123,31 @@ public final class HttpAreaCentralProductClient implements AreaCentralProductCli
                 || card.selectFirst(".product-name") == null) {
             throw new AreaCentralProductException(INVALID_RESPONSE);
         }
-        return new Product(true, decimal(price.text()), decimal(label(card, "Estoque:")), status.text().trim());
+        Element name = card.selectFirst(".product-name > div:first-child");
+        if (name == null) name = card.selectFirst(".product-name");
+        String nome = name.ownText().trim();
+        if (nome.isEmpty()) nome = name.text().trim();
+        nome = nome.replaceFirst("(?i)\\s*-\\s*1\\s*x\\s*M[²2]\\s*$", "").trim();
+        if (nome.isEmpty() || nome.length() > 200) nome = null;
+        BigDecimal multiplo = null;
+        try {
+            multiplo = decimal(label(card, "Múltiplo:"));
+            if (multiplo.signum() <= 0) multiplo = null;
+        } catch (AreaCentralProductException ignored) {
+            // Dado técnico opcional: sua ausência não impede consultar estoque/preço.
+        }
+        Element image = card.selectFirst(".product-image img, img.product-image, img");
+        String foto = null;
+        if (image != null) {
+            String source = image.hasAttr("data-src") ? image.absUrl("data-src") : image.absUrl("src");
+            try {
+                var uri = java.net.URI.create(source);
+                if ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null
+                        && uri.getRawUserInfo() == null && source.length() <= 2048) foto = source;
+            } catch (IllegalArgumentException ignored) { /* Nunca devolver URL executável ou inválida. */ }
+        }
+        return new Product(true, decimal(price.text()), decimal(label(card, "Estoque:")), status.text().trim(),
+                nome, multiplo, foto);
     }
 
     private static String label(Element card, String name) {

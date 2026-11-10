@@ -24,6 +24,17 @@ class PisoAreaCentralHttpTest {
     @Autowired MockMvc mvc;
     @MockitoBean PisoAreaCentralService service;
     static final String URL = "/api/pisos/area-central/atualizar";
+    @Test void consultaCadastroExigeSessaoCsrfECodigoSeguroSemSalvarNada() throws Exception {
+        String url="/api/pisos/area-central/consultar-cadastro";
+        mvc.perform(post(url).with(csrf()).contentType("application/json").content("{\"codigoRede\":\"123\"}")).andExpect(status().isUnauthorized());
+        mvc.perform(post(url).with(user("teste")).contentType("application/json").content("{\"codigoRede\":\"123\"}")).andExpect(status().isForbidden());
+        for(String codigo:List.of("", "a b", "https://outro.example?x=y", "a".repeat(101))){
+            mvc.perform(post(url).with(user("teste")).with(csrf()).contentType("application/json").content("{\"codigoRede\":\""+codigo+"\"}")).andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(service);
+        mvc.perform(post(url).with(user("teste")).with(csrf()).contentType("application/json").content("{\"codigoRede\":\"123\"}")).andExpect(status().isOk());
+        verify(service).consultarCadastro(eq("123"),anyString());
+    }
     @Test void exigeAutenticacaoECsrfMesmoComCookieExternoValidoEmOutroLugar() throws Exception {
         mvc.perform(post(URL).with(csrf()).contentType("application/json").content("{\"ids\":[1]}"))
                 .andExpect(status().isUnauthorized());

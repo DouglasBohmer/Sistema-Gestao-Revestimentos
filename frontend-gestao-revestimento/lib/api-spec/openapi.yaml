@@ -516,6 +516,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /pisos/area-central/consultar-cadastro:
+    post:
+      operationId: consultarCadastroAreaCentral
+      tags: [pisos]
+      summary: Consultar ASSO no portal e preparar rascunho sem gravar o cadastro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PisoConsultaAreaCentralInput'
+      responses:
+        "200":
+          description: Dados confirmados do portal e cadastros locais exatos; não houve gravação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PisoConsultaAreaCentral'
+        "400":
+          description: Código inválido
+        "401":
+          description: Sessão RedeASSO obrigatória
+        "403":
+          description: CSRF inválido
+        "409":
+          description: Conecte ou renove sua sessão da Área Central
+        "503":
+          description: Portal indisponível, resposta incompatível ou limite de consultas concorrentes
+
   /pisos/area-central/atualizar:
     post:
       operationId: atualizarPisosAreaCentral
@@ -915,6 +944,47 @@ components:
         minimum: 1
 
   schemas:
+    PisoConsultaAreaCentralInput:
+      type: object
+      required: [codigoRede]
+      properties:
+        codigoRede:
+          type: string
+          pattern: '^[A-Za-z0-9._/-]{1,100}$'
+    PisoConsultaAreaCentral:
+      type: object
+      required: [codigoRede, encontrado, nome, valorBrutoM2, valorVendaM2, estoqueM2, statusAreaCentral, m2PorCaixa, linkFoto, largura, altura, acabamentoBordas, cadastros]
+      properties:
+        codigoRede:
+          type: string
+        encontrado:
+          type: boolean
+        nome:
+          type: [string, 'null']
+        valorBrutoM2:
+          type: [number, 'null']
+        valorVendaM2:
+          type: [number, 'null']
+        estoqueM2:
+          type: [number, 'null']
+        statusAreaCentral:
+          type: [string, 'null']
+        m2PorCaixa:
+          type: [number, 'null']
+        linkFoto:
+          type: [string, 'null']
+        largura:
+          type: [number, 'null']
+          description: Medida explícita e não ambígua no nome, usada apenas no rascunho
+        altura:
+          type: [number, 'null']
+        acabamentoBordas:
+          type: [string, 'null']
+          enum: [RETIFICADO, BOLD, null]
+        cadastros:
+          type: array
+          items:
+            $ref: '#/components/schemas/Piso'
     CalculoRecente:
       type: object
       required: [id, pisoNome, criadoEm, quantidadeCaixas, metragemVendidaM2]

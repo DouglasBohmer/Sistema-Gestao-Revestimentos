@@ -16,10 +16,24 @@ public class PisoAreaCentralService {
     private final AreaCentralProductClient client;
     private final AreaCentralSessionStore sessions;
     private final AreaCentralProperties properties;
+    private final PisoCadastroAreaCentralReader cadastroReader;
     private final Semaphore queries = new Semaphore(2);
     public PisoAreaCentralService(PisoService pisos, PisoAreaCentralWriter writer, AreaCentralProductClient client,
-                                  AreaCentralSessionStore sessions, AreaCentralProperties properties) {
+                                  AreaCentralSessionStore sessions, AreaCentralProperties properties,
+                                  PisoCadastroAreaCentralReader cadastroReader) {
         this.pisos = pisos; this.writer = writer; this.client = client; this.sessions = sessions; this.properties = properties;
+        this.cadastroReader = cadastroReader;
+    }
+    public br.com.redeasso.gestao.catalogo.api.PisoConsultaAreaCentralResponse consultarCadastro(String codigo, String sessionId) {
+        if (!properties.enabled()) throw new AreaCentralProductException(UPSTREAM_UNAVAILABLE);
+        var cookies = sessions.find(sessionId).orElseThrow(() -> new AreaCentralProductException(SESSION_REQUIRED));
+        if (!queries.tryAcquire()) throw new AreaCentralProductException(BUSY);
+        try {
+            return cadastroReader.preparar(codigo, client.consultar(codigo, cookies));
+        } catch (AreaCentralProductException exception) {
+            if (exception.code() == SESSION_EXPIRED) sessions.remove(sessionId);
+            throw exception;
+        } finally { queries.release(); }
     }
     public List<Result> atualizar(List<Long> ids, String sessionId) {
         if (!properties.enabled()) throw new AreaCentralProductException(UPSTREAM_UNAVAILABLE);

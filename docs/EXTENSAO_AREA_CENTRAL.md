@@ -112,6 +112,39 @@ o Render não acessa caminhos Windows/UNC. Consulte a documentação oficial da
 
 ## Preço e estoque em tempo real
 
+### Preencher o cadastro por código ASSO
+
+Na tela de cadastro em modo **Novo** ou **Alterar**, informe o ASSO e pressione
+**Enter**. A API Spring consulta somente esse código com a sessão externa do
+usuário. Não é necessário instalar outra versão da extensão para essa ação;
+uma sessão externa válida continua sendo obrigatória, inclusive após login local.
+
+O fluxo reproduz “Copiar Infos” do desktop: reaproveita a ficha técnica do
+cadastro local exato e carrega do portal nome, bruto, preço de venda conforme
+parâmetros atuais, estoque, status e múltiplo/m² por caixa. A foto do cartão do
+produto é usada se houver um endereço HTTPS válido e ainda não houver foto.
+Sem dados locais, formato e bordas podem ser sugeridos somente quando estiverem
+explícitos e não ambíguos no nome (medidas usuais em cm; RET/RETIF/RETIFICADO ou
+BOLD). Classificação de uso, fabricante/site e ambiente não são inventados:
+revise os campos e os padrões do formulário antes de salvar.
+
+A pesquisa Google pelo nome abre numa nova guia, como no legado. A guia é
+reservada no próprio Enter e só recebe o nome após uma consulta bem-sucedida;
+falha fecha apenas a guia vazia desta tentativa. Se o usuário navegar para
+outra página, a aplicação não a substitui nem a fecha. Caso popups estejam
+bloqueados, o preenchimento continua e o link da pesquisa fica disponível.
+
+**Nada é gravado por pressionar Enter.** Um ASSO já existente é identificado
+como edição; duplicidades exigem escolha explícita. Não são escolhidos produtos
+apenas pelo código CTC nem alterados mapas, preços/estoques salvos ou ficha técnica
+até o usuário confirmar **Salvar**. Mudanças de código, limpeza ou saída da tela
+cancelam a aplicação da resposta antiga. Este rascunho não muda o comportamento
+das consultas automáticas de estoque da lista.
+
+Endpoint: `POST /api/pisos/area-central/consultar-cadastro`, com autenticação e
+CSRF, código validado e a mesma concorrência limitada da consulta de estoque.
+Sem transação/conexão de banco mantida durante a chamada HTTP externa.
+
 O Spring consulta a mesma busca filtrada do EstoqueScraper legado: POST na URL
 fixa do catálogo, `filtro[]=PF.REFERENCIA`, `operador[]=IGUAL` e o código ASSO.
 Não usa cookie global, senha salva ou navegador remoto. A referência retornada

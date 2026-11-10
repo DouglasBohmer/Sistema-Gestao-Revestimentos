@@ -11,6 +11,8 @@ import java.util.List;
 public interface PisoRepository extends JpaRepository<Piso, Long>, JpaSpecificationExecutor<Piso> {
     List<Piso> findTop15ByOrderByCreatedAtDescIdDesc();
 
+    List<Piso> findAllByCodigoRedeOrderByIdAsc(String codigoRede);
+
     List<Piso> findAllByCodigoLojaOrCodigoRedeOrderByIdAsc(String codigoLoja, String codigoRede);
 
     @Query("""

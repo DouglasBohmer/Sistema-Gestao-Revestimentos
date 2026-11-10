@@ -16,8 +16,19 @@ class PisoAreaCentralServiceTest {
     final AreaCentralProductClient client = mock(AreaCentralProductClient.class);
     final AreaCentralSessionStore sessions = mock(AreaCentralSessionStore.class);
     final AreaCentralProperties properties = mock(AreaCentralProperties.class);
-    final PisoAreaCentralService service = new PisoAreaCentralService(pisos, writer, client, sessions, properties);
+    final PisoCadastroAreaCentralReader cadastroReader = mock(PisoCadastroAreaCentralReader.class);
+    final PisoAreaCentralService service = new PisoAreaCentralService(pisos, writer, client, sessions, properties, cadastroReader);
     final AreaCentralCookieJar jar = new AreaCentralCookieJar(List.of());
+    @Test void consultaCadastroNaoUsaOutraSessaoNemGravaProdutosERevogaSessaoExpirada(){
+        var product=new AreaCentralProductClient.Product(true,BigDecimal.TEN,BigDecimal.ZERO,"PADRAO","Piso fictício",BigDecimal.ONE,null);
+        when(client.consultar("123",jar)).thenReturn(product);
+        service.consultarCadastro("123","sessao-ficticia");
+        verify(cadastroReader).preparar("123",product);verifyNoInteractions(pisos,writer);
+        assertThatThrownBy(()->service.consultarCadastro("123","outra-sessao")).isInstanceOf(AreaCentralProductException.class);
+        when(client.consultar("123",jar)).thenThrow(new AreaCentralProductException(AreaCentralProductException.Code.SESSION_EXPIRED));
+        assertThatThrownBy(()->service.consultarCadastro("123","sessao-ficticia")).isInstanceOf(AreaCentralProductException.class);
+        verify(sessions).remove("sessao-ficticia");
+    }
     PisoAreaCentralServiceTest() {
         when(properties.enabled()).thenReturn(true);
         when(sessions.find("sessao-ficticia")).thenReturn(Optional.of(jar));

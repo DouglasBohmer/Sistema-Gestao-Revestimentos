@@ -30,6 +30,17 @@ class HttpAreaCentralProductClientTest {
         assertThat(result.valorBrutoM2()).isEqualByComparingTo("10.50");
         assertThat(result.estoqueM2()).isEqualByComparingTo("1234.56");
         assertThat(result.status()).isEqualTo("PADRAO");
+        assertThat(result.nome()).isEqualTo("Piso fictício");
+        assertThat(result.m2PorCaixa()).isEqualByComparingTo("2.10");
+    }
+    @Test void extraiNomeSemGtinELinkDeFotoSeguroDoProdutoExato() {
+        String card = CARD.replace("Piso fictício - 1xM2", "<div>PISO FICTÍCIO 62X122 RETIF - 1xM2</div><small>GTIN: 123</small>")
+                .replace("<b>Estoque:","<img src='/fotos/piso.jpg'><b>Estoque:");
+        var produto = HttpAreaCentralProductClient.parse(FILTER + card, "1234567");
+        assertThat(produto.nome()).isEqualTo("PISO FICTÍCIO 62X122 RETIF");
+        assertThat(produto.linkFoto()).isEqualTo("https://redeasso.areacentral.com.br/fotos/piso.jpg");
+        assertThat(HttpAreaCentralProductClient.parse(FILTER + card.replace("/fotos/piso.jpg","javascript:alert(1)"),"1234567").linkFoto()).isNull();
+        assertThat(HttpAreaCentralProductClient.parse(FILTER + CARD.replace("<b>Múltiplo:</b> 2,10", ""),"1234567").m2PorCaixa()).isNull();
     }
     @Test void distingueZeroRealDeCampoAusente() {
         var result = HttpAreaCentralProductClient.parse(FILTER + CARD.replace("1.234,56", "0").replace("R$ 10,50", "R$ 0,00"), "1234567");

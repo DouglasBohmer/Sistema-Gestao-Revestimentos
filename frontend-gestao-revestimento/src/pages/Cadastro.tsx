@@ -8,6 +8,8 @@ import {
   getListPisosQueryKey,
   ApiError,
   customFetch,
+  consultarCadastroAreaCentral,
+  type PisoConsultaAreaCentral,
   type Piso,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,6 +54,11 @@ import { filterPisos, EMPTY_PISO_FILTERS } from "@/lib/piso-list-state";
 import { PisoStatus } from "@/components/catalogo/PisoStatus";
 import { getPiso } from "@workspace/api-client-react";
 import { useSearch, useLocation } from "wouter";
+import {
+  abrirPesquisaPiso,
+  preencherCadastro,
+  pesquisaPisoUrl,
+} from "@/lib/cadastro-area-central";
 import {
   Save,
   Edit,
@@ -177,6 +184,14 @@ export default function Cadastro() {
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [selectedPiso, setSelectedPiso] = useState<Piso | null>(null);
+  const [consultandoAsso, setConsultandoAsso] = useState(false);
+  const [consultaAsso, setConsultaAsso] =
+    useState<PisoConsultaAreaCentral | null>(null);
+  const [opcoesAsso, setOpcoesAsso] = useState<PisoConsultaAreaCentral | null>(
+    null,
+  );
+  const consultaAssoRef = useRef<AbortController | null>(null);
+  const pesquisaAssoRef = useRef<ReturnType<typeof abrirPesquisaPiso>>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [temporaryUploadedImage, setTemporaryUploadedImage] = useState<
     string | null
@@ -254,6 +269,125 @@ export default function Cadastro() {
   const alturaValue = form.watch("altura");
   const m2PorCaixaValue = form.watch("m2PorCaixa");
 
+  const cancelarConsultaAsso = () => {
+    consultaAssoRef.current?.abort();
+    consultaAssoRef.current = null;
+    pesquisaAssoRef.current?.fechar();
+    pesquisaAssoRef.current = null;
+    setConsultandoAsso(false);
+    setConsultaAsso(null);
+    setOpcoesAsso(null);
+  };
+  useEffect(
+    () => () => {
+      consultaAssoRef.current?.abort();
+      pesquisaAssoRef.current?.fechar();
+    },
+    [],
+  );
+  useEffect(() => {
+    if (location !== "/cadastro") cancelarConsultaAsso();
+  }, [location]);
+
+  const aplicarConsultaAsso = (
+    consulta: PisoConsultaAreaCentral,
+    cadastro?: Piso,
+  ) => {
+    const rascunho = preencherCadastro(form.getValues(), consulta, cadastro);
+    if (temporaryUploadedImage) rascunho.linkFoto = temporaryUploadedImage;
+    if (temporaryUploadedPaginationImage)
+      rascunho.linkPaginacao = temporaryUploadedPaginationImage;
+    form.reset(rascunho);
+    if (cadastro) {
+      setSelectedPiso(cadastro);
+      setEditingId(cadastro.id);
+    }
+    setIsEditing(true);
+    setIsViewing(false);
+    setOpcoesAsso(null);
+    setConsultaAsso(consulta);
+    toast({
+      title: cadastro
+        ? "Cadastro existente carregado para edição"
+        : "Dados da Área Central carregados",
+      description: "Revise as informações e clique em Salvar para gravar.",
+    });
+  };
+
+  const buscarCadastroAsso = async () => {
+    if (
+      !isEditing ||
+      consultaAssoRef.current ||
+      createPiso.isPending ||
+      updatePiso.isPending ||
+      isUploadingImage ||
+      isUploadingPaginationImage
+    )
+      return;
+    const codigo = form.getValues("codigoRede")?.trim() || "";
+    if (!/^[A-Za-z0-9._/-]{1,100}$/.test(codigo)) {
+      toast({ title: "Informe um código ASSO válido", variant: "destructive" });
+      return;
+    }
+    const controller = new AbortController();
+    consultaAssoRef.current = controller;
+    setConsultandoAsso(true);
+    setConsultaAsso(null);
+    setOpcoesAsso(null);
+    const pesquisa = abrirPesquisaPiso();
+    pesquisaAssoRef.current = pesquisa;
+    try {
+      const consulta = await consultarCadastroAreaCentral(
+        { codigoRede: codigo },
+        { signal: controller.signal },
+      );
+      if (
+        controller.signal.aborted ||
+        consultaAssoRef.current !== controller ||
+        form.getValues("codigoRede")?.trim() !== codigo
+      ) {
+        pesquisa?.fechar();
+        return;
+      }
+      if (!consulta.encontrado || !consulta.nome) {
+        pesquisa?.fechar();
+        toast({
+          title: "Produto não encontrado na Área Central",
+          description: "O rascunho não foi alterado.",
+          variant: "destructive",
+        });
+        return;
+      }
+      pesquisa?.pesquisar(consulta.nome);
+      pesquisaAssoRef.current = null;
+      if (
+        consulta.cadastros.length > 1 ||
+        (consulta.cadastros.length === 1 &&
+          editingId !== null &&
+          consulta.cadastros[0].id !== editingId)
+      ) {
+        setOpcoesAsso(consulta);
+      } else aplicarConsultaAsso(consulta, consulta.cadastros[0]);
+    } catch (error) {
+      pesquisa?.fechar();
+      if (!controller.signal.aborted)
+        toast({
+          title: "Não foi possível consultar a Área Central",
+          description: errorMessage(
+            error,
+            "Conecte a Área Central e tente novamente. Nenhum dado foi salvo.",
+          ),
+          variant: "destructive",
+        });
+    } finally {
+      if (consultaAssoRef.current === controller) {
+        consultaAssoRef.current = null;
+        pesquisaAssoRef.current = null;
+        setConsultandoAsso(false);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!isEditing) return;
 
@@ -275,6 +409,7 @@ export default function Cadastro() {
   }, [alturaValue, form, isEditing, larguraValue, m2PorCaixaValue]);
 
   const handleSelectPiso = (piso: Piso, preserveUploadedImage = false) => {
+    cancelarConsultaAsso();
     if (temporaryUploadedImage && !preserveUploadedImage) {
       void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
     }
@@ -314,6 +449,7 @@ export default function Cadastro() {
   };
 
   const handleNew = () => {
+    cancelarConsultaAsso();
     if (temporaryUploadedImage) {
       void deleteProductImage(temporaryUploadedImage).catch(() => undefined);
     }
@@ -629,6 +765,7 @@ export default function Cadastro() {
   };
 
   const onSubmit = (data: PisoFormValues) => {
+    if (consultaAssoRef.current || opcoesAsso) return;
     const payload = {
       ...data,
       codigoRede: data.codigoRede || undefined,
@@ -786,673 +923,770 @@ export default function Cadastro() {
                   noValidate
                   onSubmit={form.handleSubmit(onSubmit, onInvalid)}
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="nome"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Nome do Piso *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Ex: Porcelanato Marmorizado"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="codigoRede"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Código Asso</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Ex: ASS-001"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="codigoLoja"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Código Loja</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Ex: 10567"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="largura"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Largura (cm)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Ex: 60"
-                                  disabled={!isEditing}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="altura"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Altura (cm)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Ex: 60"
-                                  disabled={!isEditing}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="rejunte"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Rejunte (mm)</FormLabel>
-                              <Select
-                                disabled={!isEditing}
-                                onValueChange={handleGroutChange}
-                                value={
-                                  field.value == null
-                                    ? undefined
-                                    : String(field.value)
-                                }
-                              >
+                  <fieldset
+                    disabled={consultandoAsso}
+                    className="contents"
+                    aria-busy={consultandoAsso}
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div>
+                          <FormField
+                            control={form.control}
+                            name="nome"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Nome do Piso *</FormLabel>
                                 <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
+                                  <Input
+                                    placeholder="Ex: Porcelanato Marmorizado"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
                                 </FormControl>
-                                <SelectContent>
-                                  {["1", "1.5", "2", "3", "4", "5"].map(
-                                    (grout) => (
-                                      <SelectItem key={grout} value={grout}>
-                                        {grout.replace(".", ",")} mm
-                                      </SelectItem>
-                                    ),
-                                  )}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="tipoPiso"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo de Piso</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Ex: Acetinado"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="pecasPorCaixa"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Peças por Caixa</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  readOnly
-                                  aria-readonly="true"
-                                  placeholder="Calculado automaticamente"
-                                  className="cursor-not-allowed bg-muted"
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <p className="text-xs text-muted-foreground">
-                                Calculado pela largura, altura e m² por caixa.
+                        <div>
+                          <FormField
+                            control={form.control}
+                            name="codigoRede"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Código Asso</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Ex: ASS-001"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    onChange={(event) => {
+                                      cancelarConsultaAsso();
+                                      field.onChange(event);
+                                    }}
+                                    onKeyDown={(event) => {
+                                      if (
+                                        event.key === "Enter" &&
+                                        !event.nativeEvent.isComposing
+                                      ) {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        if (!event.repeat)
+                                          void buscarCadastroAsso();
+                                      }
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          {isEditing && (
+                            <div className="my-2 space-y-2 text-sm">
+                              <p
+                                role="status"
+                                className="text-muted-foreground"
+                              >
+                                {consultandoAsso
+                                  ? "Consultando Área Central..."
+                                  : "Pressione Enter no código ASSO para buscar os dados. Nada é salvo automaticamente."}
                               </p>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="m2PorCaixa"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>M² por Caixa *</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Ex: 1.44"
-                                  disabled={!isEditing}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="localDeUso"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Local de Uso</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Descrição detalhada do local de uso"
-                                  disabled={!isEditing}
-                                  className="min-h-28 resize-y"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="classificacaoUso"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Classificação de Uso</FormLabel>
-                              <Select
-                                disabled={!isEditing}
-                                onValueChange={handleClassificationChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecione" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {(
-                                    [
-                                      "LA",
-                                      "LB",
-                                      "LC",
-                                      "LD",
-                                      "LE",
-                                      "LF",
-                                    ] as const
-                                  ).map((classe) => (
-                                    <SelectItem key={classe} value={classe}>
-                                      {classe}
-                                    </SelectItem>
+                              {consultaAsso && (
+                                <div className="rounded-lg border bg-muted/30 p-3">
+                                  <p>
+                                    Dados consultados: {consultaAsso.nome}.
+                                    Status: {consultaAsso.statusAreaCentral}.
+                                    Revise antes de salvar.
+                                  </p>
+                                  {consultaAsso.valorBrutoM2 !== null && (
+                                    <p className="text-muted-foreground">
+                                      Bruto por m²:{" "}
+                                      {consultaAsso.valorBrutoM2.toLocaleString(
+                                        "pt-BR",
+                                        { style: "currency", currency: "BRL" },
+                                      )}
+                                      . O campo Valor já usa a margem e o
+                                      desconto configurados no sistema.
+                                    </p>
+                                  )}
+                                  <a
+                                    className="underline"
+                                    href={pesquisaPisoUrl(
+                                      consultaAsso.nome || "",
+                                    )}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    Pesquisar pelo nome do piso no Google
+                                  </a>
+                                </div>
+                              )}
+                              {opcoesAsso && (
+                                <div
+                                  role="alert"
+                                  className="space-y-2 rounded-lg border border-amber-300 p-3"
+                                >
+                                  <p>
+                                    Este ASSO já está cadastrado. Escolha qual
+                                    produto deseja editar; nenhum foi
+                                    selecionado automaticamente.
+                                  </p>
+                                  {opcoesAsso.cadastros.map((item) => (
+                                    <Button
+                                      key={item.id}
+                                      type="button"
+                                      variant="outline"
+                                      className="h-auto w-full justify-start whitespace-normal text-left"
+                                      onClick={() =>
+                                        aplicarConsultaAsso(opcoesAsso, item)
+                                      }
+                                    >
+                                      {item.nome} · CTC {item.codigoLoja || "—"}{" "}
+                                      · cadastro #{item.id}
+                                    </Button>
                                   ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
+                                </div>
+                              )}
+                            </div>
                           )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="acabamentoBordas"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Acabamento das Bordas *</FormLabel>
-                              <Select
-                                disabled={!isEditing}
-                                onValueChange={handleBorderFinishChange}
-                                value={field.value}
-                              >
+                          <FormField
+                            control={form.control}
+                            name="codigoLoja"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Código Loja</FormLabel>
                                 <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
+                                  <Input
+                                    placeholder="Ex: 10567"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
                                 </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="RETIFICADO">
-                                    Retificado
-                                  </SelectItem>
-                                  <SelectItem value="BOLD">Bold</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="largura"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Largura (cm)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Ex: 60"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="altura"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Altura (cm)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Ex: 60"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="rejunte"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Rejunte (mm)</FormLabel>
+                                <Select
+                                  disabled={!isEditing}
+                                  onValueChange={handleGroutChange}
+                                  value={
+                                    field.value == null
+                                      ? undefined
+                                      : String(field.value)
+                                  }
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecione" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {["1", "1.5", "2", "3", "4", "5"].map(
+                                      (grout) => (
+                                        <SelectItem key={grout} value={grout}>
+                                          {grout.replace(".", ",")} mm
+                                        </SelectItem>
+                                      ),
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="tipoPiso"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tipo de Piso</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    placeholder="Ex: Acetinado"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="pecasPorCaixa"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Peças por Caixa</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    readOnly
+                                    aria-readonly="true"
+                                    placeholder="Calculado automaticamente"
+                                    className="cursor-not-allowed bg-muted"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <p className="text-xs text-muted-foreground">
+                                  Calculado pela largura, altura e m² por caixa.
+                                </p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="m2PorCaixa"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>M² por Caixa *</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Ex: 1.44"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div>
+                          <FormField
+                            control={form.control}
+                            name="localDeUso"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Local de Uso</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Descrição detalhada do local de uso"
+                                    disabled={!isEditing}
+                                    className="min-h-28 resize-y"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="classificacaoUso"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Classificação de Uso</FormLabel>
+                                <Select
+                                  disabled={!isEditing}
+                                  onValueChange={handleClassificationChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Selecione" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {(
+                                      [
+                                        "LA",
+                                        "LB",
+                                        "LC",
+                                        "LD",
+                                        "LE",
+                                        "LF",
+                                      ] as const
+                                    ).map((classe) => (
+                                      <SelectItem key={classe} value={classe}>
+                                        {classe}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="acabamentoBordas"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Acabamento das Bordas *</FormLabel>
+                                <Select
+                                  disabled={!isEditing}
+                                  onValueChange={handleBorderFinishChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="RETIFICADO">
+                                      Retificado
+                                    </SelectItem>
+                                    <SelectItem value="BOLD">Bold</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div>
+                          <FormField
+                            control={form.control}
+                            name="linkSite"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Site do Piso</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="url"
+                                    placeholder="https://exemplo.com"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="linkPaginacao"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>
+                                  Link da Paginação/Ambiente
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="url"
+                                    placeholder="https://exemplo.com/ambiente.jpg"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="linkFoto"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Link da Foto do Piso</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="url"
+                                    placeholder="https://exemplo.com/foto.jpg"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="valor"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Valor R$</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Ex: 89.90"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="estoqueM2"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Estoque (m²)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    disabled={!isEditing}
+                                    {...field}
+                                    value={field.value ?? ""}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="linkAreaCentral"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Link da Área Central</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="url"
+                                    disabled={!isEditing}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="ativo"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <label className="flex h-10 items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    disabled={!isEditing}
+                                    checked={field.value}
+                                    onChange={field.onChange}
+                                    className="h-4 w-4 accent-primary"
+                                  />
+                                  <span className="text-sm">Produto ativo</span>
+                                </label>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <FormField
-                          control={form.control}
-                          name="linkSite"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Site do Piso</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="url"
-                                  placeholder="https://exemplo.com"
-                                  disabled={!isEditing}
-                                  {...field}
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium">
+                            Imagem do Piso
+                          </label>
+                          <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
+                            <PisoImage
+                              primaryUrl={linkFotoValue}
+                              fallbackUrl={legacyProductImageFallback(
+                                linkFotoValue,
+                                linkFotoOrigemValue,
+                              )}
+                              alt={selectedPiso?.nome ?? "Imagem do piso"}
+                              className="max-h-[300px] w-full rounded-md object-contain"
+                              fallbackClassName="min-h-[276px] w-full"
+                            />
+                            {isEditing && linkFotoValue && (
+                              <button
+                                type="button"
+                                aria-label="Remover imagem do piso"
+                                onClick={handleRemoveImage}
+                                className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            ref={imageInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/avif"
+                            className="hidden"
+                            disabled={!isEditing}
+                            onChange={handleFloorImageUpload}
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={!isEditing || isUploadingImage}
+                              onClick={() => imageInputRef.current?.click()}
+                            >
+                              {isUploadingImage ? (
+                                <Loader2
+                                  size={15}
+                                  className="mr-1.5 animate-spin"
                                 />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                              ) : (
+                                <Upload size={15} className="mr-1.5" />
+                              )}
+                              {isUploadingImage
+                                ? "Enviando..."
+                                : "Enviar imagem"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                !isEditing || !linkFotoValue || isUploadingImage
+                              }
+                              onClick={handleRemoveImage}
+                            >
+                              <Trash2 size={15} className="mr-1.5" />
+                              Remover imagem
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique
+                            em Salvar.
+                          </p>
+                        </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="linkPaginacao"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Link da Paginação/Ambiente</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="url"
-                                  placeholder="https://exemplo.com/ambiente.jpg"
-                                  disabled={!isEditing}
-                                  {...field}
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-medium">
+                            Paginação/Ambiente
+                          </label>
+                          <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
+                            <PisoImage
+                              primaryUrl={linkPaginacaoValue}
+                              alt={`Paginação ou ambiente de ${selectedPiso?.nome ?? "piso"}`}
+                              className="max-h-[300px] w-full rounded-md object-contain"
+                              fallbackClassName="min-h-[276px] w-full"
+                            />
+                            {isEditing && linkPaginacaoValue && (
+                              <button
+                                type="button"
+                                aria-label="Remover Paginação/Ambiente"
+                                onClick={handleRemovePaginationImage}
+                                className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            ref={paginationImageInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/avif"
+                            className="hidden"
+                            disabled={!isEditing}
+                            onChange={handlePaginationImageUpload}
+                          />
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                !isEditing || isUploadingPaginationImage
+                              }
+                              onClick={() =>
+                                paginationImageInputRef.current?.click()
+                              }
+                            >
+                              {isUploadingPaginationImage ? (
+                                <Loader2
+                                  size={15}
+                                  className="mr-1.5 animate-spin"
                                 />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="linkFoto"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Link da Foto do Piso</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="url"
-                                  placeholder="https://exemplo.com/foto.jpg"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="valor"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Valor R$</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="Ex: 89.90"
-                                  disabled={!isEditing}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="estoqueM2"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Estoque (m²)</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  disabled={!isEditing}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="linkAreaCentral"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Link da Área Central</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="url"
-                                  disabled={!isEditing}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="ativo"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Status</FormLabel>
-                              <label className="flex h-10 items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  disabled={!isEditing}
-                                  checked={field.value}
-                                  onChange={field.onChange}
-                                  className="h-4 w-4 accent-primary"
-                                />
-                                <span className="text-sm">Produto ativo</span>
-                              </label>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                              ) : (
+                                <Upload size={15} className="mr-1.5" />
+                              )}
+                              {isUploadingPaginationImage
+                                ? "Enviando..."
+                                : "Enviar imagem"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                !isEditing ||
+                                !linkPaginacaoValue ||
+                                isUploadingPaginationImage
+                              }
+                              onClick={handleRemovePaginationImage}
+                            >
+                              <Trash2 size={15} className="mr-1.5" />
+                              Remover imagem
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique
+                            em Salvar.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!linkSiteValue?.trim()}
+                            onClick={handleOpenProductSite}
+                            className="self-start"
+                          >
+                            <ExternalLink size={15} className="mr-1.5" />
+                            Abrir site do piso
+                          </Button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium">
-                          Imagem do Piso
-                        </label>
-                        <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
-                          <PisoImage
-                            primaryUrl={linkFotoValue}
-                            fallbackUrl={legacyProductImageFallback(
-                              linkFotoValue,
-                              linkFotoOrigemValue,
-                            )}
-                            alt={selectedPiso?.nome ?? "Imagem do piso"}
-                            className="max-h-[300px] w-full rounded-md object-contain"
-                            fallbackClassName="min-h-[276px] w-full"
-                          />
-                          {isEditing && linkFotoValue && (
-                            <button
-                              type="button"
-                              aria-label="Remover imagem do piso"
-                              onClick={handleRemoveImage}
-                              className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
-                            >
-                              <X size={14} />
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          ref={imageInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/avif"
-                          className="hidden"
-                          disabled={!isEditing}
-                          onChange={handleFloorImageUpload}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={!isEditing || isUploadingImage}
-                            onClick={() => imageInputRef.current?.click()}
-                          >
-                            {isUploadingImage ? (
-                              <Loader2
-                                size={15}
-                                className="mr-1.5 animate-spin"
-                              />
-                            ) : (
-                              <Upload size={15} className="mr-1.5" />
-                            )}
-                            {isUploadingImage ? "Enviando..." : "Enviar imagem"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                              !isEditing || !linkFotoValue || isUploadingImage
-                            }
-                            onClick={handleRemoveImage}
-                          >
-                            <Trash2 size={15} className="mr-1.5" />
-                            Remover imagem
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique em
-                          Salvar.
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium">
-                          Paginação/Ambiente
-                        </label>
-                        <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-3">
-                          <PisoImage
-                            primaryUrl={linkPaginacaoValue}
-                            alt={`Paginação ou ambiente de ${selectedPiso?.nome ?? "piso"}`}
-                            className="max-h-[300px] w-full rounded-md object-contain"
-                            fallbackClassName="min-h-[276px] w-full"
-                          />
-                          {isEditing && linkPaginacaoValue && (
-                            <button
-                              type="button"
-                              aria-label="Remover Paginação/Ambiente"
-                              onClick={handleRemovePaginationImage}
-                              className="absolute right-2 top-2 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90"
-                            >
-                              <X size={14} />
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          ref={paginationImageInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,image/avif"
-                          className="hidden"
-                          disabled={!isEditing}
-                          onChange={handlePaginationImageUpload}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={!isEditing || isUploadingPaginationImage}
-                            onClick={() =>
-                              paginationImageInputRef.current?.click()
-                            }
-                          >
-                            {isUploadingPaginationImage ? (
-                              <Loader2
-                                size={15}
-                                className="mr-1.5 animate-spin"
-                              />
-                            ) : (
-                              <Upload size={15} className="mr-1.5" />
-                            )}
-                            {isUploadingPaginationImage
-                              ? "Enviando..."
-                              : "Enviar imagem"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                              !isEditing ||
-                              !linkPaginacaoValue ||
-                              isUploadingPaginationImage
-                            }
-                            onClick={handleRemovePaginationImage}
-                          >
-                            <Trash2 size={15} className="mr-1.5" />
-                            Remover imagem
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          JPG, PNG, WebP ou AVIF, com até 5 MB. Depois clique em
-                          Salvar.
-                        </p>
+                    <div className="mt-8 pt-6 border-t border-gray-200">
+                      <div className="flex flex-wrap gap-3">
+                        <Button
+                          type="submit"
+                          disabled={
+                            !isEditing ||
+                            consultandoAsso ||
+                            !!opcoesAsso ||
+                            createPiso.isPending ||
+                            updatePiso.isPending
+                          }
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        >
+                          <Save size={18} className="mr-2" />
+                          Salvar
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
-                          disabled={!linkSiteValue?.trim()}
-                          onClick={handleOpenProductSite}
-                          className="self-start"
+                          onClick={handleEdit}
+                          disabled={isEditing && !editingId}
                         >
-                          <ExternalLink size={15} className="mr-1.5" />
-                          Abrir site do piso
+                          <Edit size={18} className="mr-2" />
+                          Alterar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={handleDelete}
+                        >
+                          <Trash2 size={18} className="mr-2" />
+                          Excluir
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleLimpar}
+                        >
+                          <Eraser size={18} className="mr-2" />
+                          Limpar
+                        </Button>
+                        <div className="flex-1"></div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() =>
+                            document.getElementById("search-input")?.focus()
+                          }
+                        >
+                          <Search size={18} className="mr-2" />
+                          Pesquisar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() =>
+                            toast({
+                              title: "Info",
+                              description:
+                                "Funcionalidade de impressão em breve.",
+                            })
+                          }
+                        >
+                          <Printer size={18} className="mr-2" />
+                          Imprimir Etiqueta
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleLimpar}
+                        >
+                          <Plus size={18} className="mr-2" />
+                          Novo
                         </Button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="mt-8 pt-6 border-t border-gray-200">
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        type="submit"
-                        disabled={
-                          !isEditing ||
-                          createPiso.isPending ||
-                          updatePiso.isPending
-                        }
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                      >
-                        <Save size={18} className="mr-2" />
-                        Salvar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleEdit}
-                        disabled={isEditing && !editingId}
-                      >
-                        <Edit size={18} className="mr-2" />
-                        Alterar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={handleDelete}
-                      >
-                        <Trash2 size={18} className="mr-2" />
-                        Excluir
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleLimpar}
-                      >
-                        <Eraser size={18} className="mr-2" />
-                        Limpar
-                      </Button>
-                      <div className="flex-1"></div>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() =>
-                          document.getElementById("search-input")?.focus()
-                        }
-                      >
-                        <Search size={18} className="mr-2" />
-                        Pesquisar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() =>
-                          toast({
-                            title: "Info",
-                            description:
-                              "Funcionalidade de impressão em breve.",
-                          })
-                        }
-                      >
-                        <Printer size={18} className="mr-2" />
-                        Imprimir Etiqueta
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleLimpar}
-                      >
-                        <Plus size={18} className="mr-2" />
-                        Novo
-                      </Button>
-                    </div>
-                  </div>
+                  </fieldset>
                 </form>
               </Form>
             </CardContent>

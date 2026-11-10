@@ -44,6 +44,8 @@ import type {
   MapaUpdateRequest,
   ParametrosPreco,
   Piso,
+  PisoConsultaAreaCentral,
+  PisoConsultaAreaCentralInput,
   PisoInput,
   SessionResponse,
   StartAreaCentralLoginRequest,
@@ -1795,6 +1797,77 @@ export const useCreatePiso = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreatePisoMutationOptions(options));
+    }
+
+export const getConsultarCadastroAreaCentralUrl = () => {
+
+
+
+
+  return `/api/pisos/area-central/consultar-cadastro`
+}
+
+/**
+ * @summary Consultar ASSO no portal e preparar rascunho sem gravar o cadastro
+ */
+export const consultarCadastroAreaCentral = async (pisoConsultaAreaCentralInput: PisoConsultaAreaCentralInput, options?: Parameters<typeof customFetch>[1]): Promise<PisoConsultaAreaCentral> => {
+
+  return customFetch<PisoConsultaAreaCentral>(getConsultarCadastroAreaCentralUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pisoConsultaAreaCentralInput)
+  }
+);}
+
+
+
+
+
+export const getConsultarCadastroAreaCentralMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consultarCadastroAreaCentral>>, TError,{data: BodyType<PisoConsultaAreaCentralInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof consultarCadastroAreaCentral>>, TError,{data: BodyType<PisoConsultaAreaCentralInput>}, TContext> => {
+
+const mutationKey = ['consultarCadastroAreaCentral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof consultarCadastroAreaCentral>>, {data: BodyType<PisoConsultaAreaCentralInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  consultarCadastroAreaCentral(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConsultarCadastroAreaCentralMutationResult = NonNullable<Awaited<ReturnType<typeof consultarCadastroAreaCentral>>>
+    export type ConsultarCadastroAreaCentralMutationBody = BodyType<PisoConsultaAreaCentralInput>
+    export type ConsultarCadastroAreaCentralMutationError = ErrorType<void>
+
+    /**
+ * @summary Consultar ASSO no portal e preparar rascunho sem gravar o cadastro
+ */
+export const useConsultarCadastroAreaCentral = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof consultarCadastroAreaCentral>>, TError,{data: BodyType<PisoConsultaAreaCentralInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof consultarCadastroAreaCentral>>,
+        TError,
+        {data: BodyType<PisoConsultaAreaCentralInput>},
+        TContext
+      > => {
+      return useMutation(getConsultarCadastroAreaCentralMutationOptions(options));
     }
 
 export const getAtualizarPisosAreaCentralUrl = () => {
