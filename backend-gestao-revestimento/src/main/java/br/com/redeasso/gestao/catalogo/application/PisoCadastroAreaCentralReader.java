@@ -45,10 +45,12 @@ public class PisoCadastroAreaCentralReader {
         BigDecimal largura = null, altura = null;
         var formato = FORMATO.matcher(produto.nome());
         if (formato.find()) {
+            boolean unidadeNaoSuportada = Pattern.compile("(?i)^\\s*(?:mm\\b|m\\b|m2\\b|m²|pol\\b|[\"″])")
+                    .matcher(produto.nome().substring(formato.end())).find();
             largura = new BigDecimal(formato.group(1).replace(',', '.'));
             altura = new BigDecimal(formato.group(2).replace(',', '.'));
             // Múltiplos formatos no nome são ambíguos; nunca escolher silenciosamente.
-            if (largura.signum() <= 0 || altura.signum() <= 0 || formato.find()) { largura = null; altura = null; }
+            if (unidadeNaoSuportada || largura.signum() <= 0 || altura.signum() <= 0 || formato.find()) { largura = null; altura = null; }
         }
         String nome = produto.nome().toUpperCase(Locale.ROOT);
         boolean retificado = Pattern.compile("\\bRET(?:IF(?:ICADO)?)?\\b").matcher(nome).find();

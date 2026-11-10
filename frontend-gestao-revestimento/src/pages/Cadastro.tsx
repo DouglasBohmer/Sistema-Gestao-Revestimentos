@@ -339,7 +339,12 @@ export default function Cadastro() {
     try {
       const consulta = await consultarCadastroAreaCentral(
         { codigoRede: codigo },
-        { signal: controller.signal },
+        {
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(30000),
+          ]),
+        },
       );
       if (
         controller.signal.aborted ||
@@ -375,7 +380,7 @@ export default function Cadastro() {
           title: "Não foi possível consultar a Área Central",
           description: errorMessage(
             error,
-            "Conecte a Área Central e tente novamente. Nenhum dado foi salvo.",
+            "Verifique a conexão com a Área Central e tente novamente. Nenhum dado foi salvo.",
           ),
           variant: "destructive",
         });

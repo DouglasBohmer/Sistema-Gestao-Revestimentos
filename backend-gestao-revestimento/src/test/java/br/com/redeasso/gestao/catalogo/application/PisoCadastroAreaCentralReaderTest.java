@@ -27,7 +27,7 @@ class PisoCadastroAreaCentralReaderTest {
         verify(pisos).findAllByCodigoRedeOrderByIdAsc("123");verifyNoMoreInteractions(pisos);
     }
     @Test void naoInventaFormatoBordasOuPrecoQuandoProdutoNaoFoiEncontrado(){
-        for(String nome:List.of("PISO SEM FORMATO","PISO 60X60 OU 90X90","PISO 1000X1000")){
+        for(String nome:List.of("PISO SEM FORMATO","PISO 60X60 OU 90X90","PISO 1000X1000","PISO 600X600mm","PISO 2X3m","PISO 24X48\"")){
             var result=reader.preparar("123",produto(nome));assertThat(result.largura()).isNull();assertThat(result.altura()).isNull();assertThat(result.acabamentoBordas()).isNull();
         }
         clearInvocations(precos);
