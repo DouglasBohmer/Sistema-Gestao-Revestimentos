@@ -125,8 +125,7 @@ public final class HttpAreaCentralProductClient implements AreaCentralProductCli
         }
         Element name = card.selectFirst(".product-name > div:first-child");
         if (name == null) name = card.selectFirst(".product-name");
-        String nome = name.ownText().trim();
-        if (nome.isEmpty()) nome = name.text().trim();
+        String nome = name.text().trim();
         nome = nome.replaceFirst("(?i)\\s*-\\s*1\\s*x\\s*M[²2]\\s*$", "").trim();
         if (nome.isEmpty() || nome.length() > 200) nome = null;
         BigDecimal multiplo = null;

@@ -39,6 +39,8 @@ class HttpAreaCentralProductClientTest {
         var produto = HttpAreaCentralProductClient.parse(FILTER + card, "1234567");
         assertThat(produto.nome()).isEqualTo("PISO FICTÍCIO 62X122 RETIF");
         assertThat(produto.linkFoto()).isEqualTo("https://redeasso.areacentral.com.br/fotos/piso.jpg");
+        assertThat(HttpAreaCentralProductClient.parse(FILTER + card.replace("PISO FICTÍCIO", "PISO <strong>FICTÍCIO</strong>"), "1234567").nome())
+                .isEqualTo("PISO FICTÍCIO 62X122 RETIF");
         assertThat(HttpAreaCentralProductClient.parse(FILTER + card.replace("/fotos/piso.jpg","javascript:alert(1)"),"1234567").linkFoto()).isNull();
         assertThat(HttpAreaCentralProductClient.parse(FILTER + CARD.replace("<b>Múltiplo:</b> 2,10", ""),"1234567").m2PorCaixa()).isNull();
     }
