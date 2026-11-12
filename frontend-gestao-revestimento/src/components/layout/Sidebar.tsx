@@ -6,8 +6,6 @@ import {
   Calculator,
   LogOut,
   Settings,
-  Bell,
-  Receipt,
   Map,
   Link2,
 } from "lucide-react";
@@ -18,7 +16,6 @@ const navigation = [
   { name: "Início", href: "/", icon: Home },
   { name: "Cadastro", href: "/cadastro", icon: FileText },
   { name: "Calcular", href: "/calcular", icon: Calculator },
-  { name: "Orçamento", href: null, icon: Receipt },
   { name: "Mapa Estoque", href: "/mapa-estoque", icon: Map },
 ] as const;
 
@@ -68,24 +65,6 @@ export function Sidebar() {
         >
           {navigation.map((item) => {
             const isActive = location === item.href;
-            if (!item.href) {
-              return (
-                <button
-                  key={item.name}
-                  type="button"
-                  disabled
-                  aria-disabled="true"
-                  title="Disponível em breve"
-                  className={cn(
-                    menuItemClass,
-                    "cursor-not-allowed border-transparent text-white/35",
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                  <span className={menuLabelClass}>{item.name}</span>
-                </button>
-              );
-            }
             return (
               <Link
                 key={item.name}
@@ -122,22 +101,8 @@ export function Sidebar() {
           )}
         </nav>
 
-        {/* Rodapé: Notificações + Configurações + Sair */}
+        {/* Rodapé: Configurações + Sair */}
         <div className="mt-auto border-t border-white/10">
-          <button
-            type="button"
-            disabled
-            aria-disabled="true"
-            title="Disponível em breve"
-            className={cn(
-              menuItemClass,
-              "cursor-not-allowed border-transparent py-3.5 text-white/35",
-            )}
-          >
-            <Bell className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className={menuLabelClass}>Notificações</span>
-          </button>
-
           <Link
             href="/configuracoes"
             className={cn(
