@@ -301,7 +301,7 @@ export function AreaCentralExtensionLogin() {
           void areaCentralExtension("OPEN_OPTIONS").then((reply) => {
             if (!reply.ok)
               setError(
-                "Atualize a extensão para 1.2.0 para configurar o arquivo .txt.",
+                "Atualize a extensão para 1.2.1 para configurar o arquivo .txt.",
               );
           })
         }

@@ -4,12 +4,13 @@ import { APP_ORIGIN, PORTAL_ORIGIN, LOGIN_URL } from './protocol.js'
 
 test('background pareia guias e envia cookies só à API fixa, sem devolver à página', async () => {
   let listener, removed, alarmListener, stored = {}, cookieReads = 0
+  const activity = {}
   const created = [], network = [], replies = [], closed = [], focused = []
   let portalUrl = LOGIN_URL
   const chromeBefore = globalThis.chrome, fetchBefore = globalThis.fetch, idbBefore = globalThis.indexedDB
   globalThis.chrome = {
     runtime: { onMessage: { addListener: fn => { listener = fn } } },
-    storage: { session: {
+    storage: { local: {set: async data => Object.assign(activity, data)}, session: {
       get: async key => ({ [key]: stored[key] }), set: async values => { Object.assign(stored, values) },
       remove: async key => { delete stored[key] },
     } },
@@ -23,7 +24,7 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
       cookieReads++
       assert.deepEqual(filter, { url: `${PORTAL_ORIGIN}/401/` })
       return [{ name: 'PHPSESSID', value: 'cookie-ficticio-privado', domain: 'redeasso.areacentral.com.br',
-        path: '/', secure: true, httpOnly: true }]
+        path: '/', secure: false, httpOnly: true }]
     } },
   }
   globalThis.fetch = async (url, options) => { network.push({ url, options }); return { ok: true } }
@@ -119,5 +120,55 @@ test('background pareia guias e envia cookies só à API fixa, sem devolver à p
     assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_REJECTED');
     assert.deepEqual(stored,{});
     assert.equal((await send({type:'COMPLETE'},app)).ok,false);
+
+    // Caminho completo do login manual até o próximo login pelo arquivo.
+    let fileText = '', fileClosed = false, writable = true, writes = 0;
+    const handle = {
+      queryPermission: async () => writable ? 'granted' : 'prompt',
+      getFile: async () => ({size:fileText.length,text:async()=>fileText}),
+      createWritable: async () => ({
+        write: async text => {fileText=text;writes++}, close: async () => {fileClosed=true},
+        abort: async () => {},
+      }),
+    };
+    globalThis.indexedDB.open = () => {
+      const request = {result:{close() {},transaction() {
+        const tx = {objectStore:()=>({get() {
+          const get={result:handle};queueMicrotask(()=>{get.onsuccess();tx.oncomplete()});return get;
+        }})};return tx;
+      }}};queueMicrotask(()=>request.onsuccess());return request;
+    };
+    globalThis.fetch = async (url, options) => {network.push({url,options});return {ok:true}};
+    await send({type:'START',grant},app);
+    assert.equal((await send({type:'PORTAL_STATE',authenticated:true},portal)).code,'RECEIVED');
+    assert.equal(fileClosed,true);
+    assert.equal(activity['redeasso.fileActivity.write'].code,'FILE_SAVED');
+    assert.equal(JSON.parse(fileText).cookies[0].secure,false);
+    await send({type:'COMPLETE'},app);
+    const tabsBeforeFileLogin = created.length;
+    assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_RECEIVED');
+    assert.equal(created.length,tabsBeforeFileLogin);
+    assert.equal(activity['redeasso.fileActivity.read'].code,'FILE_RECEIVED');
+    await send({type:'COMPLETE'},app);
+    const previousFile = fileText;
+    writable = false;
+    await send({type:'START',grant},app);
+    // Falha de gravação não desfaz login validado nem apaga o arquivo anterior.
+    assert.equal((await send({type:'PORTAL_STATE',authenticated:true},portal)).code,'RECEIVED');
+    assert.equal(activity['redeasso.fileActivity.write'].code,'FILE_PERMISSION_REQUIRED');
+    assert.equal(fileText,previousFile);
+    await send({type:'COMPLETE'},app);
+    assert.equal((await send({type:'START_FILE',grant},app)).code,'FILE_UNAVAILABLE');
+    assert.equal(activity['redeasso.fileActivity.read'].code,'FILE_PERMISSION_REQUIRED');
+    writable = true;
+    globalThis.fetch = async () => ({ok:false});
+    const writesBeforeRejection = writes;
+    await send({type:'START',grant},app);
+    assert.equal((await send({type:'PORTAL_STATE',authenticated:true},portal)).code,'VALIDATION_FAILED');
+    assert.equal(writes,writesBeforeRejection);
+    assert.equal(fileText,previousFile);
+    assert.equal((await send({type:'COMPLETE'},app)).ok,false);
+    assert.equal(JSON.stringify(activity).includes('cookie-ficticio-privado'),false);
+    assert.equal(JSON.stringify(replies).includes('cookie-ficticio-privado'),false);
   } finally { globalThis.chrome = chromeBefore; globalThis.fetch = fetchBefore; globalThis.indexedDB = idbBefore }
 })

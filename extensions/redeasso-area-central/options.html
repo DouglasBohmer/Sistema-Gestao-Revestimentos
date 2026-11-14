@@ -28,17 +28,31 @@
         <button id="select">Selecionar .txt existente</button
         ><button id="create">Criar .txt novo</button
         ><button id="permission">Renovar permissão</button
+        ><button id="check">Verificar arquivo</button
         ><button id="forget">Desvincular arquivo</button>
       </div>
       <p id="status" role="status"></p>
       <p id="selection"></p>
+      <section aria-label="Diagnóstico do arquivo" class="diagnostics">
+        <h2>Gravação da sessão</h2>
+        <p id="last-write" role="status"></p>
+        <h2>Leitura no login</h2>
+        <p id="last-read" role="status"></p>
+      </section>
       <p>
-        Depois de vincular, o próximo login válido no portal atualizará
-        automaticamente este arquivo com uma sessão versionada, por até 12
-        horas. Arquivos legados (um PHPSESSID por linha) podem ser lidos; ao
-        salvar, o arquivo passa ao formato novo, que não é compatível com o
-        aplicativo desktop antigo. Se ainda usa o desktop, escolha um arquivo
-        separado para o web.
+        Depois de vincular, inicie “Entrar com Área Central” ou “Conectar Área
+        Central” no RedeASSO. Entrar apenas no portal, fora dessa conexão, não
+        grava o arquivo. Após o servidor validar a sessão, a extensão atualizará
+        este arquivo automaticamente, por até 12 horas. Arquivos legados (um
+        PHPSESSID por linha) podem ser lidos; ao salvar, o arquivo passa ao
+        formato novo, que não é compatível com o aplicativo desktop antigo. Se
+        ainda usa o desktop, escolha um arquivo separado para o web.
+      </p>
+      <p>
+        Mantenha esta guia aberta até confirmar “Sessão salva no arquivo .txt
+        com sucesso”. Se o Chrome oferecer, escolha permitir acesso em cada
+        visita. Caso contrário, use Renovar permissão antes de conectar. Uma
+        sessão do app já aberta não lê nem grava o arquivo novamente.
       </p>
       <p>
         Desvincular não apaga o .txt nem faz logout de outros computadores. Para

@@ -43,3 +43,15 @@ button:hover {
 #selection {
   color: #555;
 }
+.diagnostics {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0 16px;
+}
+.diagnostics h2 {
+  font-size: 17px;
+  margin-bottom: 0;
+}
+.diagnostics p {
+  margin-top: 4px;
+}

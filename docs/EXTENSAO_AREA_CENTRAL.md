@@ -61,7 +61,7 @@ identidade real. A extração confiável do identificador individual é pendente
 
 ### Atualização da extensão
 
-A versão **1.2.0** usa o protocolo 3 e adiciona a seleção opcional do arquivo
+A versão **1.2.1** usa o protocolo 3 e corrige a gravação do arquivo
 de sessão, sem ampliar as permissões do manifest. Atualize os arquivos
 da pasta carregada sem compactação (ou baixe novamente o ZIP publicado), clique
 **Recarregar** em `chrome://extensions` e recarregue a guia do RedeASSO. Uma
@@ -75,8 +75,11 @@ Git/Cloudflare não atualizam automaticamente uma pasta em Downloads.
 2. Crie `redeasso-sessao.txt` ou selecione um arquivo existente na pasta da rede
    da sua loja. Autorize leitura/escrita no Chrome/Edge. Cada PC deve escolher
    explicitamente o mesmo arquivo; não existe um caminho global salvo no Neon.
-3. Faça um login válido normal no portal. Após a validação pelo Spring, a
-   extensão tenta atualizar o arquivo autorizado. O arquivo contém somente os
+3. Inicie **Entrar com Área Central** ou **Conectar Área Central** pelo RedeASSO
+   e entre no portal aberto por essa tentativa. Entrar apenas no portal ou já
+   estar conectado ao app não dispara uma gravação. Após a validação pelo Spring,
+   a extensão tenta atualizar o arquivo autorizado. Mantenha a guia de opções
+   aberta até aparecer **Sessão salva no arquivo .txt com sucesso**. O arquivo contém somente os
    cookies permitidos, sem senha, com expiração absoluta de até 12 horas.
 4. No próximo **Entrar com Área Central**, a extensão tenta o arquivo antes de
    abrir o portal. O Spring precisa validar a sessão novamente. Se aceita, a
@@ -85,6 +88,20 @@ Git/Cloudflare não atualizam automaticamente uma pasta em Downloads.
 5. Após reiniciar o navegador, o Chrome pode exigir **Renovar permissão** ou
    selecionar o arquivo novamente. **Desvincular** esquece a seleção apenas
    neste navegador, sem apagar o arquivo ou desconectar outros PCs.
+6. A página privativa mostra separadamente **Gravação da sessão** e **Leitura
+   no login**, com data/resultado, sem conteúdo nem caminho. **Verificar arquivo**
+   identifica arquivo vazio, inválido/vencido, falta de permissão ou acesso à
+   rede; ler um arquivo válido não comprova autenticação, que depende do Spring.
+
+Correção 1.2.1: o gravador anterior exigia `Secure=true` até quando o portal
+emitia um cookie sem esse atributo e a API o aceitava. A falha ficava silenciosa.
+O arquivo agora preserva o booleano real, sem inventar atributos nem prolongar
+a expiração. O envio continua exclusivamente por HTTPS para a API fixa e a
+API valida o catálogo antes de liberar acesso. Não houve alteração de permissões
+do manifest, formato do arquivo, cookies permitidos ou isolamento entre sessões.
+Falha de escrita não bloqueia login válido nem apaga o arquivo anterior, mas
+fica registrada nas opções. Escrita de rede que ultrapasse três segundos aparece
+como pendente até terminar, não como sucesso presumido.
 
 O `.txt` é um segredo de acesso **em texto simples**, conforme a opção do usuário.
 Restrinja a pasta/compartilhamento a pessoas e PCs autorizados da própria loja;
@@ -104,7 +121,11 @@ com o aplicativo desktop antigo**. Se ainda usa o desktop, escolha outro `.txt`.
 Limitações: cookies não garantem aceitação em outro PC/IP pelo portal. Não há
 contorno de CAPTCHA ou de vinculação de sessão. Uma pasta de rede indisponível
 não deve impedir o login individual. Escrita negada não impede o login, mas
-não renova o arquivo; confira a permissão na extensão. O teste real em duas
+não renova o arquivo; confira o diagnóstico na extensão. O Chrome pode retirar
+a permissão temporária quando todas as páginas da extensão são fechadas; prefira
+permitir em cada visita quando essa opção for oferecida ou renove a permissão.
+Veja as [regras de permissão do Chrome](https://developer.chrome.com/blog/persistent-permissions-for-the-file-system-access-api).
+O teste real em duas
 máquinas e no compartilhamento da loja ainda precisa ser feito após atualizar
 a extensão nesta branch. O navegador exige seleção explícita do usuário;
 o Render não acessa caminhos Windows/UNC. Consulte a documentação oficial da

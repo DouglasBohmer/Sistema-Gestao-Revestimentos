@@ -6,7 +6,11 @@ import {
   senderAt,
   selectCookies,
 } from "./protocol.js";
-import { readSelectedSession, saveSelectedSession } from "./shared-file.js";
+import {
+  readSelectedSessionResult,
+  saveSelectedSessionResult,
+  recordFileActivity,
+} from "./shared-file.js";
 
 const STORAGE_KEY = "redeasso.activeTransfer";
 const ALARM = "redeasso.transferExpiry";
@@ -43,12 +47,14 @@ async function handle(message, sender) {
       try {
         if (await activeTransfer()) return { ok: false, code: "BUSY" };
         let timeout;
-        const cookies = await Promise.race([
-          readSelectedSession(),
+        const file = await Promise.race([
+          readSelectedSessionResult(),
           new Promise((resolve) => {
-            timeout = setTimeout(() => resolve(null), 3000);
+            timeout = setTimeout(() => resolve({ code: "FILE_UNAVAILABLE" }), 3000);
           }),
         ]).finally(() => clearTimeout(timeout));
+        await recordFileActivity("read", file.code);
+        const cookies = file.cookies;
         if (!cookies) return { ok: false, code: "FILE_UNAVAILABLE" };
         const transfer = {
           ...message.grant,
@@ -68,13 +74,16 @@ async function handle(message, sender) {
             current?.transferToken !== transfer.transferToken
           ) {
             await clearTransfer();
+            await recordFileActivity("read", "FILE_REJECTED");
             return { ok: false, code: "FILE_REJECTED" };
           }
           transfer.validated = true;
           await chrome.storage.session.set({ [STORAGE_KEY]: transfer });
+          await recordFileActivity("read", "FILE_RECEIVED");
           return { ok: true, code: "FILE_RECEIVED" };
         } catch {
           await clearTransfer();
+          await recordFileActivity("read", "FILE_REJECTED");
           return { ok: false, code: "FILE_REJECTED" };
         }
       } finally {
@@ -186,9 +195,14 @@ async function handle(message, sender) {
       // Destino local escolhido explicitamente pelo usuário; nunca enviar cookies à SPA.
       let saveTimeout;
       await Promise.race([
-        saveSelectedSession(cookies),
+        saveSelectedSessionResult(cookies).then((result) =>
+          recordFileActivity("write", result.code),
+        ),
         new Promise((resolve) => {
-          saveTimeout = setTimeout(() => resolve(false), 3000);
+          saveTimeout = setTimeout(() => {
+            void recordFileActivity("write", "FILE_SAVE_PENDING");
+            resolve();
+          }, 3000);
         }),
       ]).finally(() => clearTimeout(saveTimeout));
     } else {

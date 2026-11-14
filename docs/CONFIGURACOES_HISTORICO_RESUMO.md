@@ -50,7 +50,7 @@ sem apagar histórico nem remover migrations já aplicadas. Não executar DROP
 ou baixar a versão Flyway em produção. Ao retomar a versão nova, o histórico
 continuará disponível. Não reconstruir cálculos que ocorreram com o código antigo.
 
-Após publicação autorizada, atualizar manualmente a extensão para **1.2.0**,
+Após publicação autorizada, atualizar manualmente a extensão para **1.2.1**,
 recarregar a extensão e a aba do app, selecionar o `.txt` em cada PC e testar:
 primeiro login grava; segundo PC reutiliza; arquivo inacessível/expirado abre
 login normal; desligar a rede não apaga arquivo nem concede acesso sem validar.

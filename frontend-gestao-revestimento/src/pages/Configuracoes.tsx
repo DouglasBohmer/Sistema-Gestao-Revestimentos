@@ -85,7 +85,7 @@ export default function Configuracoes() {
                 void areaCentralExtension("OPEN_OPTIONS").then((reply) => {
                   if (!reply.ok)
                     setMessage(
-                      "Instale ou atualize a extensão RedeASSO 1.2.0 e recarregue o app.",
+                      "Instale ou atualize a extensão RedeASSO 1.2.1 e recarregue o app.",
                     );
                 })
               }
@@ -94,7 +94,8 @@ export default function Configuracoes() {
             </Button>
             <p className="text-muted-foreground">
               A seleção ocorre na página privativa da extensão; o app não recebe
-              o caminho nem o conteúdo. Não digite cookies aqui.
+              o caminho nem o conteúdo. Confira nessa página a confirmação da
+              gravação e o resultado da leitura. Não digite cookies aqui.
             </p>
           </CardContent>
         </Card>
